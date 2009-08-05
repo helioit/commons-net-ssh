@@ -33,12 +33,24 @@ public class Pipe extends Thread
             };
     }
     
-    protected final Logger log;
+    public static void copy(InputStream in, OutputStream out, int bufSize, boolean closeStreamOnEOF) throws IOException
+    {
+        byte[] buf = new byte[bufSize];
+        int len;
+        while ((len = in.read(buf)) != -1) {
+            out.write(buf, 0, len);
+            out.flush();
+        }
+        if (closeStreamOnEOF)
+            out.close();
+    }
     
+    protected final Logger log;
     protected final InputStream in;
     protected final OutputStream out;
     protected int bufSize = 1;
     protected boolean closeStreamOnEOF;
+    
     protected ErrorCallback errCB;
     
     public Pipe(String name, InputStream in, OutputStream out)
@@ -77,18 +89,10 @@ public class Pipe extends Thread
     @Override
     public void run()
     {
-        byte[] buf = new byte[bufSize];
-        int len;
         try {
-            while ((len = in.read(buf)) != -1) {
-                out.write(buf, 0, len);
-                out.flush();
-            }
-            if (closeStreamOnEOF) {
-                log.debug("EOF on {}, closing {}", in, out);
-                out.close();
-            } else
-                log.debug("EOF on {}", in);
+            log.debug("Wil pipe from {} to {}", in, out);
+            copy(in, out, bufSize, closeStreamOnEOF);
+            log.debug("EOF on {}", in);
         } catch (IOException ioe) {
             log.error("In pipe from {} to {}: " + ioe.toString(), in, out);
             if (errCB != null)

@@ -124,6 +124,8 @@ public class TransportProtocol implements Transport, PacketHandler
     
     private int timeout = 30;
     
+    private volatile boolean authed;
+    
     public TransportProtocol(Config config)
     {
         this(config, null, null, null);
@@ -318,11 +320,16 @@ public class TransportProtocol implements Transport, PacketHandler
         dispatcher.start();
     }
     
+    public boolean isAuthenticated()
+    {
+        return authed;
+    }
+    
     public boolean isRunning()
     {
         lock.lock();
         try {
-            return !close.isSet() && (kexer.isKexOngoing() || kexer.isKexDone());
+            return !close.isSet() && dispatcher.isAlive();
         } finally {
             lock.unlock();
         }
@@ -350,6 +357,7 @@ public class TransportProtocol implements Transport, PacketHandler
     
     public void setAuthenticated()
     {
+        this.authed = true;
         lock.lock();
         try {
             encoder.setAuthenticated();

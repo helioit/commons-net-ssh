@@ -135,6 +135,8 @@ public interface Transport extends PacketWriter
      */
     void init(Socket socket) throws SSHException;
     
+    boolean isAuthenticated();
+    
     /**
      * Whether this session is active.
      * <p>

@@ -79,7 +79,7 @@ public class Decoder extends Converter
         int need;
         // Decoding loop
         for (;;)
-            if (packetLength == -1) // Wait for beginning of packet
+            if (packetLength == -1) // Waiting for beginning of packet
             {
                 // The read position should always be 0 at this point because we have compacted this
                 // buffer

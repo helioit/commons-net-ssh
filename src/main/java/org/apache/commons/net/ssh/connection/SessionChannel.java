@@ -74,6 +74,11 @@ public class SessionChannel extends AbstractDirectChannel implements Session, Se
         return this;
     }
     
+    public String getErrorAsString() throws IOException
+    {
+        return getStreamAsString(err);
+    }
+    
     public InputStream getErrorStream()
     {
         return err;
@@ -91,11 +96,17 @@ public class SessionChannel extends AbstractDirectChannel implements Session, Se
     
     public String getOutputAsString() throws IOException
     {
+        return getStreamAsString(in);
+    }
+    
+    public String getStreamAsString(InputStream stream) throws IOException
+    {
         StringBuilder sb = new StringBuilder();
         int r;
-        while ((r = in.read()) != -1)
+        while ((r = stream.read()) != -1)
             sb.append((char) r);
         return sb.toString();
+        
     }
     
     @Override
@@ -172,4 +183,5 @@ public class SessionChannel extends AbstractDirectChannel implements Session, Se
         else
             super.handleExtendedData(dataTypeCode, buf);
     }
+    
 }

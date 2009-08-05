@@ -124,7 +124,6 @@ public class SSHClient extends SocketClient
         } else {
             conf.setKeyExchangeFactories(new DHG1.Factory());
             conf.setRandomFactory(new SingletonRandomFactory(new JCERandom.Factory()));
-            conf.setFileKeyProviderFactories();
         }
         
         List<NamedFactory<Cipher>> avail = new LinkedList<NamedFactory<Cipher>> //
@@ -350,6 +349,11 @@ public class SSHClient extends SocketClient
             throw new IOException("Could not load user known_hosts");
     }
     
+    public boolean isAuthenticated()
+    {
+        return trans.isAuthenticated();
+    }
+    
     @Override
     public boolean isConnected()
     {
@@ -434,6 +438,11 @@ public class SSHClient extends SocketClient
         super._connectAction_();
         trans.init(_socket_);
         trans.getKeyExchanger().startKex(true);
+    }
+    
+    void forceRekey(boolean waitForDone) throws TransportException
+    {
+        trans.getKeyExchanger().startKex(waitForDone);
     }
     
 }

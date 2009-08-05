@@ -2,45 +2,38 @@ package org.apache.commons.net.ssh.connection;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
 import java.util.Map;
 
 import org.apache.commons.net.ssh.transport.TransportException;
 
-public interface Session
+public interface Session extends Channel
 {
     
-    interface Command
+    interface Command extends Channel
     {
         
-        Boolean canDoFlowControl();
+        String getErrorAsString() throws IOException;
         
-        InputStream getErrorStream();
+        InputStream getErrorStream() throws IOException;
         
         Signal getExitSignal();
         
         Integer getExitStatus();
         
-        InputStream getInputStream();
-        
         String getOutputAsString() throws IOException;
-        
-        OutputStream getOutputStream();
         
         void signal(Signal sig) throws TransportException;
         
     }
     
-    interface Shell
+    interface Shell extends Channel
     {
         
         Boolean canDoFlowControl();
         
+        void changeWindowDimensions(int cols, int rows, int width, int height) throws TransportException;
+        
         InputStream getErrorStream();
-        
-        InputStream getInputStream();
-        
-        OutputStream getOutputStream();
         
     }
     
@@ -86,25 +79,16 @@ public interface Session
         
     }
     
-    interface Subsystem
+    interface Subsystem extends Channel
     {
-        
-        Boolean canDoFlowControl();
-        
+        // should this be here?
         Integer getExitStatus();
-        
-        InputStream getInputStream();
-        
-        OutputStream getOutputStream();
-        
     }
     
     void allocateDefaultPTY() throws ConnectionException, TransportException;
     
     void allocatePTY(String term, int cols, int rows, int width, int height, Map<PTYMode, Integer> modes)
             throws ConnectionException, TransportException;
-    
-    void changeWindowDimensions(int cols, int rows, int width, int height) throws TransportException;
     
     void close() throws ConnectionException, TransportException;
     
@@ -121,7 +105,5 @@ public interface Session
     
     void startX11Forwarding(boolean singleConnection, String authProto, String authCookie, int screen,
             ConnectListener listener) throws ConnectionException, TransportException;
-    
-    void waitForClose() throws ConnectionException;
     
 }

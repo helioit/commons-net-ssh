@@ -207,14 +207,14 @@ public interface Constants
             this.b = (byte) b;
         }
         
+        public boolean geq(int num)
+        {
+            return b >= num;
+        }
+        
         public boolean gt(int num)
         {
             return b > num;
-        }
-        
-        public boolean lt(int num)
-        {
-            return b < num;
         }
         
         public boolean in(int x, int y)
@@ -222,14 +222,14 @@ public interface Constants
             return b >= x && b <= y;
         }
         
-        public boolean geq(int num)
-        {
-            return b >= num;
-        }
-        
         public boolean leq(int num)
         {
             return b <= num;
+        }
+        
+        public boolean lt(int num)
+        {
+            return b < num;
         }
         
         public byte toByte()

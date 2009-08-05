@@ -41,9 +41,12 @@ public class ConnectionProtocol extends AbstractService implements ConnectionSer
 {
     
     protected final AtomicInteger nextID = new AtomicInteger();
+    
     protected final Map<Integer, Channel> channels = new ConcurrentHashMap<Integer, Channel>();
+    
     protected final Map<String, ForwardedChannelOpener> openers =
             new ConcurrentHashMap<String, ForwardedChannelOpener>();
+    
     protected final Queue<Future<Buffer, ConnectionException>> globalReqs =
             new LinkedList<Future<Buffer, ConnectionException>>();
     
@@ -135,7 +138,7 @@ public class ConnectionProtocol extends AbstractService implements ConnectionSer
             }
         
         else
-            throw new TransportException(DisconnectReason.PROTOCOL_ERROR, "Not an ssh-connection packet");
+            throw new TransportException(DisconnectReason.PROTOCOL_ERROR, "Not a connection layer packet");
     }
     
     public synchronized void join() throws InterruptedException
@@ -219,8 +222,9 @@ public class ConnectionProtocol extends AbstractService implements ConnectionSer
     
     protected void sendOpenFailure(int recipient, int reasonCode, String message) throws TransportException
     {
-        trans.writePacket(new Buffer(Message.CHANNEL_OPEN_FAILURE).putInt(recipient).putInt(reasonCode)
+        trans.writePacket(new Buffer(Message.CHANNEL_OPEN_FAILURE) //
+                                                                  .putInt(recipient) //
+                                                                  .putInt(reasonCode) //
                                                                   .putString(message));
     }
-    
 }

@@ -50,9 +50,10 @@ public interface NamedFactory<T>
          */
         public static <T> T create(List<NamedFactory<T>> factories, String name)
         {
-            for (NamedFactory<T> f : factories)
-                if (f.getName().equals(name))
-                    return f.create();
+            if (factories != null)
+                for (NamedFactory<T> f : factories)
+                    if (f.getName().equals(name))
+                        return f.create();
             return null;
         }
         
