@@ -27,31 +27,6 @@ public class SCPDownloadClient extends SCPClient
         this.modeSetter = modeSetter == null ? new DefaultModeSetter() : modeSetter;
     }
     
-    protected boolean doCopy(File f) throws IOException
-    {
-        String msg = readMessage();
-        String bufferedTMsg = null;
-        switch (msg.charAt(0))
-        {
-            case 'T':
-                bufferedTMsg = msg;
-                sendOK();
-                break;
-            case 'C':
-                processIncomingFile(msg, bufferedTMsg, f);
-                break;
-            case 'D':
-                processIncomingDirectory(msg, bufferedTMsg, f);
-                break;
-            case 'E':
-                return true;
-            default:
-                // TODO: send error to remote scp, then raise IOEx
-                assert false;
-        }
-        return false;
-    }
-    
     protected void init(String source) throws ConnectionException, TransportException
     {
         List<String> args = new LinkedList<String>();
@@ -89,7 +64,39 @@ public class SCPDownloadClient extends SCPClient
         return cmd.substring(2);
     }
     
-    protected void processIncomingDirectory(String dMsg, String tMsg, File f) throws IOException
+    protected boolean process(String msg, File f) throws IOException
+    {
+        if (!(msg.length() > 1))
+            throw new IOException("Could not parse message: " + msg);
+        
+        String bufferedTMsg = null;
+        
+        switch (msg.charAt(0))
+        {
+            case 'T':
+                bufferedTMsg = msg;
+                sendOK();
+                break;
+            case 'C':
+                processRegularFile(msg, bufferedTMsg, f);
+                break;
+            case 'D':
+                processDirectory(msg, bufferedTMsg, f);
+                break;
+            case 'E':
+                return true;
+            case (char) 1:
+                addWarning(msg.substring(1));
+                break;
+            default:
+                // TODO: send error to remote scp, then raise IOEx
+                assert false;
+        }
+        
+        return false;
+    }
+    
+    protected void processDirectory(String dMsg, String tMsg, File f) throws IOException
     {
         String[] dMsgParts = tokenize(dMsg, 3);
         String perms = parsePermissions(dMsgParts[0]);
@@ -112,13 +119,13 @@ public class SCPDownloadClient extends SCPClient
         
         sendOK();
         
-        while (!doCopy(f))
+        while (!process(readMessage(), f))
             ;
         
         sendOK();
     }
     
-    protected void processIncomingFile(String cMsg, String tMsg, File f) throws IOException
+    protected void processRegularFile(String cMsg, String tMsg, File f) throws IOException
     {
         String[] cMsgParts = tokenize(cMsg, 3);
         String perms = parsePermissions(cMsgParts[0]);
@@ -137,13 +144,13 @@ public class SCPDownloadClient extends SCPClient
         scp.ensureLocalWinAtLeast((int) Math.min(length, Integer.MAX_VALUE));
         
         FileOutputStream fos = new FileOutputStream(f);
-        sendOK();
+        
+        sendOK(); // tell remote to start sending
         transfer(scp.getInputStream(), fos, scp.getLocalMaxPacketSize(), length);
-        checkResponseOK();
+        checkResponseOK(); // confirm transfer was fine accd. to remote
+        sendOK(); // tell remote alles gut from our end as well
         
         IOUtils.closeQuietly(fos);
-        
-        sendOK();
     }
     
     protected void setTimes(String tMsg, File f) throws IOException
@@ -160,7 +167,11 @@ public class SCPDownloadClient extends SCPClient
     {
         init(sourcePath);
         sendOK();
-        doCopy(new File(targetPath));
+        File target = new File(targetPath);
+        String msg = readMessage(true);
+        do
+            process(msg, target);
+        while ((msg = readMessage(false)) != null);
     }
     
     protected String[] tokenize(String msg, int numPartsExpected) throws IOException

@@ -3,6 +3,7 @@ package org.apache.commons.net.ssh.scp;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.LinkedList;
 import java.util.List;
 
 import org.apache.commons.net.ssh.SSHClient;
@@ -32,7 +33,7 @@ public abstract class SCPClient
     {
         SOURCE('f'), SINK('t'), RECURSIVE('r'), VERBOSE('v'), PRESERVE_MODES('p'), QUIET('q');
         
-        char a;
+        private char a;
         
         private Arg(char a)
         {
@@ -55,6 +56,8 @@ public abstract class SCPClient
     
     protected Command scp;
     
+    protected LinkedList<String> warnings = new LinkedList<String>();
+    
     protected SCPClient(SSHClient host)
     {
         this.host = host;
@@ -69,6 +72,12 @@ public abstract class SCPClient
             ret = exit();
         }
         return ret;
+    }
+    
+    protected void addWarning(String warning)
+    {
+        log.warn(warning);
+        warnings.add(warning);
     }
     
     protected void checkResponseOK() throws IOException
@@ -86,6 +95,8 @@ public abstract class SCPClient
             case 0: // OK
                 return;
             case 1:
+                addWarning(readMessage());
+                break;
             case 2:
                 throw new SCPException("Remote SCP command had error: " + readMessage());
             default:
@@ -117,25 +128,23 @@ public abstract class SCPClient
     
     protected String readMessage() throws IOException
     {
-        StringBuilder sb = new StringBuilder();
-        char ch;
-        while ((ch = (char) scp.getInputStream().read()) != LF) {
-            if (ch == -1) {
-                scp.close();
-                throw new SCPException("EOF while reading message");
-            }
-            sb.append(ch);
-        }
-        log.debug("Read message: {}", sb);
-        return sb.toString();
+        return readMessage(true);
     }
     
-    protected void sendMessage(String msg) throws IOException
+    protected String readMessage(boolean errOnEOF) throws IOException
     {
-        log.debug("Sending message: {}", msg);
-        scp.getOutputStream().write((msg + LF).getBytes());
-        scp.getOutputStream().flush();
-        checkResponseOK();
+        StringBuilder sb = new StringBuilder();
+        int x;
+        while ((x = scp.getInputStream().read()) != LF)
+            if (x == -1) {
+                if (errOnEOF)
+                    throw new IOException("EOF while reading message");
+                else
+                    return null;
+            } else
+                sb.append((char) x);
+        log.debug("Read message: {}", sb);
+        return sb.toString();
     }
     
     protected void sendOK() throws IOException
