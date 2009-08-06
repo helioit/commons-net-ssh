@@ -1,12 +1,12 @@
 package examples.ssh;
 
 import org.apache.commons.net.ssh.SSHClient;
-import org.apache.commons.net.ssh.scp.SCPUploadClient;
+import org.apache.commons.net.ssh.scp.SCPDownloadClient;
 import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.ConsoleAppender;
 import org.apache.log4j.PatternLayout;
 
-public class SCPUpload
+public class SCPDownload
 {
     
     static {
@@ -20,7 +20,7 @@ public class SCPUpload
         ssh.connect("localhost");
         try {
             ssh.authPublickey(System.getProperty("user.name"));
-            new SCPUploadClient(ssh).copy("/home/shikhar/logs", "/tmp/");
+            new SCPDownloadClient(ssh).copy("logs", "/tmp/");
         } finally {
             ssh.disconnect();
         }
