@@ -104,6 +104,7 @@ public class UserAuthProtocol extends AbstractService implements UserAuthService
                 log.error("Saving for later - {}", e.toString());
                 savedEx.push(e);
             } finally {
+                method = null;
                 lock.unlock();
             }
         }
@@ -143,7 +144,7 @@ public class UserAuthProtocol extends AbstractService implements UserAuthService
         return partialSuccess;
     }
     
-    public void handle(Message msg, Buffer buf) throws UserAuthException, TransportException
+    public void handle(Message msg, Buffer buf) throws SSHException
     {
         // ssh-userauth packets have message numbers between 50-80
         if (!msg.in(50, 80))
@@ -166,7 +167,11 @@ public class UserAuthProtocol extends AbstractService implements UserAuthService
                         result.set(false);
                 } else {
                     log.debug("Asking {} method to handle {} packet", method.getName(), msg);
-                    method.handle(msg, buf);
+                    try {
+                        method.handle(msg, buf);
+                    } catch (UserAuthException e) {
+                        result.error(e);
+                    }
                 }
             } else
                 trans.sendUnimplemented();

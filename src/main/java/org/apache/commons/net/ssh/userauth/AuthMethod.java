@@ -20,8 +20,6 @@ package org.apache.commons.net.ssh.userauth;
 
 import org.apache.commons.net.ssh.PacketHandler;
 import org.apache.commons.net.ssh.transport.TransportException;
-import org.apache.commons.net.ssh.util.Buffer;
-import org.apache.commons.net.ssh.util.Constants.Message;
 
 /**
  * An authentication method of the <a href="http://www.ietf.org/rfc/rfc4252.txt">SSH Authentication
@@ -34,8 +32,6 @@ public interface AuthMethod extends PacketHandler
 {
     
     String getName();
-    
-    void handle(Message cmd, Buffer buf) throws UserAuthException, TransportException;
     
     void init(AuthParams params);
     
