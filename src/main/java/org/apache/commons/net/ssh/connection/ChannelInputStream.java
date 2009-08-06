@@ -42,16 +42,6 @@ public class ChannelInputStream extends InputStream
         eof();
     }
     
-    public void eof()
-    {
-        synchronized (buf) {
-            if (!eof) {
-                eof = true;
-                buf.notifyAll();
-            }
-        }
-    }
-    
     @Override
     public int read() throws IOException
     {
@@ -102,5 +92,15 @@ public class ChannelInputStream extends InputStream
     public String toString()
     {
         return "< ChannelInputStream for Channel #" + chan.getID() + " >";
+    }
+    
+    protected void eof()
+    {
+        synchronized (buf) {
+            if (!eof) {
+                eof = true;
+                buf.notifyAll();
+            }
+        }
     }
 }

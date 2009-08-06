@@ -90,9 +90,9 @@ public abstract class AbstractChannel implements Channel
         close.await(conn.getTimeout());
     }
     
-    public void ensureLocalWinAtLeast(int size) throws ConnectionException
+    public void ensureLocalWinAtLeast(int size) throws TransportException
     {
-        lwin.expand(size);
+        lwin.ensureIsAtLeast(size);
     }
     
     public int getID()

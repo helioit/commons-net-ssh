@@ -35,6 +35,8 @@ public interface Channel extends Closeable, PacketHandler
     
     void close() throws TransportException, ConnectionException;
     
+    void ensureLocalWinAtLeast(int size) throws TransportException;
+    
     int getID();
     
     InputStream getInputStream();
@@ -56,8 +58,6 @@ public interface Channel extends Closeable, PacketHandler
     Transport getTransport();
     
     String getType();
-    
-    void ensureLocalWinAtLeast(int size) throws ConnectionException;
     
     boolean isOpen();
     

@@ -26,18 +26,18 @@ public class LocalWindow extends Window
             growBy(this.size - size);
     }
     
-    public void sendWindowAdjust(int inc) throws TransportException
+    protected synchronized void growBy(int inc) throws TransportException
+    {
+        sendWindowAdjust(inc);
+        expand(inc);
+    }
+    
+    protected synchronized void sendWindowAdjust(int inc) throws TransportException
     {
         log.debug("Sending SSH_MSG_CHANNEL_WINDOW_ADJUST to #{} for {} bytes", chan.getRecipient(), inc);
         chan.getTransport().writePacket(new Buffer(Message.CHANNEL_WINDOW_ADJUST) //
                                                                                  .putInt(chan.getRecipient()) //
                                                                                  .putInt(inc));
-    }
-    
-    protected void growBy(int inc) throws TransportException
-    {
-        sendWindowAdjust(inc);
-        expand(inc);
     }
     
 }

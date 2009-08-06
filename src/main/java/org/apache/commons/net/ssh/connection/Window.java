@@ -18,9 +18,6 @@
  */
 package org.apache.commons.net.ssh.connection;
 
-import org.apache.commons.net.ssh.transport.TransportException;
-import org.apache.commons.net.ssh.util.Buffer;
-import org.apache.commons.net.ssh.util.Constants.Message;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -77,14 +74,6 @@ public class Window
     {
         this.size = this.initSize = initialWinSize;
         this.maxPacketSize = maxPacketSize;
-    }
-    
-    public void sendWindowAdjust(int inc) throws TransportException
-    {
-        log.info("Sending SSH_MSG_CHANNEL_WINDOW_ADJUST to #{} for {} bytes", chan.getRecipient(), inc);
-        chan.getTransport().writePacket(new Buffer(Message.CHANNEL_WINDOW_ADJUST) //
-                                                                                 .putInt(chan.getRecipient()) //
-                                                                                 .putInt(inc));
     }
     
     @Override
