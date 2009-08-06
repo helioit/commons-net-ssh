@@ -437,7 +437,10 @@ public class SSHClient extends SocketClient
     {
         super._connectAction_();
         trans.init(_socket_);
+        
+        long start = System.nanoTime();
         trans.getKeyExchanger().startKex(true);
+        log.info("Key exchange took {} seconds", (System.nanoTime() - start) / 1000000000.0);
     }
     
     void forceRekey(boolean waitForDone) throws TransportException

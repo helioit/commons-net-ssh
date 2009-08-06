@@ -9,6 +9,7 @@ import java.util.List;
 import org.apache.commons.net.ssh.SSHClient;
 import org.apache.commons.net.ssh.connection.ConnectionException;
 import org.apache.commons.net.ssh.transport.TransportException;
+import org.apache.commons.net.ssh.util.IOUtils;
 
 public class SCPUploadClient extends SCPClient
 {
@@ -26,39 +27,35 @@ public class SCPUploadClient extends SCPClient
         this.modeGetter = modeGetter == null ? new DefaultModeGetter() : modeGetter;
     }
     
-    @Override
-    public synchronized int copy(String sourcePath, String targetPath) throws IOException
+    protected void doCopy(File f) throws IOException
     {
-        init(targetPath);
-        copy(new File(sourcePath), true);
-        return exit();
-    }
-    
-    protected void copy(File f, boolean check) throws IOException
-    {
-        if (check)
-            checkResponseOK();
-        
         if (modeGetter.shouldPreserveTimes())
             sendMessage("T" + modeGetter.getLastAccessTime(f) + " 0 " + modeGetter.getLastAccessTime(f) + " 0");
         
         if (f.isDirectory()) {
+            
             log.info("Entering directory `{}`", f.getName());
             sendMessage("D0" + modeGetter.getPermissions(f) + " 0 " + f.getName());
+            
             for (File child : f.listFiles())
-                copy(child, false);
+                doCopy(child);
+            
             sendMessage("E");
             log.info("Exiting directory `{}`", f.getName());
-        }
-
-        else if (f.isFile()) {
+            
+        } else if (f.isFile()) {
+            
             sendMessage("C0" + modeGetter.getPermissions(f) + " " + f.length() + " " + f.getName());
             log.info("Sending `{}`", f.getName());
-            doCopy(new FileInputStream(f), scp.getOutputStream(), scp.getRemoteMaxPacketSize(), f.length());
+            
+            FileInputStream fis = new FileInputStream(f);
+            transfer(fis, scp.getOutputStream(), scp.getRemoteMaxPacketSize(), f.length());
+            IOUtils.closeQuietly(fis);
+            
+            sendOK();
             checkResponseOK();
-        }
-
-        else
+            
+        } else
             throw new IOException("File type not supported for SCP: " + f);
     }
     
@@ -69,6 +66,14 @@ public class SCPUploadClient extends SCPClient
         args.add(Arg.RECURSIVE.toString());
         args.add(target == null || target.equals("") ? "." : target);
         execSCPWith(args);
+    }
+    
+    @Override
+    protected synchronized void startCopy(String sourcePath, String targetPath) throws IOException
+    {
+        init(targetPath);
+        checkResponseOK();
+        doCopy(new File(sourcePath));
     }
     
 }

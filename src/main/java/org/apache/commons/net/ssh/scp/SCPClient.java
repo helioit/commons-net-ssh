@@ -14,7 +14,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * 
  * @author shikhar
  * @see <a href="http://blogs.sun.com/janp/entry/how_the_scp_protocol_works">SCP Protocol</a>
  */
@@ -31,22 +30,20 @@ public abstract class SCPClient
     
     protected static enum Arg
     {
+        SOURCE('f'), SINK('t'), RECURSIVE('r'), VERBOSE('v'), PRESERVE_MODES('p'), QUIET('q');
         
-        SOURCE('f'), SINK('t'), RECURSIVE('r'), VERBOSE('v'), MODE_PRESERVING('p');
+        char a;
         
-        char x;
-        
-        private Arg(char x)
+        private Arg(char a)
         {
-            this.x = x;
+            this.a = a;
         }
         
         @Override
         public String toString()
         {
-            return "-" + x;
+            return "-" + a;
         }
-        
     }
     
     protected static final char LF = '\n';
@@ -58,12 +55,21 @@ public abstract class SCPClient
     
     protected Command scp;
     
-    public SCPClient(SSHClient host)
+    protected SCPClient(SSHClient host)
     {
         this.host = host;
     }
     
-    public abstract int copy(String source, String target) throws IOException;
+    public synchronized int copy(String sourcePath, String targetPath) throws IOException
+    {
+        int ret = -1;
+        try {
+            startCopy(sourcePath, targetPath);
+        } finally {
+            ret = exit();
+        }
+        return ret;
+    }
     
     protected void checkResponseOK() throws IOException
     {
@@ -72,34 +78,19 @@ public abstract class SCPClient
         switch (code)
         {
             case -1:
-                String err = scp.getErrorAsString();
-                if (err != "")
-                    throw new SCPException("Remote SCP command returned error: " + err);
+                String stderr = scp.getErrorAsString();
+                if (stderr != "")
+                    stderr = ". Additional info: " + stderr;
                 else
-                    throw new SCPException("EOF while expecting response to protocol message");
+                    throw new SCPException("EOF while expecting response to protocol message" + stderr);
             case 0: // OK
                 return;
             case 1:
-                log.warn("Remote SCP warning: {}", readMessage());
-                break;
             case 2:
-                throw new SCPException("Remote SCP command returned error: " + readMessage());
+                throw new SCPException("Remote SCP command had error: " + readMessage());
             default:
                 throw new SCPException("Received unknown response code");
         }
-    }
-    
-    protected void doCopy(InputStream in, OutputStream out, int bufSize, long len) throws IOException
-    {
-        byte[] buf = new byte[bufSize];
-        long count = 0;
-        int read;
-        while ((read = in.read(buf)) != -1 && count < len) {
-            out.write(buf, 0, read);
-            out.flush();
-            count += read;
-        }
-        sendOK();
     }
     
     protected synchronized void execSCPWith(List<String> args) throws ConnectionException, TransportException
@@ -114,7 +105,7 @@ public abstract class SCPClient
     {
         if (scp != null) {
             scp.close();
-            if (scp.getExitStatus() != 0)
+            if (scp.getExitStatus() != null && scp.getExitStatus() != 0)
                 log.warn("SCP exit status: {}", scp.getExitStatus());
             if (scp.getExitSignal() != null)
                 log.warn("SCP exit signal: {}", scp.getExitSignal());
@@ -126,15 +117,16 @@ public abstract class SCPClient
     
     protected String readMessage() throws IOException
     {
-        char ch;
         StringBuilder sb = new StringBuilder();
+        char ch;
         while ((ch = (char) scp.getInputStream().read()) != LF) {
             if (ch == -1) {
                 scp.close();
-                throw new SCPException("EOF while reading error message");
+                throw new SCPException("EOF while reading message");
             }
             sb.append(ch);
         }
+        log.debug("Read message: {}", sb);
         return sb.toString();
     }
     
@@ -142,12 +134,33 @@ public abstract class SCPClient
     {
         log.debug("Sending message: {}", msg);
         scp.getOutputStream().write((msg + LF).getBytes());
+        scp.getOutputStream().flush();
+        checkResponseOK();
     }
     
     protected void sendOK() throws IOException
     {
         log.debug("Sending OK");
         scp.getOutputStream().write(0);
+        scp.getOutputStream().flush();
+    }
+    
+    protected abstract void startCopy(String sourcePath, String targetPath) throws IOException;
+    
+    protected void transfer(InputStream in, OutputStream out, int bufSize, long len) throws IOException
+    {
+        byte[] buf = new byte[bufSize];
+        long count = 0;
+        int read;
+        long startTime = System.nanoTime();
+        while ((read = in.read(buf, 0, (int) Math.min(bufSize, len - count))) != -1 && count < len) {
+            out.write(buf, 0, read);
+            out.flush();
+            count += read;
+        }
+        log.info("Transferred @ {} KiB/s", (count / (1024 * (System.nanoTime() - startTime) / 1000000000.0)));
+        if (read == -1 && !(count == len))
+            throw new IOException("Had EOF before transfer completed");
     }
     
 }
