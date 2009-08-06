@@ -134,11 +134,12 @@ public class TransportProtocol implements Transport, PacketHandler
     public TransportProtocol(Config config, KeyExchanger kexer, Encoder encoder, Decoder decoder)
     {
         this.config = config;
-        clientID = "SSH-2.0-" + config.getVersion();
-        prng = config.getRandomFactory().create();
+        this.prng = config.getRandomFactory().create();
         this.kexer = kexer == null ? new KeyExchanger(this) : kexer;
         this.encoder = encoder == null ? new Encoder(prng) : encoder;
         this.decoder = decoder == null ? new Decoder(this) : decoder;
+        
+        clientID = "SSH-2.0-" + config.getVersion();
     }
     
     public synchronized void addHostKeyVerifier(HostKeyVerifier hkv)
@@ -327,12 +328,7 @@ public class TransportProtocol implements Transport, PacketHandler
     
     public boolean isRunning()
     {
-        lock.lock();
-        try {
-            return !close.isSet() && dispatcher.isAlive();
-        } finally {
-            lock.unlock();
-        }
+        return !close.isSet();
     }
     
     public synchronized void reqService(Service service) throws TransportException
@@ -417,9 +413,9 @@ public class TransportProtocol implements Transport, PacketHandler
     
     public long writePacket(Buffer payload) throws TransportException
     {
-        // Ensure packets sent in correct order
         lock.lock();
         try {
+            
             if (kexer.isKexOngoing()) {
                 // Only transport layer packets (1 to 49) allowed except SERVICE_REQUEST
                 Message m = Message.fromByte(payload.array()[payload.rpos()]);
@@ -427,6 +423,7 @@ public class TransportProtocol implements Transport, PacketHandler
                     kexer.waitForDone();
             } else if (encoder.getSequenceNumber() == 0)
                 kexer.startKex(true);
+            
             long seq = encoder.encode(payload);
             try {
                 output.write(payload.array(), payload.rpos(), payload.available());
@@ -434,6 +431,7 @@ public class TransportProtocol implements Transport, PacketHandler
                 throw new TransportException(e);
             }
             return seq;
+            
         } finally {
             lock.unlock();
         }
@@ -441,6 +439,7 @@ public class TransportProtocol implements Transport, PacketHandler
     
     private void close()
     {
+        log.info("Killing dispatcher thread");
         dispatcher.interrupt();
         try {
             socket.shutdownInput();
@@ -456,38 +455,30 @@ public class TransportProtocol implements Transport, PacketHandler
     @SuppressWarnings("unchecked")
     private void die(IOException ex)
     {
-        
         log.error("Dying because - {}", ex.toString());
         
         SSHException causeOfDeath = SSHException.chainer.chain(ex);
         
-        lock.lock();
+        // Throw the exception in any thread waiting for state change
+        Event.Util.<TransportException> notifyError(causeOfDeath, close, serviceAccept);
+        
+        kexer.notifyError(causeOfDeath);
+        
+        log.debug("Notifying {}", getService());
         try {
-            
-            // Throw the exception in any thread waiting for state change
-            Event.Util.<TransportException> notifyError(causeOfDeath, close, serviceAccept);
-            
-            kexer.notifyError(causeOfDeath);
-            
-            log.debug("Notifying {}", getService());
-            try {
-                getService().notifyError(causeOfDeath);
-            } catch (Exception ignored) {
-                log.debug("Service spewed - {}", ignored.toString());
-            }
-            setService(nullService);
-            
-            final boolean gotRequiredInfo = causeOfDeath.getDisconnectReason() != DisconnectReason.UNKNOWN;
-            final boolean didNotReceiveDisconnect = msg != Message.DISCONNECT;
-            
-            if (gotRequiredInfo && didNotReceiveDisconnect)
-                disconnect(causeOfDeath.getDisconnectReason(), causeOfDeath.getMessage());
-            else
-                close();
-            
-        } finally {
-            lock.unlock();
+            getService().notifyError(causeOfDeath);
+        } catch (Exception ignored) {
+            log.debug("Service spewed - {}", ignored.toString());
         }
+        setService(nullService);
+        
+        final boolean gotRequiredInfo = causeOfDeath.getDisconnectReason() != DisconnectReason.UNKNOWN;
+        final boolean didNotReceiveDisconnect = msg != Message.DISCONNECT;
+        
+        if (gotRequiredInfo && didNotReceiveDisconnect)
+            disconnect(causeOfDeath.getDisconnectReason(), causeOfDeath.getMessage());
+        
+        close();
     }
     
     /**
@@ -513,7 +504,10 @@ public class TransportProtocol implements Transport, PacketHandler
      * sent upon connection by the server. It takes the form of, e.g. "SSH-2.0-OpenSSH_ver".
      * <p>
      * Several concerns are taken care of here, e.g. verifying protocol version, correct line
-     * endings as specified in RFC and such.
+     * endings as specified in RFC and such. It is not very efficient but this is only done once.
+     * <p>
+     * It should be called from a loop like {@code String id = null; while ((id =
+     * readIdentification) == null) ; }
      * 
      * @param buffer
      * @return
@@ -525,13 +519,13 @@ public class TransportProtocol implements Transport, PacketHandler
         
         byte[] data = new byte[256];
         for (;;) {
-            int savedPos = buffer.rpos();
+            int savedBufPos = buffer.rpos();
             int pos = 0;
             boolean needLF = false;
             for (;;) {
                 if (buffer.available() == 0) {
                     // Need more data, so undo reading and return null
-                    buffer.rpos(savedPos);
+                    buffer.rpos(savedBufPos);
                     return null;
                 }
                 byte b = buffer.getByte();

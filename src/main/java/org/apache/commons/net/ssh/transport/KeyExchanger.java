@@ -18,6 +18,7 @@
  */
 package org.apache.commons.net.ssh.transport;
 
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.commons.net.ssh.NamedFactory;
@@ -57,7 +58,7 @@ public class KeyExchanger implements PacketHandler
     protected final Logger log = LoggerFactory.getLogger(getClass());
     protected final Transport trans;
     
-    protected volatile boolean kexOngoing = true;
+    protected AtomicBoolean kexOngoing = new AtomicBoolean();
     /** What we are expecting from the next packet */
     protected Expected expected = Expected.KEXINIT;
     
@@ -96,12 +97,9 @@ public class KeyExchanger implements PacketHandler
     protected final Event<TransportException> done = newEvent("kex done");
     protected final Event<TransportException> kexInitSent = newEvent("kexinit sent");
     
-    protected int timeout;
-    
     public KeyExchanger(Transport trans)
     {
         this.trans = trans;
-        timeout = trans.getTimeout() * 3;
     }
     
     /**
@@ -116,47 +114,37 @@ public class KeyExchanger implements PacketHandler
         return sessionID;
     }
     
-    public int getTimeout()
-    {
-        return timeout;
-    }
-    
     public void handle(Message msg, Buffer buf) throws TransportException
     {
         switch (expected)
         {
             
             case KEXINIT:
-                ensure(msg, Message.KEXINIT);
+                ensureReceivedMatchesExpected(msg, Message.KEXINIT);
                 log.info("Received SSH_MSG_KEXINIT");
-                if (!isKexOngoing()) // => server-initated key exchange
-                    startKex(false);
-                else
-                    kexInitSent.await(timeout);
+                startKex(false);
+                kexInitSent.await(trans.getTimeout());
                 gotKexInit(buf);
                 expected = Expected.FOLLOWUP;
                 break;
             
             case FOLLOWUP:
-                checkKexOngoing();
+                ensureKexOngoing();
                 log.info("Received kex followup data");
-                buf.rpos(buf.rpos() - 1);
+                buf.rpos(buf.rpos() - 1); // un-read the message byte
                 if (kex.next(buf)) {
-                    // Basically done; verify host key
                     trans.verifyHost(kex.getHostKey());
-                    // Declare all is well
                     sendNewKeys();
                     expected = Expected.NEWKEYS;
                 }
                 break;
             
             case NEWKEYS:
-                ensure(msg, Message.NEWKEYS);
-                checkKexOngoing();
+                ensureReceivedMatchesExpected(msg, Message.NEWKEYS);
+                ensureKexOngoing();
                 log.info("Received SSH_MSG_NEWKEYS");
                 gotNewKeys();
-                done.set();
-                kexOngoing = false;
+                setKexDone();
                 expected = Expected.KEXINIT;
                 break;
             
@@ -173,39 +161,28 @@ public class KeyExchanger implements PacketHandler
     
     public boolean isKexOngoing()
     {
-        return kexOngoing;
+        return kexOngoing.get();
     }
     
+    @SuppressWarnings("unchecked")
     public void notifyError(SSHException causeOfDeath)
     {
-        kexInitSent.error(causeOfDeath);
-        done.error(causeOfDeath);
-    }
-    
-    public void setTimeout(int timeout)
-    {
-        this.timeout = timeout;
+        Event.Util.<TransportException> notifyError(causeOfDeath, kexInitSent, done);
     }
     
     public void startKex(boolean waitForDone) throws TransportException
     {
-        done.clear();
-        setKexOngoing(true);
-        sendKexInit();
+        if (!kexOngoing.getAndSet(true)) {
+            done.clear();
+            sendKexInit();
+        }
         if (waitForDone)
             waitForDone();
     }
     
     public void waitForDone() throws TransportException
     {
-        done.await(timeout);
-    }
-    
-    protected synchronized void checkKexOngoing() throws TransportException
-    {
-        if (!isKexOngoing())
-            throw new TransportException(DisconnectReason.PROTOCOL_ERROR,
-                                         "Key exchange packet received when key exchange was not ongoing");
+        done.await(trans.getTimeout());
     }
     
     /**
@@ -229,7 +206,14 @@ public class KeyExchanger implements PacketHandler
         };
     }
     
-    protected void ensure(Message got, Message expected) throws TransportException
+    protected synchronized void ensureKexOngoing() throws TransportException
+    {
+        if (!isKexOngoing())
+            throw new TransportException(DisconnectReason.PROTOCOL_ERROR,
+                                         "Key exchange packet received when key exchange was not ongoing");
+    }
+    
+    protected void ensureReceivedMatchesExpected(Message got, Message expected) throws TransportException
     {
         if (got != expected)
             throw new TransportException(DisconnectReason.PROTOCOL_ERROR, "Was expecting " + expected);
@@ -435,9 +419,11 @@ public class KeyExchanger implements PacketHandler
         trans.writePacket(new Buffer(Message.NEWKEYS));
     }
     
-    protected void setKexOngoing(boolean val)
+    protected void setKexDone()
     {
-        kexOngoing = val;
+        kexOngoing.set(false);
+        kexInitSent.clear();
+        done.set();
     }
     
 }
