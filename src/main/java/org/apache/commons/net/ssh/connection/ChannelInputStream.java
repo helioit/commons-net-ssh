@@ -15,14 +15,14 @@ public class ChannelInputStream extends InputStream
 {
     
     protected final Channel chan;
-    protected final Window win;
+    protected final LocalWindow win;
     
     protected final Buffer buf = new Buffer();
     protected final byte[] b = new byte[1];
     
     protected boolean eof;
     
-    public ChannelInputStream(Channel chan, Window win)
+    public ChannelInputStream(Channel chan, LocalWindow win)
     {
         this.chan = chan;
         this.win = win;

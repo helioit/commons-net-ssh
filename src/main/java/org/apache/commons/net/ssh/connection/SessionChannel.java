@@ -70,6 +70,7 @@ public class SessionChannel extends AbstractDirectChannel implements Session, Se
     
     public Command exec(String command) throws ConnectionException, TransportException
     {
+        log.info("Will request to exec `{}`", command);
         sendChannelRequest("exec", true, new Buffer().putString(command)).await(conn.getTimeout());
         return this;
     }
@@ -140,6 +141,7 @@ public class SessionChannel extends AbstractDirectChannel implements Session, Se
     
     public Subsystem startSubsysytem(String name) throws ConnectionException, TransportException
     {
+        log.info("Will request `{}` subsystem", name);
         sendChannelRequest("subsystem", true, new Buffer().putString(name)).await(conn.getTimeout());
         return this;
     }

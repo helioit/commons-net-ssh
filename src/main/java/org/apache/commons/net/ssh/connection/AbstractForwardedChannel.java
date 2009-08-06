@@ -1,5 +1,6 @@
 package org.apache.commons.net.ssh.connection;
 
+import org.apache.commons.net.ssh.connection.OpenFailException.Reason;
 import org.apache.commons.net.ssh.transport.TransportException;
 import org.apache.commons.net.ssh.util.Buffer;
 import org.apache.commons.net.ssh.util.Constants.Message;
@@ -41,11 +42,11 @@ public abstract class AbstractForwardedChannel extends AbstractChannel implement
         return origPort;
     }
     
-    public void reject(int reasonCode, String message) throws TransportException
+    public void reject(Reason reason, String message) throws TransportException
     {
         log.info("Rejecting `{}` channel: {}", type, message);
         trans.writePacket(new Buffer(Message.CHANNEL_OPEN_FAILURE) //
-                                                                  .putInt(reasonCode) //
+                                                                  .putInt(reason.getCode()) //
                                                                   .putString(message));
     }
     

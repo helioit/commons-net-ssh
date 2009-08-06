@@ -39,23 +39,14 @@ public abstract class AbstractDirectChannel extends AbstractChannel implements C
     @Override
     protected void gotUnknown(Message cmd, Buffer buf) throws TransportException
     {
-        switch (cmd)
-        {
-            case CHANNEL_OPEN_CONFIRMATION:
-            {
-                init(buf.getInt(), buf.getInt(), buf.getInt());
-                open.set();
-                break;
-            }
-            case CHANNEL_OPEN_FAILURE:
-            {
-                open.error(new OpenFailException(type, buf.getInt(), buf.getString()));
-                conn.forget(this);
-                break;
-            }
-            default:
-                super.gotUnknown(cmd, buf);
-        }
+        if (cmd == Message.CHANNEL_OPEN_CONFIRMATION) {
+            init(buf.getInt(), buf.getInt(), buf.getInt());
+            open.set();
+        } else if (cmd == Message.CHANNEL_OPEN_FAILURE) {
+            open.error(new OpenFailException(type, buf.getInt(), buf.getString()));
+            conn.forget(this);
+        } else
+            super.gotUnknown(cmd, buf);
     }
     
 }

@@ -166,10 +166,10 @@ public class RemotePortForwarder implements ForwardedChannelOpener
                 if (chan.isOpen())
                     chan.sendClose();
                 else
-                    chan.reject(OpenFailException.CONNECT_FAILED, "");
+                    chan.reject(OpenFailException.Reason.CONNECT_FAILED, "");
             }
         else
-            chan.reject(OpenFailException.ADMINISTRATIVELY_PROHIBITED, "Forwarding was not requested on ["
+            chan.reject(OpenFailException.Reason.ADMINISTRATIVELY_PROHIBITED, "Forwarding was not requested on ["
                     + chan.getParentForward() + "]");
     }
     

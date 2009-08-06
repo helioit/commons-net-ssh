@@ -51,8 +51,8 @@ public abstract class AbstractChannel implements Channel
     protected final ConnectionService conn;
     protected final int id;
     
-    protected final Window lwin = new Window(this, true);
-    protected final Window rwin = new Window(this, false);
+    protected final LocalWindow lwin = new LocalWindow(this);
+    protected final RemoteWindow rwin = new RemoteWindow(this);
     
     protected Queue<Event<ConnectionException>> reqs = new LinkedList<Event<ConnectionException>>();
     
@@ -88,6 +88,11 @@ public abstract class AbstractChannel implements Channel
     {
         sendClose();
         close.await(conn.getTimeout());
+    }
+    
+    public void ensureLocalWinAtLeast(int size) throws ConnectionException
+    {
+        lwin.expand(size);
     }
     
     public int getID()
@@ -145,7 +150,7 @@ public abstract class AbstractChannel implements Channel
         return type;
     }
     
-    public void handle(Message cmd, Buffer buf) throws ConnectionException, TransportException
+    public void handle(Message cmd, Buffer buf) throws SSHException
     {
         switch (cmd)
         {
@@ -196,10 +201,13 @@ public abstract class AbstractChannel implements Channel
             case CHANNEL_CLOSE:
             {
                 log.info("Got close");
-                sendClose();
-                close.set();
-                closeStreams();
-                conn.forget(this);
+                try {
+                    closeStreams();
+                    sendClose();
+                } finally {
+                    close.set();
+                    conn.forget(this);
+                }
                 break;
             }
                 

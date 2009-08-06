@@ -22,7 +22,6 @@ import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.io.OutputStream;
 
-import org.apache.commons.net.ssh.transport.TransportException;
 import org.apache.commons.net.ssh.util.Buffer;
 import org.apache.commons.net.ssh.util.Constants.Message;
 
@@ -33,7 +32,7 @@ public class ChannelOutputStream extends OutputStream
 {
     
     protected final Channel chan;
-    protected final Window win;
+    protected final RemoteWindow win;
     
     protected final byte[] b = new byte[1];
     
@@ -41,19 +40,22 @@ public class ChannelOutputStream extends OutputStream
     protected int bufferLength;
     protected boolean closed;
     
-    public ChannelOutputStream(Channel chan, Window win)
+    public ChannelOutputStream(Channel chan, RemoteWindow win)
     {
         this.chan = chan;
         this.win = win;
     }
     
     @Override
-    public synchronized void close() throws ConnectionException, TransportException
+    public synchronized void close() throws IOException
     {
-        if (!closed) {
-            closed = true;
-            chan.sendEOF();
-        }
+        if (!closed)
+            try {
+                flush();
+            } finally {
+                closed = true;
+                chan.sendEOF();
+            }
     }
     
     @Override

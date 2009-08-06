@@ -26,6 +26,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.net.ssh.AbstractService;
 import org.apache.commons.net.ssh.SSHException;
+import org.apache.commons.net.ssh.connection.OpenFailException.Reason;
 import org.apache.commons.net.ssh.transport.Transport;
 import org.apache.commons.net.ssh.transport.TransportException;
 import org.apache.commons.net.ssh.util.Buffer;
@@ -109,7 +110,7 @@ public class ConnectionProtocol extends AbstractService implements ConnectionSer
         return windowSize;
     }
     
-    public void handle(Message msg, Buffer buf) throws ConnectionException, TransportException
+    public void handle(Message msg, Buffer buf) throws SSHException
     {
         if (msg.in(91, 100))
             getChannel(buf).handle(msg, buf);
@@ -130,7 +131,7 @@ public class ConnectionProtocol extends AbstractService implements ConnectionSer
                         openers.get(type).handleOpen(buf);
                     else {
                         log.warn("No opener found for `{}` CHANNEL_OPEN request -- rejecting", type);
-                        sendOpenFailure(buf.getInt(), OpenFailException.UNKNOWN_CHANNEL_TYPE, "");
+                        sendOpenFailure(buf.getInt(), OpenFailException.Reason.UNKNOWN_CHANNEL_TYPE, "");
                     }
                     break;
                 default:
@@ -220,11 +221,12 @@ public class ConnectionProtocol extends AbstractService implements ConnectionSer
             throw new ConnectionException(DisconnectReason.PROTOCOL_ERROR);
     }
     
-    protected void sendOpenFailure(int recipient, int reasonCode, String message) throws TransportException
+    protected void sendOpenFailure(int recipient, Reason reason, String message) throws TransportException
     {
         trans.writePacket(new Buffer(Message.CHANNEL_OPEN_FAILURE) //
                                                                   .putInt(recipient) //
-                                                                  .putInt(reasonCode) //
+                                                                  .putInt(reason.getCode()) //
                                                                   .putString(message));
     }
+    
 }

@@ -28,7 +28,7 @@ public class LocalPortForwarder
         
         private void start() throws IOException
         {
-            sock.setSendBufferSize(rwin.getMaxPacketSize());
+            sock.setSendBufferSize(getRemoteMaxPacketSize());
             
             ErrorCallback chanCloser = Pipe.closeOnErrorCallback(this);
             

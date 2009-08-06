@@ -6,10 +6,9 @@ import java.io.OutputStream;
 
 import org.apache.commons.net.ssh.PacketHandler;
 import org.apache.commons.net.ssh.SSHException;
+import org.apache.commons.net.ssh.connection.OpenFailException.Reason;
 import org.apache.commons.net.ssh.transport.Transport;
 import org.apache.commons.net.ssh.transport.TransportException;
-import org.apache.commons.net.ssh.util.Buffer;
-import org.apache.commons.net.ssh.util.Constants;
 
 public interface Channel extends Closeable, PacketHandler
 {
@@ -30,7 +29,7 @@ public interface Channel extends Closeable, PacketHandler
         
         int getOriginatorPort();
         
-        void reject(int reasonCode, String message) throws TransportException;
+        void reject(Reason reason, String message) throws TransportException;
         
     }
     
@@ -58,7 +57,7 @@ public interface Channel extends Closeable, PacketHandler
     
     String getType();
     
-    void handle(Constants.Message cmd, Buffer buf) throws ConnectionException, TransportException;
+    void ensureLocalWinAtLeast(int size) throws ConnectionException;
     
     boolean isOpen();
     

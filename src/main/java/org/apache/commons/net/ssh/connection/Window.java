@@ -44,16 +44,6 @@ public class Window
         log = LoggerFactory.getLogger("<< chan#" + chan.getID() + " / " + (local ? "local" : "remote") + " window >>");
     }
     
-    public synchronized void check(int max) throws TransportException
-    {
-        int threshold = Math.min(maxPacketSize * 8, max / 4);
-        int diff = max - size;
-        if (diff > maxPacketSize && (diff > threshold || size < threshold)) {
-            sendWindowAdjust(diff);
-            expand(diff);
-        }
-    }
-    
     public synchronized void consume(int dec)
     {
         size -= dec;
@@ -64,8 +54,7 @@ public class Window
     public synchronized void expand(int inc)
     {
         size += inc;
-        if (log.isDebugEnabled())
-            log.debug("Increasing by {} up to {}", inc, size);
+        log.debug("Increasing by {} up to {}", inc, size);
         notifyAll();
     }
     
@@ -102,15 +91,6 @@ public class Window
     public String toString()
     {
         return "[ size=" + size + " | maxPacketSize=" + maxPacketSize + " ]";
-    }
-    
-    public synchronized void waitAndConsume(int howMuch) throws InterruptedException
-    {
-        while (size < howMuch) {
-            log.debug("Waiting, need window space for {} bytes", howMuch);
-            wait();
-        }
-        consume(howMuch);
     }
     
 }
