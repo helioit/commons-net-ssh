@@ -159,6 +159,8 @@ public class TransportProtocol implements Transport, PacketHandler
     
     public void disconnect(DisconnectReason reason, String msg)
     {
+        close();
+        
         if (msg == null)
             msg = "";
         log.debug("Sending SSH_MSG_DISCONNECT: reason=[{}], msg=[{}]", reason, msg);
@@ -166,7 +168,6 @@ public class TransportProtocol implements Transport, PacketHandler
                                                                  .putInt(reason.toInt()) //
                                                                  .putString(msg) //
                                                                  .putString("")); // lang tag
-        close();
     }
     
     public String getClientID()
