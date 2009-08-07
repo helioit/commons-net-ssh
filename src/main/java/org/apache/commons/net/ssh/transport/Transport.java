@@ -147,6 +147,8 @@ public interface Transport extends PacketWriter
      */
     boolean isRunning();
     
+    void join() throws TransportException;
+    
     /**
      * Request a SSH service represented by a {@link Service} instance.
      * <p>
@@ -196,7 +198,5 @@ public interface Transport extends PacketWriter
     void setTimeout(int timeout);
     
     void verifyHost(PublicKey key) throws TransportException;
-    
-    void waitForClose(int timeout) throws TransportException;
     
 }

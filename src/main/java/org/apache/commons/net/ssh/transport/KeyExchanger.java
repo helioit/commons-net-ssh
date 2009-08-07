@@ -45,7 +45,7 @@ import org.slf4j.LoggerFactory;
 public class KeyExchanger implements PacketHandler
 {
     
-    protected enum Expected
+    protected static enum Expected
     {
         /** we have sent or are sending KEXINIT, and expect the server's KEXINIT */
         KEXINIT,

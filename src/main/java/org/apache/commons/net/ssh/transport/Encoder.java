@@ -49,7 +49,7 @@ public class Encoder extends Converter
         int off = buffer.rpos() - 5;
         
         // Debug log the packet
-        if (log.isDebugEnabled())
+        if (log.isTraceEnabled())
             log.trace("Sending packet #{}: {}", seq, buffer.printHex());
         
         // Compress the packet if needed

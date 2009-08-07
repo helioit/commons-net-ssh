@@ -92,9 +92,14 @@ public class TransportProtocol implements Transport, PacketHandler
             public void run()
             {
                 try {
-                    while (!Thread.currentThread().isInterrupted())
-                        decoder.received((byte) input.read());
-                } catch (IOException e) {
+                    byte[] recvbuf = new byte[Decoder.maxPacketLength + 32];
+                    int needed = 1;
+                    int read;
+                    while (!Thread.currentThread().isInterrupted()) {
+                        read = input.read(recvbuf, 0, needed);
+                        needed = decoder.received(recvbuf, read);
+                    }
+                } catch (Exception e) {
                     if (Thread.currentThread().isInterrupted()) {
                         // We are meant to shut up and draw to a close if interrupted
                     } else
@@ -332,6 +337,11 @@ public class TransportProtocol implements Transport, PacketHandler
         return !close.isSet();
     }
     
+    public void join() throws TransportException
+    {
+        close.await();
+    }
+    
     public synchronized void reqService(Service service) throws TransportException
     {
         lock.lock();
@@ -407,11 +417,6 @@ public class TransportProtocol implements Transport, PacketHandler
                 + KeyType.fromKey(key) + "] host key with fingerprint [" + SecurityUtils.getFingerprint(key) + "]");
     }
     
-    public void waitForClose(int timeout) throws TransportException
-    {
-        close.await(timeout);
-    }
-    
     public long writePacket(Buffer payload) throws TransportException
     {
         lock.lock();
@@ -428,6 +433,7 @@ public class TransportProtocol implements Transport, PacketHandler
             long seq = encoder.encode(payload);
             try {
                 output.write(payload.array(), payload.rpos(), payload.available());
+                output.flush();
             } catch (IOException e) {
                 throw new TransportException(e);
             }
@@ -454,7 +460,7 @@ public class TransportProtocol implements Transport, PacketHandler
     }
     
     @SuppressWarnings("unchecked")
-    private void die(IOException ex)
+    private void die(Exception ex)
     {
         log.error("Dying because - {}", ex.toString());
         

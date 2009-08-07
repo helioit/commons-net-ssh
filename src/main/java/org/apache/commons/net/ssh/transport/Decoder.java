@@ -24,6 +24,8 @@ public class Decoder extends Converter
     /** Buffer where as-yet undecoded data lives */
     protected final Buffer inputBuffer = new Buffer();
     
+    public static final int maxPacketLength = 256 * 1024;
+    
     protected int packetLength = -1;
     
     protected Buffer uncompressBuffer;
@@ -47,13 +49,14 @@ public class Decoder extends Converter
      * When enough data has been received to decode a complete packet,
      * {@link TransportProtocol#handle(Buffer)} will be called.
      */
-    public void received(byte b) throws SSHException
+    public int received(byte[] b, int len) throws SSHException
     {
-        inputBuffer.putByte(b);
-        if (needed == 1)
+        inputBuffer.putRawBytes(b, 0, len);
+        if (needed <= len)
             needed = decode();
         else
-            needed--;
+            needed -= len;
+        return needed;
     }
     
     @Override
@@ -93,7 +96,7 @@ public class Decoder extends Converter
                     // Read packet length
                     packetLength = inputBuffer.getInt();
                     // Check packet length validity
-                    if (packetLength < 5 || packetLength > 256 * 1024) {
+                    if (packetLength < 5 || packetLength > maxPacketLength) {
                         log.info("Error decoding packet (invalid length) {}", inputBuffer.printHex());
                         throw new TransportException(DisconnectReason.PROTOCOL_ERROR, "invalid packet length: "
                                 + packetLength);
