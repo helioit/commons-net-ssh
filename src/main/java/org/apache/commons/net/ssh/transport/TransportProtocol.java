@@ -253,9 +253,11 @@ public class TransportProtocol implements Transport, PacketHandler
      */
     public void handle(Message msg, Buffer buf) throws SSHException
     {
-        log.debug("Received packet {}", msg);
+        this.msg = msg;
         
-        if (msg.geq(50))
+        log.trace("Received packet {}", msg);
+        
+        if (msg.geq(50)) // not a transport layer packet
             getService().handle(msg, buf);
         
         else if (msg.in(20, 21) || msg.in(30, 49)) // kex packet
@@ -365,13 +367,8 @@ public class TransportProtocol implements Transport, PacketHandler
     public void setAuthenticated()
     {
         this.authed = true;
-        lock.lock();
-        try {
-            encoder.setAuthenticated();
-            decoder.setAuthenticated();
-        } finally {
-            lock.unlock();
-        }
+        encoder.setAuthenticated();
+        decoder.setAuthenticated();
     }
     
     public void setClientToServerAlgorithms(Cipher cipher, MAC mac, Compression comp)
@@ -419,8 +416,7 @@ public class TransportProtocol implements Transport, PacketHandler
     
     public long writePacket(Buffer payload) throws TransportException
     {
-        lock.lock();
-        try {
+        synchronized (encoder) {
             
             if (kexer.isKexOngoing()) {
                 // Only transport layer packets (1 to 49) allowed except SERVICE_REQUEST
@@ -434,13 +430,12 @@ public class TransportProtocol implements Transport, PacketHandler
             try {
                 output.write(payload.array(), payload.rpos(), payload.available());
                 output.flush();
-            } catch (IOException e) {
-                throw new TransportException(e);
+            } catch (IOException ioe) {
+                throw new TransportException(ioe);
             }
+            
             return seq;
             
-        } finally {
-            lock.unlock();
         }
     }
     

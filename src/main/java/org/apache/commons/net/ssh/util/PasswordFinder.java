@@ -118,10 +118,10 @@ public interface PasswordFinder
         
         /**
          * @param password
-         *            the password as a string
+         *            the password as a char[]
          * @return the constructed {@link PasswordFinder}
          */
-        public static PasswordFinder createOneOff(final String password)
+        public static PasswordFinder createOneOff(final char[] password)
         {
             if (password == null)
                 return null;
@@ -130,7 +130,9 @@ public interface PasswordFinder
                     {
                         public char[] reqPassword(Resource resource)
                         {
-                            return password.toCharArray();
+                            char[] cloned = password.clone();
+                            blankOut(password);
+                            return cloned;
                         }
                         
                         public boolean shouldRetry(Resource resource)

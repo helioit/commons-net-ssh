@@ -44,8 +44,7 @@ public class Window
     public synchronized void consume(int dec)
     {
         size -= dec;
-        if (log.isDebugEnabled())
-            log.debug("Consuming by " + dec + " down to " + size);
+        log.debug("Consuming by " + dec + " down to " + size);
     }
     
     public synchronized void expand(int inc)

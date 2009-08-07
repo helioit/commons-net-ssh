@@ -100,18 +100,16 @@ public class SCPDownloadClient extends SCPClient
         setTimes(tMsg, f);
     }
     
-    protected boolean process(String msg, File f) throws IOException
+    protected boolean process(String bufferedTMsg, String msg, File f) throws IOException
     {
         if (msg.length() < 1)
             throw new IOException("Could not parse message: " + msg);
         
-        String bufferedTMsg = null;
-        
         switch (msg.charAt(0))
         {
             case 'T':
-                bufferedTMsg = msg;
                 signal("ACK: T");
+                process(msg, readMessage(true), f);
                 break;
             case 'C':
                 processFile(msg, bufferedTMsg, f);
@@ -147,7 +145,7 @@ public class SCPDownloadClient extends SCPClient
         
         signal("ACK: D");
         
-        while (!process(readMessage(), f))
+        while (!process(null, readMessage(), f))
             ;
         
         signal("ACK: E");
@@ -189,7 +187,7 @@ public class SCPDownloadClient extends SCPClient
         
         String msg = readMessage(true);
         do
-            process(msg, new File(targetPath));
+            process(null, msg, new File(targetPath));
         while ((msg = readMessage(false)) != null);
     }
     

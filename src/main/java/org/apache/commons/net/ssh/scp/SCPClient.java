@@ -116,8 +116,7 @@ public abstract class SCPClient
                 String stderr = scp.getErrorAsString();
                 if (stderr != "")
                     stderr = ". Additional info: " + stderr;
-                else
-                    throw new SCPException("EOF while expecting response to protocol message" + stderr);
+                throw new SCPException("EOF while expecting response to protocol message" + stderr);
             case 0: // OK
                 log.debug(what);
                 return;
@@ -189,7 +188,7 @@ public abstract class SCPClient
     
     protected void signal(String what) throws IOException
     {
-        log.debug(what);
+        log.debug("Signalling: {}", what);
         scp.getOutputStream().write(0);
         scp.getOutputStream().flush();
     }
@@ -209,7 +208,7 @@ public abstract class SCPClient
         out.flush();
         long sizeKiB = count / 1024;
         double timeSeconds = (System.currentTimeMillis() - startTime) / 1000.0;
-        log.info(sizeKiB + " KiB transferred  in {} seconds ({} KiB/s)", timeSeconds, (sizeKiB / timeSeconds));
+        log.info(sizeKiB / 1024.0 + " MiB transferred  in {} seconds ({} KiB/s)", timeSeconds, (sizeKiB / timeSeconds));
         if (read == -1 && !(count == len))
             throw new IOException("Had EOF before transfer completed");
     }

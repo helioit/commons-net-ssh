@@ -67,7 +67,7 @@ public class ChannelInputStream extends InputStream
                 return -1;
             if (len > buf.available())
                 len = buf.available();
-            buf.getRawBytes(b, off, len = buf.available() > len ? len : len);
+            buf.getRawBytes(b, off, len);
             if (buf.rpos() > win.getMaxPacketSize() || buf.available() == 0)
                 buf.compact();
             avail = win.getInitialSize() - buf.available();

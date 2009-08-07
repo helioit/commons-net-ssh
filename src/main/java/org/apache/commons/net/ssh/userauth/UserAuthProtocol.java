@@ -82,35 +82,37 @@ public class UserAuthProtocol extends AbstractService implements UserAuth, AuthP
         
         for (AuthMethod meth : methods) {
             
-            log.info("Trying {} auth...", meth.getName());
             if (!allowed.contains(meth.getName()))
-                continue;
+                save(meth.getName() + " auth not allowed by server");
+            else
+                log.info("Trying {} auth...", meth.getName());
             
-            lock.lock();
+            this.method = meth;
+            meth.init(this);
+            result.clear();
+            boolean success = false;
+            
             try {
-                this.method = meth;
-                meth.init(this);
-                result.clear();
                 meth.request();
-                if (result.get(timeout)) { // Success
-                    // Puts delayed compression into force if applicable
-                    trans.setAuthenticated();
-                    // We aren't in charge anymore, next service is
-                    trans.setService(nextService);
-                    return;
-                }
+                success = result.get(timeout);
             } catch (UserAuthException e) {
                 // Let's give other methods a shot
-                log.error("Saving for later - {}", e.toString());
-                savedEx.push(e);
-            } finally {
-                method = null;
-                lock.unlock();
+                save(e);
             }
+            
+            if (success) {
+                // Puts delayed compression into force if applicable
+                trans.setAuthenticated();
+                // We aren't in charge anymore, next service is
+                trans.setService(nextService);
+                return;
+            }
+            
+            method = null;
         }
         
         log.debug("Had {} saved exception(s)", savedEx.size());
-        throw new UserAuthException("Exhausted availalbe authentication methods", savedEx.peek());
+        throw new UserAuthException("Exhausted available authentication methods", savedEx.peek());
     }
     
     public String getBanner()
@@ -163,8 +165,10 @@ public class UserAuthProtocol extends AbstractService implements UserAuth, AuthP
                     partialSuccess |= buf.getBoolean();
                     if (allowed.contains(method.getName()) && method.shouldRetry())
                         method.request();
-                    else
+                    else {
+                        save(method.getName() + " auth failed");
                         result.set(false);
+                    }
                 } else {
                     log.debug("Asking {} method to handle {} packet", method.getName(), msg);
                     try {
@@ -189,6 +193,17 @@ public class UserAuthProtocol extends AbstractService implements UserAuth, AuthP
         } finally {
             lock.unlock();
         }
+    }
+    
+    protected void save(String msg)
+    {
+        save(new UserAuthException(msg));
+    }
+    
+    protected void save(UserAuthException e)
+    {
+        log.error("Saving for later - {}", e.toString());
+        savedEx.push(e);
     }
     
 }

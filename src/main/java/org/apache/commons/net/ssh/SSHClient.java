@@ -213,6 +213,11 @@ public class SSHClient extends SocketClient
         auth.authenticate(username, (Service) conn, methods);
     }
     
+    public void authPassword(String username, char[] password) throws UserAuthException, TransportException
+    {
+        authPassword(username, PasswordFinder.Util.createOneOff(password));
+    }
+    
     /**
      * Attempts authentication using the {@code "password"} authentication method.
      * 
@@ -240,7 +245,7 @@ public class SSHClient extends SocketClient
      */
     public void authPassword(String username, String password) throws UserAuthException, TransportException
     {
-        authPassword(username, PasswordFinder.Util.createOneOff(password));
+        authPassword(username, password.toCharArray());
     }
     
     public void authPublickey(String username) throws UserAuthException, TransportException
@@ -378,7 +383,24 @@ public class SSHClient extends SocketClient
      */
     public FileKeyProvider loadKeyFile(String location) throws IOException
     {
-        return loadKeyFile(location, "");
+        return loadKeyFile(location, (PasswordFinder) null);
+    }
+    
+    /**
+     * Convenience method for creating a {@link FileKeyProvider} instance from a location where an
+     * <i>encrypted</i> key file is located.
+     * 
+     * @param location
+     *            the location of the key file
+     * @param passphrase
+     *            the passphrase for unlocking the key
+     * @return the {@link FileKeyProvider} initialized with given location
+     * @throws IOException
+     *             if the key file format is not known, if the file could not be read etc.
+     */
+    public FileKeyProvider loadKeyFile(String location, char[] passphrase) throws IOException
+    {
+        return loadKeyFile(location, PasswordFinder.Util.createOneOff(passphrase));
     }
     
     /**
@@ -406,21 +428,9 @@ public class SSHClient extends SocketClient
         return fkp;
     }
     
-    /**
-     * Convenience method for creating a {@link FileKeyProvider} instance from a location where an
-     * <i>encrypted</i> key file is located.
-     * 
-     * @param location
-     *            the location of the key file
-     * @param passphrase
-     *            the passphrase for unlocking the key
-     * @return the {@link FileKeyProvider} initialized with given location
-     * @throws IOException
-     *             if the key file format is not known, if the file could not be read etc.
-     */
     public FileKeyProvider loadKeyFile(String location, String passphrase) throws IOException
     {
-        return loadKeyFile(location, PasswordFinder.Util.createOneOff(passphrase));
+        return loadKeyFile(location, passphrase.toCharArray());
     }
     
     public LocalPortForwarder newLocalPortForwarder(SocketAddress addr, String toHost, int toPort) throws IOException

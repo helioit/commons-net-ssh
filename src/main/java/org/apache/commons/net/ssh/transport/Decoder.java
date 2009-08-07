@@ -60,7 +60,7 @@ public class Decoder extends Converter
     }
     
     @Override
-    public void setAlgorithms(Cipher cipher, MAC mac, Compression compression)
+    public synchronized void setAlgorithms(Cipher cipher, MAC mac, Compression compression)
     {
         super.setAlgorithms(cipher, mac, compression);
         macResult = new byte[mac.getBlockSize()];
