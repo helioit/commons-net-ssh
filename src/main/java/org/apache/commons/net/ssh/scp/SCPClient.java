@@ -5,6 +5,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Queue;
 
 import org.apache.commons.net.ssh.SSHClient;
 import org.apache.commons.net.ssh.SSHException;
@@ -48,15 +49,26 @@ public abstract class SCPClient
     }
     
     protected static final char LF = '\n';
-    protected static final String COMMAND = "scp";
+    protected static final String SCP_COMMAND = "scp";
+    
+    protected static void addArg(List<String> args, Arg arg)
+    {
+        addArg(args, arg.toString());
+    }
+    
+    protected static void addArg(List<String> args, String arg)
+    {
+        args.add(arg);
+    }
     
     protected final Logger log = LoggerFactory.getLogger(getClass());
     
     protected final SSHClient host;
     
-    protected Command scp;
+    protected final Queue<String> warnings = new LinkedList<String>();
+    protected int exitStatus = -1;
     
-    protected LinkedList<String> warnings = new LinkedList<String>();
+    protected Command scp;
     
     protected SCPClient(SSHClient host)
     {
@@ -65,13 +77,28 @@ public abstract class SCPClient
     
     public synchronized int copy(String sourcePath, String targetPath) throws IOException
     {
-        int ret = -1;
+        cleanSlate();
         try {
             startCopy(sourcePath, targetPath);
         } finally {
-            ret = exit();
+            exit();
         }
-        return ret;
+        return exitStatus;
+    }
+    
+    public int getExitStatus()
+    {
+        return exitStatus;
+    }
+    
+    public Queue<String> getWarnings()
+    {
+        return warnings;
+    }
+    
+    public boolean hadWarnings()
+    {
+        return !warnings.isEmpty();
     }
     
     protected void addWarning(String warning)
@@ -80,10 +107,9 @@ public abstract class SCPClient
         warnings.add(warning);
     }
     
-    protected void checkResponseOK() throws IOException
+    protected void check(String what) throws IOException
     {
         int code = scp.getInputStream().read();
-        log.debug("Response code: {}", code);
         switch (code)
         {
             case -1:
@@ -93,6 +119,7 @@ public abstract class SCPClient
                 else
                     throw new SCPException("EOF while expecting response to protocol message" + stderr);
             case 0: // OK
+                log.debug(what);
                 return;
             case 1:
                 addWarning(readMessage());
@@ -104,26 +131,39 @@ public abstract class SCPClient
         }
     }
     
+    protected void cleanSlate()
+    {
+        exitStatus = -1;
+        warnings.clear();
+    }
+    
     protected synchronized void execSCPWith(List<String> args) throws ConnectionException, TransportException
     {
-        String cmd = COMMAND;
+        String cmd = SCP_COMMAND;
         for (String arg : args)
             cmd += " " + arg;
         scp = host.startSession().exec(cmd);
     }
     
-    protected synchronized int exit() throws IOException
+    protected void exit() throws IOException
     {
         if (scp != null) {
             scp.close();
-            if (scp.getExitStatus() != null && scp.getExitStatus() != 0)
-                log.warn("SCP exit status: {}", scp.getExitStatus());
+            
+            if (scp.getExitStatus() != null) {
+                exitStatus = scp.getExitStatus();
+                if (scp.getExitStatus() != 0)
+                    log.warn("SCP exit status: {}", scp.getExitStatus());
+            } else
+                exitStatus = -1;
+            
             if (scp.getExitSignal() != null)
                 log.warn("SCP exit signal: {}", scp.getExitSignal());
-            return scp.getExitStatus() != null ? scp.getExitStatus() : -1;
-        }
+            
+        } else
+            exitStatus = -1;
+        
         scp = null;
-        return -1;
     }
     
     protected String readMessage() throws IOException
@@ -147,9 +187,9 @@ public abstract class SCPClient
         return sb.toString();
     }
     
-    protected void sendOK() throws IOException
+    protected void signal(String what) throws IOException
     {
-        log.debug("Sending OK");
+        log.debug(what);
         scp.getOutputStream().write(0);
         scp.getOutputStream().flush();
     }
@@ -161,13 +201,15 @@ public abstract class SCPClient
         byte[] buf = new byte[bufSize];
         long count = 0;
         int read;
-        long startTime = System.nanoTime();
+        long startTime = System.currentTimeMillis();
         while ((read = in.read(buf, 0, (int) Math.min(bufSize, len - count))) != -1 && count < len) {
             out.write(buf, 0, read);
-            out.flush();
             count += read;
         }
-        log.info("Transferred @ {} KiB/s", (count / (1024 * (System.nanoTime() - startTime) / 1000000000.0)));
+        out.flush();
+        long sizeKiB = count / 1024;
+        double timeSeconds = (System.currentTimeMillis() - startTime) / 1000.0;
+        log.info(sizeKiB + " KiB transferred  in {} seconds ({} KiB/s)", timeSeconds, (sizeKiB / timeSeconds));
         if (read == -1 && !(count == len))
             throw new IOException("Had EOF before transfer completed");
     }

@@ -16,6 +16,8 @@ public class SCPDownloadClient extends SCPClient
     
     protected final ModeSetter modeSetter;
     
+    protected boolean recursive = true;
+    
     public SCPDownloadClient(SSHClient host)
     {
         this(host, null);
@@ -27,22 +29,50 @@ public class SCPDownloadClient extends SCPClient
         this.modeSetter = modeSetter == null ? new DefaultModeSetter() : modeSetter;
     }
     
+    public SCPDownloadClient recursive(boolean recursive)
+    {
+        this.recursive = recursive;
+        return this;
+    }
+    
+    protected File getTargetDirectory(File f, String dirname) throws IOException
+    {
+        if (f.exists())
+            if (f.isDirectory())
+                f = new File(f, dirname); //  <-- A
+            else
+                throw new IOException(f + " already exists as a file; remote end is sending directory");
+        
+        // else <-- B
+        
+        if (!f.exists())
+            if (!f.mkdir())
+                throw new IOException("Failed to create directory " + f);
+        
+        return f;
+    }
+    
+    protected File getTargetFile(File f, String filename) throws IOException
+    {
+        if (f.exists()) {
+            if (f.isDirectory())
+                f = new File(f, filename);
+        } else
+            f.createNewFile();
+        return f;
+    }
+    
     protected void init(String source) throws ConnectionException, TransportException
     {
         List<String> args = new LinkedList<String>();
-        args.add(Arg.SOURCE.toString());
-        args.add(Arg.QUIET.toString());
-        args.add(Arg.RECURSIVE.toString());
+        addArg(args, Arg.SOURCE);
+        addArg(args, Arg.QUIET);
+        if (recursive)
+            addArg(args, Arg.RECURSIVE);
         if (modeSetter.shouldPreserveTimes())
-            args.add(Arg.PRESERVE_MODES.toString());
-        args.add(source == null || source.equals("") ? "." : source);
+            addArg(args, Arg.PRESERVE_MODES);
+        addArg(args, source == null || source.equals("") ? "." : source);
         execSCPWith(args);
-    }
-    
-    protected void mkdir(File f) throws IOException
-    {
-        if (!f.mkdir())
-            throw new IOException("Failed to create directory " + f);
     }
     
     protected long parseLong(String longString, String valType) throws IOException
@@ -64,9 +94,15 @@ public class SCPDownloadClient extends SCPClient
         return cmd.substring(2);
     }
     
+    protected void prepare(File f, String perms, String tMsg) throws IOException
+    {
+        modeSetter.setPermissions(f, perms);
+        setTimes(tMsg, f);
+    }
+    
     protected boolean process(String msg, File f) throws IOException
     {
-        if (!(msg.length() > 1))
+        if (msg.length() < 1)
             throw new IOException("Could not parse message: " + msg);
         
         String bufferedTMsg = null;
@@ -75,10 +111,10 @@ public class SCPDownloadClient extends SCPClient
         {
             case 'T':
                 bufferedTMsg = msg;
-                sendOK();
+                signal("ACK: T");
                 break;
             case 'C':
-                processRegularFile(msg, bufferedTMsg, f);
+                processFile(msg, bufferedTMsg, f);
                 break;
             case 'D':
                 processDirectory(msg, bufferedTMsg, f);
@@ -88,6 +124,8 @@ public class SCPDownloadClient extends SCPClient
             case (char) 1:
                 addWarning(msg.substring(1));
                 break;
+            case (char) 2:
+                throw new IOException("Remote SCP command returned error: " + msg.substring(1));
             default:
                 // TODO: send error to remote scp, then raise IOEx
                 assert false;
@@ -98,65 +136,45 @@ public class SCPDownloadClient extends SCPClient
     
     protected void processDirectory(String dMsg, String tMsg, File f) throws IOException
     {
-        String[] dMsgParts = tokenize(dMsg, 3);
-        String perms = parsePermissions(dMsgParts[0]);
+        String[] dMsgParts = tokenize(dMsg, 3); // e.g. D0755 0 <dirname> 
+        
         long length = parseLong(dMsgParts[1], "dir length");
         if (length != 0)
             throw new IOException("Remote SCP command sent strange directory length: " + length);
-        String dirname = dMsgParts[2];
         
-        if (f.exists())
-            if (f.isDirectory())
-                f = new File(f, dirname);
-            else
-                throw new IOException(f + " already exists as a file; remote end was sending directory");
+        f = getTargetDirectory(f, dMsgParts[2]);
+        prepare(f, parsePermissions(dMsgParts[0]), tMsg);
         
-        if (!f.exists())
-            mkdir(f);
-        
-        modeSetter.setPermissions(f, perms);
-        setTimes(tMsg, f);
-        
-        sendOK();
+        signal("ACK: D");
         
         while (!process(readMessage(), f))
             ;
         
-        sendOK();
+        signal("ACK: E");
     }
     
-    protected void processRegularFile(String cMsg, String tMsg, File f) throws IOException
+    protected void processFile(String cMsg, String tMsg, File f) throws IOException
     {
         String[] cMsgParts = tokenize(cMsg, 3);
-        String perms = parsePermissions(cMsgParts[0]);
+        
         long length = parseLong(cMsgParts[1], "length");
-        String filename = cMsgParts[2];
         
-        if (f.exists()) {
-            if (f.isDirectory())
-                f = new File(f, filename);
-        } else
-            f.createNewFile();
-        
-        modeSetter.setPermissions(f, perms);
-        setTimes(tMsg, f);
-        
-        scp.ensureLocalWinAtLeast((int) Math.min(length, Integer.MAX_VALUE));
+        f = getTargetFile(f, cMsgParts[2]);
+        prepare(f, parsePermissions(cMsgParts[0]), tMsg);
         
         FileOutputStream fos = new FileOutputStream(f);
-        
-        sendOK(); // tell remote to start sending
+        //scp.ensureLocalWinAtLeast((int) Math.min(length, Integer.MAX_VALUE));
+        signal("Remote can start transfer");
         transfer(scp.getInputStream(), fos, scp.getLocalMaxPacketSize(), length);
-        checkResponseOK(); // confirm transfer was fine accd. to remote
-        sendOK(); // tell remote alles gut from our end as well
-        
+        check("Remote agrees transfer done");
+        signal("Transfer done");
         IOUtils.closeQuietly(fos);
     }
     
     protected void setTimes(String tMsg, File f) throws IOException
     {
         if (tMsg != null && modeSetter.shouldPreserveTimes()) {
-            String[] tMsgParts = tokenize(tMsg, 4);
+            String[] tMsgParts = tokenize(tMsg, 4); // e.g. T<mtime> 0 <atime> 0
             modeSetter.setLastModifiedTime(f, parseLong(tMsgParts[0].substring(1), "last modified time"));
             modeSetter.setLastAccessedTime(f, parseLong(tMsgParts[2], "last access time"));
         }
@@ -166,11 +184,12 @@ public class SCPDownloadClient extends SCPClient
     protected void startCopy(String sourcePath, String targetPath) throws IOException
     {
         init(sourcePath);
-        sendOK();
-        File target = new File(targetPath);
+        
+        signal("We can talk SCP");
+        
         String msg = readMessage(true);
         do
-            process(msg, target);
+            process(msg, new File(targetPath));
         while ((msg = readMessage(false)) != null);
     }
     

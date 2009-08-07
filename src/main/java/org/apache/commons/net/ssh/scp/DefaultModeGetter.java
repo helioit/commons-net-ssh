@@ -8,11 +8,13 @@ public class DefaultModeGetter implements ModeGetter
     
     public long getLastAccessTime(File f)
     {
+        //return f.lastModified() / 1000;
         return 0;
     }
     
     public long getLastModifiedTime(File f)
     {
+        //return f.lastModified() / 1000;
         return 0;
     }
     
