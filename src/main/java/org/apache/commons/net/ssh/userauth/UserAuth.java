@@ -26,8 +26,9 @@ import org.apache.commons.net.ssh.transport.TransportException;
  * 
  * @author shikhar
  */
-public interface UserAuthService
+public interface UserAuth
 {
+    
     void authenticate(String username, Service nextService, Iterable<AuthMethod> methods) throws UserAuthException,
             TransportException;
     

@@ -48,7 +48,7 @@ public abstract class AbstractChannel implements Channel
     protected final String type;
     
     protected final Transport trans;
-    protected final ConnectionService conn;
+    protected final Connection conn;
     protected final int id;
     
     protected final LocalWindow lwin = new LocalWindow(this);
@@ -71,7 +71,7 @@ public abstract class AbstractChannel implements Channel
     
     protected int timeout;
     
-    protected AbstractChannel(String type, ConnectionService conn)
+    protected AbstractChannel(String type, Connection conn)
     {
         this.type = type;
         this.conn = conn;

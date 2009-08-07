@@ -8,7 +8,7 @@ import org.apache.commons.net.ssh.util.Constants.Message;
 public abstract class AbstractDirectChannel extends AbstractChannel implements Channel.Direct
 {
     
-    protected AbstractDirectChannel(String name, ConnectionService conn)
+    protected AbstractDirectChannel(String name, Connection conn)
     {
         super(name, conn);
         conn.attach(this);

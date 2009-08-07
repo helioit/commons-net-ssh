@@ -26,9 +26,9 @@ import java.security.PrivateKey;
 import java.security.PublicKey;
 
 import org.apache.commons.net.ssh.NamedFactory;
-import org.apache.commons.net.ssh.PasswordFinder;
-import org.apache.commons.net.ssh.PasswordFinder.Resource;
+import org.apache.commons.net.ssh.util.PasswordFinder;
 import org.apache.commons.net.ssh.util.Constants.KeyType;
+import org.apache.commons.net.ssh.util.PasswordFinder.Resource;
 import org.bouncycastle.openssl.PEMReader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -117,7 +117,7 @@ public class PKCS8KeyFile implements FileKeyProvider
                 o = r.readObject();
             } catch (IOException e) {
                 if (e.toString().contains("javax.crypto.BadPaddingException")) // screen-scraping sucks
-                    if (pwdf.retry(resource))
+                    if (pwdf.shouldRetry(resource))
                         // PasswordFinder is telling us to retry
                         continue;
                 throw e;

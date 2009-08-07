@@ -39,9 +39,9 @@ import org.apache.commons.net.ssh.cipher.BlowfishCBC;
 import org.apache.commons.net.ssh.cipher.Cipher;
 import org.apache.commons.net.ssh.cipher.TripleDESCBC;
 import org.apache.commons.net.ssh.compression.CompressionNone;
+import org.apache.commons.net.ssh.connection.Connection;
 import org.apache.commons.net.ssh.connection.ConnectionException;
 import org.apache.commons.net.ssh.connection.ConnectionProtocol;
-import org.apache.commons.net.ssh.connection.ConnectionService;
 import org.apache.commons.net.ssh.connection.LocalPortForwarder;
 import org.apache.commons.net.ssh.connection.RemotePortForwarder;
 import org.apache.commons.net.ssh.connection.Session;
@@ -67,10 +67,11 @@ import org.apache.commons.net.ssh.transport.TransportProtocol;
 import org.apache.commons.net.ssh.userauth.AuthMethod;
 import org.apache.commons.net.ssh.userauth.AuthPassword;
 import org.apache.commons.net.ssh.userauth.AuthPublickey;
+import org.apache.commons.net.ssh.userauth.UserAuth;
 import org.apache.commons.net.ssh.userauth.UserAuthException;
 import org.apache.commons.net.ssh.userauth.UserAuthProtocol;
-import org.apache.commons.net.ssh.userauth.UserAuthService;
 import org.apache.commons.net.ssh.util.KnownHosts;
+import org.apache.commons.net.ssh.util.PasswordFinder;
 import org.apache.commons.net.ssh.util.SecurityUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -160,8 +161,8 @@ public class SSHClient extends SocketClient
     }
     
     protected final Transport trans;
-    protected final ConnectionService conn;
-    protected final UserAuthService auth;
+    protected final UserAuth auth;
+    protected final Connection conn;
     
     /**
      * Default constructor
@@ -199,7 +200,7 @@ public class SSHClient extends SocketClient
     
     public void addHostKeyVerifier(String fingerprint)
     {
-        addHostKeyVerifier(HostKeyVerifier.Util.makeForFingerprint(fingerprint));
+        addHostKeyVerifier(HostKeyVerifier.Util.createFromFingerprint(fingerprint));
     }
     
     public void auth(String username, AuthMethod... methods) throws UserAuthException, TransportException
@@ -217,21 +218,6 @@ public class SSHClient extends SocketClient
      * 
      * @param username
      *            the username to authenticate
-     * @param password
-     *            the password to use
-     * @throws SSHException
-     *             if an error occurs during the authentication process
-     */
-    public void authPassword(String username, char[] password) throws UserAuthException, TransportException
-    {
-        authPassword(username, PasswordFinder.Util.createOneOff(password));
-    }
-    
-    /**
-     * Attempts authentication using the {@code "password"} authentication method.
-     * 
-     * @param username
-     *            the username to authenticate
      * @param pfinder
      *            the {@link PasswordFinder} to use
      * @throws SSHException
@@ -240,6 +226,21 @@ public class SSHClient extends SocketClient
     public void authPassword(String username, PasswordFinder pfinder) throws UserAuthException, TransportException
     {
         auth(username, new AuthPassword(pfinder));
+    }
+    
+    /**
+     * Attempts authentication using the {@code "password"} authentication method.
+     * 
+     * @param username
+     *            the username to authenticate
+     * @param password
+     *            the password to use
+     * @throws SSHException
+     *             if an error occurs during the authentication process
+     */
+    public void authPassword(String username, String password) throws UserAuthException, TransportException
+    {
+        authPassword(username, PasswordFinder.Util.createOneOff(password));
     }
     
     public void authPublickey(String username) throws UserAuthException, TransportException
@@ -284,7 +285,12 @@ public class SSHClient extends SocketClient
         super.disconnect();
     }
     
-    public ConnectionService getConnectionService()
+    public void forceRekey(boolean waitForDone) throws TransportException
+    {
+        trans.getKeyExchanger().startKex(waitForDone);
+    }
+    
+    public Connection getConnection()
     {
         return conn;
     }
@@ -302,7 +308,7 @@ public class SSHClient extends SocketClient
         return trans;
     }
     
-    public UserAuthService getUserAuthService()
+    public UserAuth getUserAuth()
     {
         return auth;
     }
@@ -372,24 +378,7 @@ public class SSHClient extends SocketClient
      */
     public FileKeyProvider loadKeyFile(String location) throws IOException
     {
-        return loadKeyFile(location, new char[] {});
-    }
-    
-    /**
-     * Convenience method for creating a {@link FileKeyProvider} instance from a location where an
-     * <i>encrypted</i> key file is located.
-     * 
-     * @param location
-     *            the location of the key file
-     * @param passphrase
-     *            the passphrase for unlocking the key
-     * @return the {@link FileKeyProvider} initialized with given location
-     * @throws IOException
-     *             if the key file format is not known, if the file could not be read etc.
-     */
-    public FileKeyProvider loadKeyFile(String location, char[] passphrase) throws IOException
-    {
-        return loadKeyFile(location, PasswordFinder.Util.createOneOff(passphrase));
+        return loadKeyFile(location, "");
     }
     
     /**
@@ -417,6 +406,23 @@ public class SSHClient extends SocketClient
         return fkp;
     }
     
+    /**
+     * Convenience method for creating a {@link FileKeyProvider} instance from a location where an
+     * <i>encrypted</i> key file is located.
+     * 
+     * @param location
+     *            the location of the key file
+     * @param passphrase
+     *            the passphrase for unlocking the key
+     * @return the {@link FileKeyProvider} initialized with given location
+     * @throws IOException
+     *             if the key file format is not known, if the file could not be read etc.
+     */
+    public FileKeyProvider loadKeyFile(String location, String passphrase) throws IOException
+    {
+        return loadKeyFile(location, PasswordFinder.Util.createOneOff(passphrase));
+    }
+    
     public LocalPortForwarder newLocalPortForwarder(SocketAddress addr, String toHost, int toPort) throws IOException
     {
         return new LocalPortForwarder(conn, addr, toHost, toPort);
@@ -438,14 +444,9 @@ public class SSHClient extends SocketClient
         super._connectAction_();
         trans.init(_socket_);
         
-        long start = System.nanoTime();
+        long start = System.currentTimeMillis();
         trans.getKeyExchanger().startKex(true);
-        log.info("Key exchange took {} seconds", (System.nanoTime() - start) / 1000000000.0);
-    }
-    
-    void forceRekey(boolean waitForDone) throws TransportException
-    {
-        trans.getKeyExchanger().startKex(waitForDone);
+        log.info("Key exchange took {} seconds", (System.currentTimeMillis() - start) / 1000.0);
     }
     
 }

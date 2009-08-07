@@ -38,7 +38,7 @@ import org.apache.commons.net.ssh.util.Constants.Message;
 /**
  * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
  */
-public class ConnectionProtocol extends AbstractService implements ConnectionService
+public class ConnectionProtocol extends AbstractService implements Connection
 {
     
     protected final AtomicInteger nextID = new AtomicInteger();
@@ -51,8 +51,8 @@ public class ConnectionProtocol extends AbstractService implements ConnectionSer
     protected final Queue<Future<Buffer, ConnectionException>> globalReqs =
             new LinkedList<Future<Buffer, ConnectionException>>();
     
-    protected int windowSize = 0x200000;
-    protected int maxPacketSize = 0x8000;
+    protected int windowSize = 2048 * 1024;
+    protected int maxPacketSize = 128 * 1024;
     
     public ConnectionProtocol(Transport trans)
     {

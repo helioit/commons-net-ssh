@@ -18,9 +18,9 @@
  */
 package org.apache.commons.net.ssh;
 
-import org.apache.commons.net.ssh.connection.ConnectionService;
+import org.apache.commons.net.ssh.connection.Connection;
 import org.apache.commons.net.ssh.transport.Transport;
-import org.apache.commons.net.ssh.userauth.UserAuthService;
+import org.apache.commons.net.ssh.userauth.UserAuth;
 import org.apache.commons.net.ssh.util.Buffer;
 import org.apache.commons.net.ssh.util.Constants.Message;
 
@@ -28,8 +28,8 @@ import org.apache.commons.net.ssh.util.Constants.Message;
  * Represents a service running on top of the SSH protocol transport layer.
  * 
  * @author shikhar
- * @see UserAuthService
- * @see ConnectionService
+ * @see UserAuth
+ * @see Connection
  */
 public interface Service extends PacketHandler
 {

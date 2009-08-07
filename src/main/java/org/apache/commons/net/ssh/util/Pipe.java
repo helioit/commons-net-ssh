@@ -33,7 +33,7 @@ public class Pipe extends Thread
             };
     }
     
-    public static void copy(InputStream in, OutputStream out, int bufSize, boolean closeStreamOnEOF) throws IOException
+    public static void pipe(InputStream in, OutputStream out, int bufSize, boolean closeStreamOnEOF) throws IOException
     {
         byte[] buf = new byte[bufSize];
         int len;
@@ -91,7 +91,7 @@ public class Pipe extends Thread
     {
         try {
             log.debug("Wil pipe from {} to {}", in, out);
-            copy(in, out, bufSize, closeStreamOnEOF);
+            pipe(in, out, bufSize, closeStreamOnEOF);
             log.debug("EOF on {}", in);
         } catch (IOException ioe) {
             log.error("In pipe from {} to {}: " + ioe.toString(), in, out);

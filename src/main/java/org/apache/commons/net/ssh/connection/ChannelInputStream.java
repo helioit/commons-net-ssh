@@ -17,7 +17,7 @@ public class ChannelInputStream extends InputStream
     protected final Channel chan;
     protected final LocalWindow win;
     
-    protected final Buffer buf = new Buffer();
+    protected final Buffer buf;
     protected final byte[] b = new byte[1];
     
     protected boolean eof;
@@ -26,6 +26,8 @@ public class ChannelInputStream extends InputStream
     {
         this.chan = chan;
         this.win = win;
+        
+        buf = new Buffer(chan.getLocalMaxPacketSize());
     }
     
     @Override
@@ -55,20 +57,17 @@ public class ChannelInputStream extends InputStream
     {
         int avail;
         synchronized (buf) {
-            for (;;) {
-                if (buf.available() > 0)
-                    break;
-                if (eof)
-                    return -1;
+            while (buf.available() == 0 && !eof)
                 try {
                     buf.wait();
                 } catch (InterruptedException e) {
                     throw (IOException) new InterruptedIOException().initCause(e);
                 }
-            }
+            if (eof)
+                return -1;
             if (len > buf.available())
                 len = buf.available();
-            buf.getRawBytes(b, off, len);
+            buf.getRawBytes(b, off, len = buf.available() > len ? len : len);
             if (buf.rpos() > win.getMaxPacketSize() || buf.available() == 0)
                 buf.compact();
             avail = win.getInitialSize() - buf.available();

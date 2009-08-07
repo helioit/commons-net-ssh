@@ -23,7 +23,7 @@ public class LocalWindow extends Window
     public synchronized void ensureIsAtLeast(int size) throws TransportException
     {
         if (this.size < size)
-            growBy(this.size - size);
+            growBy(size - this.size);
     }
     
     protected synchronized void growBy(int inc) throws TransportException

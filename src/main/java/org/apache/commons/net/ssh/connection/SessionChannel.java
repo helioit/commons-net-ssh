@@ -21,25 +21,25 @@ public class SessionChannel extends AbstractDirectChannel implements Session, Se
     
     private final ChannelInputStream err = new ChannelInputStream(this, lwin);
     
-    public SessionChannel(ConnectionService conn)
+    public SessionChannel(Connection conn)
     {
         super("session", conn);
     }
     
     public void allocateDefaultPTY() throws ConnectionException, TransportException
     {
-        Map<PTYMode, Integer> modes = new HashMap<PTYMode, Integer>();
-        modes.put(PTYMode.ISIG, 1);
-        modes.put(PTYMode.ICANON, 1);
-        modes.put(PTYMode.ECHO, 0);
-        modes.put(PTYMode.ECHOE, 0);
-        modes.put(PTYMode.ECHOK, 0);
-        modes.put(PTYMode.ECHONL, 0);
-        modes.put(PTYMode.NOFLSH, 0);
+        Map<PTYMode, Buffer> modes = new HashMap<PTYMode, Buffer>();
+        modes.put(PTYMode.ISIG, new Buffer().putInt(1));
+        modes.put(PTYMode.ICANON, new Buffer().putInt(1));
+        modes.put(PTYMode.ECHO, new Buffer().putInt(0));
+        modes.put(PTYMode.ECHOE, new Buffer().putInt(0));
+        modes.put(PTYMode.ECHOK, new Buffer().putInt(0));
+        modes.put(PTYMode.ECHONL, new Buffer().putInt(0));
+        modes.put(PTYMode.NOFLSH, new Buffer().putInt(0));
         allocatePTY("vt100", 80, 40, 640, 480, modes);
     }
     
-    public void allocatePTY(String term, int cols, int rows, int width, int height, Map<PTYMode, Integer> modes)
+    public void allocatePTY(String term, int cols, int rows, int width, int height, Map<PTYMode, Buffer> modes)
             throws ConnectionException, TransportException
     {
         sendChannelRequest("pty-req", //
@@ -130,7 +130,7 @@ public class SessionChannel extends AbstractDirectChannel implements Session, Se
     
     public void signal(Signal sig) throws TransportException
     {
-        sendChannelRequest("signal", false, new Buffer().putString(sig.getName()));
+        sendChannelRequest("signal", false, new Buffer().putString(sig.toString()));
     }
     
     public Shell startShell() throws ConnectionException, TransportException

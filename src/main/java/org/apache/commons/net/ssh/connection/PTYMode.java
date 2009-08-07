@@ -64,12 +64,12 @@ public enum PTYMode
     TTY_OP_ISPEED(128),
     TTY_OP_OSPEED(129);
     
-    public static byte[] encode(Map<PTYMode, Integer> modes)
+    public static byte[] encode(Map<PTYMode, Buffer> modes)
     {
         Buffer buf = new Buffer();
-        for (Entry<PTYMode, Integer> entry : modes.entrySet()) {
+        for (Entry<PTYMode, Buffer> entry : modes.entrySet()) {
             buf.putByte(entry.getKey().getOpcode());
-            buf.putInt(entry.getValue());
+            buf.putBuffer(entry.getValue());
         }
         buf.putByte((byte) 0);
         return buf.getCompactData();
@@ -86,4 +86,5 @@ public enum PTYMode
     {
         return opcode;
     }
+    
 }

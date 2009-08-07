@@ -18,11 +18,11 @@
  */
 package org.apache.commons.net.ssh.userauth;
 
-import org.apache.commons.net.ssh.PasswordFinder;
-import org.apache.commons.net.ssh.PasswordFinder.Resource;
 import org.apache.commons.net.ssh.transport.TransportException;
 import org.apache.commons.net.ssh.util.Buffer;
+import org.apache.commons.net.ssh.util.PasswordFinder;
 import org.apache.commons.net.ssh.util.Constants.Message;
+import org.apache.commons.net.ssh.util.PasswordFinder.Resource;
 
 public class AuthPassword extends AbstractAuthMethod
 {
@@ -65,7 +65,7 @@ public class AuthPassword extends AbstractAuthMethod
     @Override
     public boolean shouldRetry()
     {
-        return pwdf.retry(getResource());
+        return pwdf.shouldRetry(getResource());
     }
     
     protected Resource getResource()

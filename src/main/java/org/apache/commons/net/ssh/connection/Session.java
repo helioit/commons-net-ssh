@@ -5,6 +5,7 @@ import java.io.InputStream;
 import java.util.Map;
 
 import org.apache.commons.net.ssh.transport.TransportException;
+import org.apache.commons.net.ssh.util.Buffer;
 
 public interface Session extends Channel
 {
@@ -35,44 +36,45 @@ public interface Session extends Channel
         
         InputStream getErrorStream();
         
+        void signal(Signal sig) throws TransportException;
+        
     }
     
     enum Signal
     {
         
-        SIG_ABRT("ABRT"),
-        SIG_ALRM("ALRM"),
-        SIG_FPE("FPE"),
-        SIG_HUP("HUP"),
-        SIG_ILL("ILL"),
-        SIG_INT("INT"),
-        SIG_KILL("KILL"),
-        SIG_PIPE("PIPE"),
-        SIG_QUIT("QUIT"),
-        SIG_SEGV("SEGV"),
-        SIG_TERM("TERM"),
-        SIG_USR1("USR1"),
-        SIG_USR2("USR2"),
-        UNKNOWN("");
+        ABRT("ABRT"),
+        ALRM("ALRM"),
+        FPE("FPE"),
+        HUP("HUP"),
+        ILL("ILL"),
+        INT("INT"),
+        KILL("KILL"),
+        PIPE("PIPE"),
+        QUIT("QUIT"),
+        SEGV("SEGV"),
+        TERM("TERM"),
+        USR1("USR1"),
+        USR2("USR2"),
+        UNKNOWN("UNKNOWN");
         
         public static Signal fromString(String name)
         {
             for (Signal sig : Signal.values())
                 if (sig.name.equals(name))
                     return sig;
-            Signal unknown = UNKNOWN;
-            unknown.name = name;
-            return unknown;
+            return UNKNOWN;
         }
         
-        private String name;
+        private final String name;
         
         private Signal(String name)
         {
             this.name = name;
         }
         
-        public String getName()
+        @Override
+        public String toString()
         {
             return name;
         }
@@ -87,7 +89,7 @@ public interface Session extends Channel
     
     void allocateDefaultPTY() throws ConnectionException, TransportException;
     
-    void allocatePTY(String term, int cols, int rows, int width, int height, Map<PTYMode, Integer> modes)
+    void allocatePTY(String term, int cols, int rows, int width, int height, Map<PTYMode, Buffer> modes)
             throws ConnectionException, TransportException;
     
     void close() throws ConnectionException, TransportException;

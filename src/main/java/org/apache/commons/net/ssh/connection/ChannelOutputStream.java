@@ -19,7 +19,6 @@
 package org.apache.commons.net.ssh.connection;
 
 import java.io.IOException;
-import java.io.InterruptedIOException;
 import java.io.OutputStream;
 
 import org.apache.commons.net.ssh.util.Buffer;
@@ -52,9 +51,9 @@ public class ChannelOutputStream extends OutputStream
         if (!closed)
             try {
                 flush();
+                chan.sendEOF();
             } finally {
                 closed = true;
-                chan.sendEOF();
             }
     }
     
@@ -73,8 +72,6 @@ public class ChannelOutputStream extends OutputStream
         try {
             win.waitAndConsume(bufferLength);
             chan.getTransport().writePacket(buffer);
-        } catch (InterruptedException e) {
-            throw (IOException) new InterruptedIOException().initCause(e);
         } finally {
             newBuffer();
         }

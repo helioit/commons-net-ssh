@@ -75,7 +75,7 @@ public class RemotePortForwarder implements ForwardedChannelOpener
         
         private final Forward fwd;
         
-        public ForwardedTCPIPChannel(ConnectionService conn, int recipient, int remoteWinSize, int remoteMaxPacketSize,
+        public ForwardedTCPIPChannel(Connection conn, int recipient, int remoteWinSize, int remoteMaxPacketSize,
                 Forward fwd, String origIP, int origPort) throws TransportException
         {
             super(TYPE, conn, recipient, remoteWinSize, remoteMaxPacketSize, origIP, origPort);
@@ -92,7 +92,7 @@ public class RemotePortForwarder implements ForwardedChannelOpener
     public static final String PF_REQ = "tcpip-forward";
     public static final String PF_CANCEL = "cancel-tcpip-forward";
     
-    public static RemotePortForwarder getInstance(ConnectionService conn)
+    public static RemotePortForwarder getInstance(Connection conn)
     {
         RemotePortForwarder rpf = (RemotePortForwarder) conn.get(ForwardedTCPIPChannel.TYPE);
         if (rpf == null)
@@ -102,11 +102,11 @@ public class RemotePortForwarder implements ForwardedChannelOpener
     
     protected final Logger log = LoggerFactory.getLogger(getClass());
     
-    protected final ConnectionService conn;
+    protected final Connection conn;
     
     protected final Map<Forward, ConnectListener> listeners = new HashMap<Forward, ConnectListener>();
     
-    private RemotePortForwarder(ConnectionService conn)
+    private RemotePortForwarder(Connection conn)
     {
         this.conn = conn;
     }

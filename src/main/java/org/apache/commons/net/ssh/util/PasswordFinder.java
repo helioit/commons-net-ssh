@@ -16,7 +16,7 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.commons.net.ssh;
+package org.apache.commons.net.ssh.util;
 
 import java.util.Arrays;
 import java.util.Map;
@@ -121,7 +121,7 @@ public interface PasswordFinder
          *            the password as a string
          * @return the constructed {@link PasswordFinder}
          */
-        public static PasswordFinder createOneOff(final char[] password)
+        public static PasswordFinder createOneOff(final String password)
         {
             if (password == null)
                 return null;
@@ -130,10 +130,10 @@ public interface PasswordFinder
                     {
                         public char[] reqPassword(Resource resource)
                         {
-                            return password;
+                            return password.toCharArray();
                         }
                         
-                        public boolean retry(Resource resource)
+                        public boolean shouldRetry(Resource resource)
                         {
                             return false;
                         }
@@ -149,7 +149,7 @@ public interface PasswordFinder
                         return passwordMap.get(resource).toCharArray();
                     }
                     
-                    public boolean retry(Resource resource)
+                    public boolean shouldRetry(Resource resource)
                     {
                         return false;
                     }
@@ -167,7 +167,7 @@ public interface PasswordFinder
      * 
      * @param resource
      *            the resource for which password is being requested
-     * @return the password
+     * @return the password or {@code null}
      */
     char[] reqPassword(Resource resource);
     
@@ -180,6 +180,6 @@ public interface PasswordFinder
      * 
      * @return whether to retry requesting password for a particular resource
      */
-    boolean retry(Resource resource);
+    boolean shouldRetry(Resource resource);
     
 }

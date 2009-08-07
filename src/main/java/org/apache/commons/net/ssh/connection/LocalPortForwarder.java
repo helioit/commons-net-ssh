@@ -20,7 +20,7 @@ public class LocalPortForwarder
         
         private final Socket sock;
         
-        private DirectTCPIPChannel(ConnectionService conn, Socket sock)
+        private DirectTCPIPChannel(Connection conn, Socket sock)
         {
             super("direct-tcpip", conn);
             this.sock = sock;
@@ -60,7 +60,7 @@ public class LocalPortForwarder
         
     }
     
-    private final ConnectionService conn;
+    private final Connection conn;
     private final Event<ConnectionException> close =
             new Event<ConnectionException>("pfd close", ConnectionException.chainer);
     private final ServerSocket ss;
@@ -102,7 +102,7 @@ public class LocalPortForwarder
             }
         };
     
-    public LocalPortForwarder(ConnectionService conn, SocketAddress listeningAddr, String toHost, int toPort)
+    public LocalPortForwarder(Connection conn, SocketAddress listeningAddr, String toHost, int toPort)
             throws IOException
     {
         this.conn = conn;

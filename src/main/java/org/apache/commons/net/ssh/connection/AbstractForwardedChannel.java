@@ -12,7 +12,7 @@ public abstract class AbstractForwardedChannel extends AbstractChannel implement
     protected final String origIP;
     protected final int origPort;
     
-    protected AbstractForwardedChannel(String name, ConnectionService conn, int recipient, int remoteWinSize,
+    protected AbstractForwardedChannel(String name, Connection conn, int recipient, int remoteWinSize,
             int remoteMaxPacketSize, String origIP, int origPort)
     {
         super(name, conn);

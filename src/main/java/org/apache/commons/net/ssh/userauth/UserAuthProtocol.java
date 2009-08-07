@@ -39,7 +39,7 @@ import org.apache.commons.net.ssh.util.Constants.Message;
  * 
  * @author shikhar
  */
-public class UserAuthProtocol extends AbstractService implements UserAuthService, AuthParams
+public class UserAuthProtocol extends AbstractService implements UserAuth, AuthParams
 {
     
     protected final ReentrantLock lock = new ReentrantLock();

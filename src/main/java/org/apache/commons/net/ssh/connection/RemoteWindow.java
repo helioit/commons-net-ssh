@@ -8,11 +8,15 @@ public class RemoteWindow extends Window
         super(chan, false);
     }
     
-    public synchronized void waitAndConsume(int howMuch) throws InterruptedException
+    public synchronized void waitAndConsume(int howMuch) throws ConnectionException
     {
         while (size < howMuch) {
             log.debug("Waiting, need window space for {} bytes", howMuch);
-            wait();
+            try {
+                wait();
+            } catch (InterruptedException ie) {
+                throw new ConnectionException(ie);
+            }
         }
         consume(howMuch);
     }

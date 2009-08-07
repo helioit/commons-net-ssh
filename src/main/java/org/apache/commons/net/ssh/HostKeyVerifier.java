@@ -34,7 +34,7 @@ public interface HostKeyVerifier
     class Util
     {
         
-        public static HostKeyVerifier makeForFingerprint(final String fp)
+        public static HostKeyVerifier createFromFingerprint(final String fp)
         {
             return new HostKeyVerifier()
                 {

@@ -18,7 +18,7 @@
  */
 package org.apache.commons.net.ssh.keyprovider;
 
-import org.apache.commons.net.ssh.PasswordFinder;
+import org.apache.commons.net.ssh.util.PasswordFinder;
 
 /**
  * 

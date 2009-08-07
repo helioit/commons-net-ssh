@@ -26,7 +26,7 @@ import org.apache.commons.net.ssh.transport.TransportException;
  * Protocol</a>.
  * 
  * @author shikhar
- * @see UserAuthService
+ * @see UserAuth
  */
 public interface AuthMethod extends PacketHandler
 {
