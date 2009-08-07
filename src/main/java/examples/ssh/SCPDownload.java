@@ -20,7 +20,7 @@ public class SCPDownload
         ssh.connect("localhost");
         try {
             ssh.authPublickey(System.getProperty("user.name"));
-            new SCPDownloadClient(ssh).copy("logs", "/tmp/");
+            new SCPDownloadClient(ssh).copy("/tmp/hundred", "/home/shikhar");
         } finally {
             ssh.disconnect();
         }

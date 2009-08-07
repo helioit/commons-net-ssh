@@ -36,7 +36,7 @@ public class X11
              * There are some security concerns arising from both of the above points, but then this
              * snippet is intended to serve as a simple example...
              */
-            sess.startX11Forwarding(false, "MIT-MAGIC-COOKIE-1", "b82b684083406053bb71bd9fc754502b", 0,
+            sess.startX11Forwarding(false, "MIT-MAGIC-COOKIE-1", "85c0d66965c04b0b6ac3d2a21d6ced19", 0,
                                     new SocketForwardingConnectListener(new InetSocketAddress("localhost", 6000)));
             
             Command cmd = sess.exec("firefox");
@@ -45,7 +45,7 @@ public class X11
             new Pipe("stderr", cmd.getErrorStream(), System.err).start();
             
             // Wait for session & X11 channel to get closed
-            client.getConnectionService().join();
+            client.getConnection().join();
             
         } finally {
             client.disconnect();

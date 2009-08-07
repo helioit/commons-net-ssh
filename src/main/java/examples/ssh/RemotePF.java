@@ -32,7 +32,7 @@ public class RemotePF
                         new SocketForwardingConnectListener(new InetSocketAddress("google.com", 80)));
             
             // something to hang on to so forwarding stays
-            client.getTransport().waitForClose(0);
+            client.getTransport().join();
             
         } finally {
             client.disconnect();

@@ -22,9 +22,6 @@ public class Exec
             
             Command cmd = client.startSession().exec("uptime");
             
-            // Wait for channel to get closed (i.e. when the command terminates..)
-            client.getConnectionService().join();
-            
             System.out.print(cmd.getOutputAsString());
             System.out.println("\n** exit status: " + cmd.getExitStatus());
             

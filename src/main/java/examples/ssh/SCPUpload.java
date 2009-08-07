@@ -20,7 +20,7 @@ public class SCPUpload
         ssh.connect("localhost");
         try {
             ssh.authPublickey(System.getProperty("user.name"));
-            new SCPUploadClient(ssh).copy("/home/shikhar/logs", "/tmp/");
+            new SCPUploadClient(ssh).copy("/tmp/ten", "");
         } finally {
             ssh.disconnect();
         }
