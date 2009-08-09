@@ -36,19 +36,6 @@ public class SCPUploadClient extends SCPClient
         return this;
     }
     
-    protected void doCopy(File f) throws IOException
-    {
-        if (modeGetter.shouldPreserveTimes())
-            sendMessage("T" + modeGetter.getLastModifiedTime(f) + " 0 " + modeGetter.getLastAccessTime(f) + " 0");
-        
-        if (f.isDirectory())
-            sendDirectory(f);
-        else if (f.isFile()) // i.e. a regular file not a socket or pipe or smthn
-            sendFile(f);
-        else
-            throw new IOException(f + " is not a regular file or directory.");
-    }
-    
     protected File[] getChildren(File f) throws IOException
     {
         File[] files = fileFilter == null ? f.listFiles() : f.listFiles(fileFilter);
@@ -68,19 +55,34 @@ public class SCPUploadClient extends SCPClient
         execSCPWith(args);
     }
     
+    protected void process(File f) throws IOException
+    {
+        if (modeGetter.shouldPreserveTimes())
+            sendMessage("T" + modeGetter.getLastModifiedTime(f) + " 0 " + modeGetter.getLastAccessTime(f) + " 0");
+        
+        if (f.isDirectory())
+            sendDirectory(f);
+        else if (f.isFile()) // i.e. a regular file not a socket or pipe or smthn
+            sendFile(f);
+        else
+            throw new IOException(f + " is not a regular file or directory.");
+    }
+    
     protected void sendDirectory(File f) throws IOException
     {
         log.info("Entering directory `{}`", f.getName());
         sendMessage("D0" + modeGetter.getPermissions(f) + " 0 " + f.getName());
+        
         for (File child : getChildren(f))
-            doCopy(child);
+            process(child);
+        
         sendMessage("E");
         log.info("Exiting directory `{}`", f.getName());
     }
     
     protected void sendFile(File f) throws IOException
     {
-        log.info("Sending `{}`", f.getName());
+        log.info("Sending `{}`...", f.getName());
         InputStream src = new FileInputStream(f);
         sendMessage("C0" + modeGetter.getPermissions(f) + " " + f.length() + " " + f.getName());
         transfer(src, scp.getOutputStream(), scp.getRemoteMaxPacketSize(), f.length());
@@ -89,20 +91,12 @@ public class SCPUploadClient extends SCPClient
         IOUtils.closeQuietly(src);
     }
     
-    protected void sendMessage(String msg) throws IOException
-    {
-        log.debug("Sending message: {}", msg);
-        scp.getOutputStream().write((msg + LF).getBytes());
-        scp.getOutputStream().flush();
-        check("Message ACK received");
-    }
-    
     @Override
     protected synchronized void startCopy(String sourcePath, String targetPath) throws IOException
     {
         init(targetPath);
-        check("Remote can talk SCP");
-        doCopy(new File(sourcePath));
+        check("Start status OK");
+        process(new File(sourcePath));
     }
     
 }

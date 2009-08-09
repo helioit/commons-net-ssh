@@ -12,6 +12,7 @@ import org.apache.commons.net.ssh.SSHException;
 import org.apache.commons.net.ssh.connection.ConnectionException;
 import org.apache.commons.net.ssh.connection.Session.Command;
 import org.apache.commons.net.ssh.transport.TransportException;
+import org.apache.commons.net.ssh.util.IOUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -112,21 +113,21 @@ public abstract class SCPClient
         int code = scp.getInputStream().read();
         switch (code)
         {
-            case -1:
-                String stderr = scp.getErrorAsString();
-                if (stderr != "")
-                    stderr = ". Additional info: " + stderr;
-                throw new SCPException("EOF while expecting response to protocol message" + stderr);
-            case 0: // OK
-                log.debug(what);
-                return;
-            case 1:
-                addWarning(readMessage());
-                break;
-            case 2:
-                throw new SCPException("Remote SCP command had error: " + readMessage());
-            default:
-                throw new SCPException("Received unknown response code");
+        case -1:
+            String stderr = scp.getErrorAsString();
+            if (stderr != "")
+                stderr = ". Additional info: `" + stderr + "`";
+            throw new SCPException("EOF while expecting response to protocol message" + stderr);
+        case 0: // OK
+            log.debug(what);
+            return;
+        case 1:
+            addWarning(readMessage());
+            break;
+        case 2:
+            throw new SCPException("Remote SCP command had error: " + readMessage());
+        default:
+            throw new SCPException("Received unknown response code");
         }
     }
     
@@ -144,23 +145,19 @@ public abstract class SCPClient
         scp = host.startSession().exec(cmd);
     }
     
-    protected void exit() throws IOException
+    protected void exit()
     {
-        if (scp != null) {
-            scp.close();
-            
-            if (scp.getExitStatus() != null) {
-                exitStatus = scp.getExitStatus();
-                if (scp.getExitStatus() != 0)
-                    log.warn("SCP exit status: {}", scp.getExitStatus());
-            } else
-                exitStatus = -1;
-            
-            if (scp.getExitSignal() != null)
-                log.warn("SCP exit signal: {}", scp.getExitSignal());
-            
+        IOUtils.closeQuietly(scp);
+        
+        if (scp.getExitStatus() != null) {
+            exitStatus = scp.getExitStatus();
+            if (scp.getExitStatus() != 0)
+                log.warn("SCP exit status: {}", scp.getExitStatus());
         } else
             exitStatus = -1;
+        
+        if (scp.getExitSignal() != null)
+            log.warn("SCP exit signal: {}", scp.getExitSignal());
         
         scp = null;
     }
@@ -184,6 +181,14 @@ public abstract class SCPClient
                 sb.append((char) x);
         log.debug("Read message: {}", sb);
         return sb.toString();
+    }
+    
+    protected void sendMessage(String msg) throws IOException
+    {
+        log.debug("Sending message: {}", msg);
+        scp.getOutputStream().write((msg + LF).getBytes());
+        scp.getOutputStream().flush();
+        check("Message ACK received");
     }
     
     protected void signal(String what) throws IOException

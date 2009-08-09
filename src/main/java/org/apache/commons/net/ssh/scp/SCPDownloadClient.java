@@ -81,7 +81,7 @@ public class SCPDownloadClient extends SCPClient
         try {
             val = Long.parseLong(longString);
         } catch (NumberFormatException nfe) {
-            throw new IOException("Could not parse " + valType + " from: " + longString, nfe);
+            throw new IOException("Could not parse " + valType + " from `" + longString + "`", nfe);
         }
         return val;
     }
@@ -90,43 +90,49 @@ public class SCPDownloadClient extends SCPClient
     {
         // e.g. "C0644" -> "644"; "D0755" -> "755"
         if (cmd.length() != 5)
-            throw new IOException("Could not parse permissions: " + cmd);
+            throw new IOException("Could not parse permissions from `" + cmd + "`");
         return cmd.substring(2);
     }
     
     protected void prepare(File f, String perms, String tMsg) throws IOException
     {
         modeSetter.setPermissions(f, perms);
-        setTimes(tMsg, f);
+        
+        if (tMsg != null && modeSetter.shouldPreserveTimes()) {
+            String[] tMsgParts = tokenize(tMsg, 4); // e.g. T<mtime> 0 <atime> 0
+            modeSetter.setLastModifiedTime(f, parseLong(tMsgParts[0].substring(1), "last modified time"));
+            modeSetter.setLastAccessedTime(f, parseLong(tMsgParts[2], "last access time"));
+        }
     }
     
     protected boolean process(String bufferedTMsg, String msg, File f) throws IOException
     {
         if (msg.length() < 1)
-            throw new IOException("Could not parse message: " + msg);
+            throw new IOException("Could not parse message `" + msg + "`");
         
         switch (msg.charAt(0))
         {
-            case 'T':
-                signal("ACK: T");
-                process(msg, readMessage(true), f);
-                break;
-            case 'C':
-                processFile(msg, bufferedTMsg, f);
-                break;
-            case 'D':
-                processDirectory(msg, bufferedTMsg, f);
-                break;
-            case 'E':
-                return true;
-            case (char) 1:
-                addWarning(msg.substring(1));
-                break;
-            case (char) 2:
-                throw new IOException("Remote SCP command returned error: " + msg.substring(1));
-            default:
-                // TODO: send error to remote scp, then raise IOEx
-                assert false;
+        case 'T':
+            signal("ACK: T");
+            process(msg, readMessage(true), f);
+            break;
+        case 'C':
+            processFile(msg, bufferedTMsg, f);
+            break;
+        case 'D':
+            processDirectory(msg, bufferedTMsg, f);
+            break;
+        case 'E':
+            return true;
+        case (char) 1:
+            addWarning(msg.substring(1));
+            break;
+        case (char) 2:
+            throw new IOException("Remote SCP command returned error: " + msg.substring(1));
+        default:
+            String err = "Unrecognized message: `" + msg + "`";
+            sendMessage((char) 2 + err);
+            throw new IOException(err);
         }
         
         return false;
@@ -169,21 +175,12 @@ public class SCPDownloadClient extends SCPClient
         IOUtils.closeQuietly(fos);
     }
     
-    protected void setTimes(String tMsg, File f) throws IOException
-    {
-        if (tMsg != null && modeSetter.shouldPreserveTimes()) {
-            String[] tMsgParts = tokenize(tMsg, 4); // e.g. T<mtime> 0 <atime> 0
-            modeSetter.setLastModifiedTime(f, parseLong(tMsgParts[0].substring(1), "last modified time"));
-            modeSetter.setLastAccessedTime(f, parseLong(tMsgParts[2], "last access time"));
-        }
-    }
-    
     @Override
     protected void startCopy(String sourcePath, String targetPath) throws IOException
     {
         init(sourcePath);
         
-        signal("We can talk SCP");
+        signal("Start status OK");
         
         String msg = readMessage(true);
         do
