@@ -10,7 +10,7 @@ public class SCPUpload
 {
     
     static {
-        BasicConfigurator.configure(new ConsoleAppender(new PatternLayout("[%t] %p %c{2} %m%n")));
+        BasicConfigurator.configure(new ConsoleAppender(new PatternLayout("%d [%-15.15t] %-5p %-30.30c{1} - %m%n")));
     }
     
     public static void main(String[] args) throws Exception
@@ -20,7 +20,13 @@ public class SCPUpload
         ssh.connect("localhost");
         try {
             ssh.authPublickey(System.getProperty("user.name"));
-            new SCPUploadClient(ssh).copy("/tmp/ten", "");
+            
+            // Compression = significant speedup for large file transfers on fast links
+            // present here to demo renegotiation - could have just put this before connect()             
+            ssh.useZlibCompression();
+            
+            new SCPUploadClient(ssh).copy("/tmp/ten", ".");
+            
         } finally {
             ssh.disconnect();
         }

@@ -4,7 +4,7 @@ import java.net.InetSocketAddress;
 
 import org.apache.commons.net.ssh.SSHClient;
 import org.apache.commons.net.ssh.connection.Session;
-import org.apache.commons.net.ssh.connection.ConnectListener.SocketForwardingConnectListener;
+import org.apache.commons.net.ssh.connection.SocketForwardingConnectListener;
 import org.apache.commons.net.ssh.connection.Session.Command;
 import org.apache.commons.net.ssh.util.Pipe;
 
@@ -12,12 +12,13 @@ public class X11
 {
     
     //    static {
-    //        BasicConfigurator.configure(new ConsoleAppender(new PatternLayout("[%t] %p %c{2} %m%n")));
+    //        BasicConfigurator.configure(new ConsoleAppender(new PatternLayout("%d [%-15.15t] %-5p %-30.30c{1} - %m%n")));
     //    }
     
     public static void main(String... args) throws Exception
     {
         SSHClient client = new SSHClient();
+        client.useZlibCompression();
         client.initUserKnownHosts();
         
         client.connect("localhost");
@@ -36,7 +37,7 @@ public class X11
              * There are some security concerns arising from both of the above points, but then this
              * snippet is intended to serve as a simple example...
              */
-            sess.startX11Forwarding(false, "MIT-MAGIC-COOKIE-1", "85c0d66965c04b0b6ac3d2a21d6ced19", 0,
+            sess.startX11Forwarding(false, "MIT-MAGIC-COOKIE-1", "d45d3d875226efad4520f18ff07f1c5a", 0,
                                     new SocketForwardingConnectListener(new InetSocketAddress("localhost", 6000)));
             
             Command cmd = sess.exec("firefox");

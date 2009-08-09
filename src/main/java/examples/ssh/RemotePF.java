@@ -3,14 +3,14 @@ package examples.ssh;
 import java.net.InetSocketAddress;
 
 import org.apache.commons.net.ssh.SSHClient;
-import org.apache.commons.net.ssh.connection.ConnectListener.SocketForwardingConnectListener;
+import org.apache.commons.net.ssh.connection.SocketForwardingConnectListener;
 import org.apache.commons.net.ssh.connection.RemotePortForwarder.Forward;
 
 public class RemotePF
 {
     
     //    static {
-    //        BasicConfigurator.configure(new ConsoleAppender(new PatternLayout("[%t] %p %c{2} %m%n")));
+    //        BasicConfigurator.configure(new ConsoleAppender(new PatternLayout("%d [%-15.15t] %-5p %-30.30c{1} - %m%n")));
     //    }
     
     public static void main(String... args) throws Exception
@@ -31,7 +31,7 @@ public class RemotePF
                   .bind(new Forward("127.0.0.1", 8080), //
                         new SocketForwardingConnectListener(new InetSocketAddress("google.com", 80)));
             
-            // something to hang on to so forwarding stays
+            // Something to hang on to so forwarding stays
             client.getTransport().join();
             
         } finally {

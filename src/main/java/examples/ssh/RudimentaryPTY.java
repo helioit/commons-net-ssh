@@ -11,7 +11,7 @@ class RudimentaryPTY
 {
     
     //    static {
-    //        BasicConfigurator.configure(new ConsoleAppender(new PatternLayout("[%t] %p %c{2} %m%n")));
+    //        BasicConfigurator.configure(new ConsoleAppender(new PatternLayout("%d [%-15.15t] %-5p %-30.30c{1} - %m%n")));
     //    }
     
     public static void main(String... args) throws IOException
