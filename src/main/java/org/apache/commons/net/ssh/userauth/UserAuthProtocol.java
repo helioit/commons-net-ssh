@@ -106,7 +106,10 @@ public class UserAuthProtocol extends AbstractService implements UserAuth, AuthP
                 // We aren't in charge anymore, next service is
                 trans.setService(nextService);
                 return;
-            }
+            } else if (hadPartialSuccess())
+                log.info("Authentication partially successful");
+            else
+                log.info("Authentication failed");
             
             method = null;
         }

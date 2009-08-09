@@ -22,6 +22,8 @@ import java.io.Closeable;
 import java.io.IOException;
 
 import org.apache.commons.net.ssh.transport.PacketWriter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * TODO Add javadoc
@@ -31,13 +33,16 @@ import org.apache.commons.net.ssh.transport.PacketWriter;
 public class IOUtils
 {
     
+    protected static final Logger LOG = LoggerFactory.getLogger(IOUtils.class);
+    
     public static void closeQuietly(Closeable... closeables)
     {
         for (Closeable c : closeables)
             try {
                 if (c != null)
                     c.close();
-            } catch (IOException ignored) {
+            } catch (IOException logged) {
+                LOG.warn("Error closing {} - {}", c, logged);
             }
     }
     
@@ -45,7 +50,8 @@ public class IOUtils
     {
         try {
             return pw.writePacket(payload);
-        } catch (IOException ignored) {
+        } catch (IOException logged) {
+            LOG.warn("Error writing packet to {} - {}", pw, logged);
             return -1;
         }
     }

@@ -26,6 +26,7 @@ import java.security.PrivateKey;
 import java.security.PublicKey;
 
 import org.apache.commons.net.ssh.NamedFactory;
+import org.apache.commons.net.ssh.util.IOUtils;
 import org.apache.commons.net.ssh.util.PasswordFinder;
 import org.apache.commons.net.ssh.util.Constants.KeyType;
 import org.apache.commons.net.ssh.util.PasswordFinder.Resource;
@@ -116,18 +117,13 @@ public class PKCS8KeyFile implements FileKeyProvider
                 r = new PEMReader(new InputStreamReader(new FileInputStream(location)), pFinder);
                 o = r.readObject();
             } catch (IOException e) {
-                if (e.toString().contains("javax.crypto.BadPaddingException")) // screen-scraping sucks
+                if (e.toString().contains("javax.crypto.BadPaddingException"))
+                    // => incorrect password. screen-scraping sucks.
                     if (pwdf.shouldRetry(resource))
-                        // PasswordFinder is telling us to retry
                         continue;
                 throw e;
             } finally {
-                try {
-                    if (r != null)
-                        r.close();
-                } catch (IOException ignored) {
-                    log.debug("strangeness - {}", ignored.toString());
-                }
+                IOUtils.closeQuietly(r);
             }
             break;
         }

@@ -57,7 +57,7 @@ public class Buffer
      */
     public static final int DEFAULT_SIZE = 256;
     
-    private static int getNextPowerOf2(int i)
+    protected static int getNextPowerOf2(int i)
     {
         int j = 1;
         while (j < i)
@@ -156,6 +156,22 @@ public class Buffer
         rpos = 0;
     }
     
+    public void ensureAvailable(int a)
+    {
+        if (available() < a)
+            throw new BufferException("Underflow");
+    }
+    
+    public void ensureCapacity(int capacity)
+    {
+        if (data.length - wpos < capacity) {
+            int cw = wpos + capacity;
+            byte[] tmp = new byte[getNextPowerOf2(cw)];
+            System.arraycopy(data, 0, tmp, 0, data.length);
+            data = tmp;
+        }
+    }
+    
     /**
      * Read an SSH boolean byte
      * 
@@ -218,18 +234,6 @@ public class Buffer
         return i;
     }
     
-    //    /**
-    //     * Reads two SSH strings in order, the first one is taken to be the text and the second one is
-    //     * taken to be te language tag.
-    //     * 
-    //     * @return a constructed {@link LQString}
-    //     */
-    //    public LQString getLQString()
-    //    {
-    //        return new LQString(getString(), getString());
-    //    }
-    //    
-    
     /**
      * Reads an SSH byte and returns it as {@link Constants.Message}
      * 
@@ -270,26 +274,26 @@ public class Buffer
         try {
             switch (KeyType.fromString(getString()))
             {
-                case RSA:
-                {
-                    BigInteger e = getMPInt();
-                    BigInteger n = getMPInt();
-                    KeyFactory keyFactory = SecurityUtils.getKeyFactory("RSA");
-                    key = keyFactory.generatePublic(new RSAPublicKeySpec(n, e));
-                    break;
-                }
-                case DSA:
-                {
-                    BigInteger p = getMPInt();
-                    BigInteger q = getMPInt();
-                    BigInteger g = getMPInt();
-                    BigInteger y = getMPInt();
-                    KeyFactory keyFactory = SecurityUtils.getKeyFactory("DSA");
-                    key = keyFactory.generatePublic(new DSAPublicKeySpec(y, p, q, g));
-                    break;
-                }
-                default:
-                    assert false;
+            case RSA:
+            {
+                BigInteger e = getMPInt();
+                BigInteger n = getMPInt();
+                KeyFactory keyFactory = SecurityUtils.getKeyFactory("RSA");
+                key = keyFactory.generatePublic(new RSAPublicKeySpec(n, e));
+                break;
+            }
+            case DSA:
+            {
+                BigInteger p = getMPInt();
+                BigInteger q = getMPInt();
+                BigInteger g = getMPInt();
+                BigInteger y = getMPInt();
+                KeyFactory keyFactory = SecurityUtils.getKeyFactory("DSA");
+                key = keyFactory.generatePublic(new DSAPublicKeySpec(y, p, q, g));
+                break;
+            }
+            default:
+                assert false;
             }
         } catch (GeneralSecurityException e) {
             throw new SSHRuntimeException(e);
@@ -445,13 +449,13 @@ public class Buffer
     /**
      * Writes a byte indicating the SSH message identifier
      * 
-     * @param cmd
+     * @param msg
      *            the identifier as a {@link Constants.Message} type
      * @return this
      */
-    public Buffer putMessageID(Message cmd)
+    public Buffer putMessageID(Message msg)
     {
-        return putByte(cmd.toByte());
+        return putByte(msg.toByte());
     }
     
     /**
@@ -512,20 +516,20 @@ public class Buffer
         KeyType type = KeyType.fromKey(key);
         switch (type)
         {
-            case RSA:
-                putString(type.toString()) // ssh-rsa
-                                          .putMPInt(((RSAPublicKey) key).getPublicExponent()) // e
-                                          .putMPInt(((RSAPublicKey) key).getModulus()); // n
-                break;
-            case DSA:
-                putString(type.toString()) // ssh-dss
-                                          .putMPInt(((DSAPublicKey) key).getParams().getP()) // p
-                                          .putMPInt(((DSAPublicKey) key).getParams().getQ()) // q
-                                          .putMPInt(((DSAPublicKey) key).getParams().getG()) // g
-                                          .putMPInt(((DSAPublicKey) key).getY()); // y
-                break;
-            default:
-                assert false;
+        case RSA:
+            putString(type.toString()) // ssh-rsa
+                                      .putMPInt(((RSAPublicKey) key).getPublicExponent()) // e
+                                      .putMPInt(((RSAPublicKey) key).getModulus()); // n
+            break;
+        case DSA:
+            putString(type.toString()) // ssh-dss
+                                      .putMPInt(((DSAPublicKey) key).getParams().getP()) // p
+                                      .putMPInt(((DSAPublicKey) key).getParams().getQ()) // q
+                                      .putMPInt(((DSAPublicKey) key).getParams().getG()) // g
+                                      .putMPInt(((DSAPublicKey) key).getY()); // y
+            break;
+        default:
+            assert false;
         }
         return this;
     }
@@ -587,22 +591,6 @@ public class Buffer
     {
         ensureCapacity(wpos - this.wpos);
         this.wpos = wpos;
-    }
-    
-    private void ensureAvailable(int a)
-    {
-        if (available() < a)
-            throw new BufferException("Underflow");
-    }
-    
-    private void ensureCapacity(int capacity)
-    {
-        if (data.length - wpos < capacity) {
-            int cw = wpos + capacity;
-            byte[] tmp = new byte[getNextPowerOf2(cw)];
-            System.arraycopy(data, 0, tmp, 0, data.length);
-            data = tmp;
-        }
     }
     
 }

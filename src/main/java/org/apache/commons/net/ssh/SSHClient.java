@@ -38,7 +38,9 @@ import org.apache.commons.net.ssh.cipher.AES256CTR;
 import org.apache.commons.net.ssh.cipher.BlowfishCBC;
 import org.apache.commons.net.ssh.cipher.Cipher;
 import org.apache.commons.net.ssh.cipher.TripleDESCBC;
+import org.apache.commons.net.ssh.compression.CompressionDelayedZlib;
 import org.apache.commons.net.ssh.compression.CompressionNone;
+import org.apache.commons.net.ssh.compression.CompressionZlib;
 import org.apache.commons.net.ssh.connection.Connection;
 import org.apache.commons.net.ssh.connection.ConnectionException;
 import org.apache.commons.net.ssh.connection.ConnectionProtocol;
@@ -119,19 +121,29 @@ public class SSHClient extends SocketClient
         conf.setVersion("NET_3_0");
         
         if (SecurityUtils.isBouncyCastleRegistered()) {
-            conf.setKeyExchangeFactories(new DHG14.Factory(), new DHG1.Factory());
+            
+            conf.setKeyExchangeFactories(new DHG14.Factory(), //
+                                         new DHG1.Factory());
+            
             conf.setRandomFactory(new SingletonRandomFactory(new BouncyCastleRandom.Factory()));
-            conf.setFileKeyProviderFactories(new PKCS8KeyFile.Factory(), new OpenSSHKeyFile.Factory());
+            
+            conf.setFileKeyProviderFactories(new PKCS8KeyFile.Factory(), //
+                                             new OpenSSHKeyFile.Factory());
+            
         } else {
             conf.setKeyExchangeFactories(new DHG1.Factory());
             conf.setRandomFactory(new SingletonRandomFactory(new JCERandom.Factory()));
         }
         
         List<NamedFactory<Cipher>> avail = new LinkedList<NamedFactory<Cipher>> //
-                (Arrays.<NamedFactory<Cipher>> asList(new AES128CTR.Factory(), new AES192CTR.Factory(),
-                                                      new AES256CTR.Factory(), new AES128CBC.Factory(),
-                                                      new AES192CBC.Factory(), new AES256CBC.Factory(),
-                                                      new TripleDESCBC.Factory(), new BlowfishCBC.Factory()));
+                (Arrays.<NamedFactory<Cipher>> asList(new AES128CTR.Factory(), //
+                                                      new AES192CTR.Factory(), //
+                                                      new AES256CTR.Factory(), //
+                                                      new AES128CBC.Factory(), //
+                                                      new AES192CBC.Factory(), // 
+                                                      new AES256CBC.Factory(), //
+                                                      new TripleDESCBC.Factory(), //
+                                                      new BlowfishCBC.Factory()));
         
         { /*
            * @see https://issues.apache.org/jira/browse/SSHD-24:
@@ -152,10 +164,16 @@ public class SSHClient extends SocketClient
         }
         
         conf.setCipherFactories(avail);
+        
         conf.setCompressionFactories(new CompressionNone.Factory());
-        conf.setMACFactories(new HMACSHA1.Factory(), new HMACSHA196.Factory(), new HMACMD5.Factory(),
+        
+        conf.setMACFactories(new HMACSHA1.Factory(), //
+                             new HMACSHA196.Factory(), //
+                             new HMACMD5.Factory(), //
                              new HMACMD596.Factory());
-        conf.setSignatureFactories(new SignatureRSA.Factory(), new SignatureDSA.Factory());
+        
+        conf.setSignatureFactories(new SignatureRSA.Factory(), //
+                                   new SignatureDSA.Factory());
         
         return conf;
     }
@@ -266,20 +284,24 @@ public class SSHClient extends SocketClient
      *            the {@link KeyProvider} for private key
      * @throws SSHException
      */
-    public void authPublickey(String username, KeyProvider keyProvider) throws UserAuthException, TransportException
+    public void authPublickey(String username, KeyProvider... keyProviders) throws UserAuthException,
+            TransportException
     {
-        auth(username, new AuthPublickey(keyProvider));
+        AuthMethod[] am = new AuthMethod[keyProviders.length];
+        for (int i = 0; i < keyProviders.length; i++)
+            am[i] = new AuthPublickey(keyProviders[i]);
+        auth(username, am);
     }
     
     public void authPublickey(String username, String... locations) throws UserAuthException, TransportException
     {
-        List<AuthMethod> am = new LinkedList<AuthMethod>();
+        List<KeyProvider> keyProviders = new LinkedList<KeyProvider>();
         for (String loc : locations)
             try {
-                am.add(new AuthPublickey(loadKeyFile(loc)));
+                keyProviders.add(loadKeyFile(loc));
             } catch (IOException ignore) {
             }
-        auth(username, am);
+        authPublickey(username, keyProviders.<KeyProvider> toArray(new KeyProvider[keyProviders.size()]));
     }
     
     @Override
@@ -288,11 +310,6 @@ public class SSHClient extends SocketClient
         trans.disconnect();
         assert !trans.isRunning();
         super.disconnect();
-    }
-    
-    public void forceRekey(boolean waitForDone) throws TransportException
-    {
-        trans.getKeyExchanger().startKex(waitForDone);
     }
     
     public Connection getConnection()
@@ -337,7 +354,7 @@ public class SSHClient extends SocketClient
      * ~/.ssh/known_hosts} and {@code ~/.ssh/known_hosts2} on most platforms.
      * 
      * @throws IOException
-     *             if there is an error loading from <b>both</b> locations
+     *             if there is an error loading from <em>both</em> locations
      */
     public void initUserKnownHosts() throws IOException
     {
@@ -381,7 +398,7 @@ public class SSHClient extends SocketClient
      * @throws IOException
      *             if the key file format is not known, if the file could not be read, etc.
      */
-    public FileKeyProvider loadKeyFile(String location) throws IOException
+    public KeyProvider loadKeyFile(String location) throws IOException
     {
         return loadKeyFile(location, (PasswordFinder) null);
     }
@@ -398,51 +415,105 @@ public class SSHClient extends SocketClient
      * @throws IOException
      *             if the key file format is not known, if the file could not be read etc.
      */
-    public FileKeyProvider loadKeyFile(String location, char[] passphrase) throws IOException
+    public KeyProvider loadKeyFile(String location, char[] passphrase) throws IOException
     {
         return loadKeyFile(location, PasswordFinder.Util.createOneOff(passphrase));
     }
     
     /**
-     * Convenience method for creating a {@link FileKeyProvider} instance from a location where an
-     * <i>encrypted</i> key file is located.
+     * Convenience method for creating a {@link FileKeyProvider}.
      * 
      * @param location
      *            the location of the key file
      * @param pwdf
-     *            the {@link PasswordFinder} that can supply the passphrase for decryption
+     *            the {@link PasswordFinder} that can supply the passphrase for decryption (may be
+     *            {@code null} in case keyfile is not encrypted
      * @return the {@link FileKeyProvider} initialized with given location
      * @throws IOException
      *             if the key file format is not known, if the file could not be read, etc.
      */
-    public FileKeyProvider loadKeyFile(String location, PasswordFinder pwdf) throws IOException
+    public KeyProvider loadKeyFile(String location, PasswordFinder pwdf) throws IOException
     {
         String format = SecurityUtils.detectKeyFileFormat(location);
-        if (format.equals("unknown"))
-            throw new IOException("Unknown key file format");
         FileKeyProvider fkp = NamedFactory.Utils.create(trans.getConfig().getFileKeyProviderFactories(), format);
-        if (fkp != null)
-            fkp.init(location, pwdf);
-        else
+        if (fkp == null)
             throw new SSHException("No provider available for " + format + " key file");
+        fkp.init(location, pwdf);
         return fkp;
     }
     
-    public FileKeyProvider loadKeyFile(String location, String passphrase) throws IOException
+    public KeyProvider loadKeyFile(String location, String passphrase) throws IOException
     {
         return loadKeyFile(location, passphrase.toCharArray());
     }
     
-    public LocalPortForwarder newLocalPortForwarder(SocketAddress addr, String toHost, int toPort) throws IOException
+    /**
+     * Create a {@link LocalPortForwarder} that will listen on {@code address} and forward incoming
+     * connections to the connected host; which will further redirect them to {@code host:port}.
+     * 
+     * @param address
+     *            {@link SocketAdddress} defining where the {@link LocalPortForwarder} listens
+     * @param host
+     *            hostname to which the SSH server will redirect
+     * @param port
+     *            the port at at {@code hostname} to which SSH server wil redirect
+     * @return
+     * @throws IOException
+     */
+    public LocalPortForwarder newLocalPortForwarder(SocketAddress address, String host, int port) throws IOException
     {
-        return new LocalPortForwarder(conn, addr, toHost, toPort);
+        return new LocalPortForwarder(conn, address, host, port);
     }
     
+    /**
+     * Does key rexchange.
+     * 
+     * @throws TransportException
+     *             if we were not connected or an error occurs during key exchange
+     */
+    public void rekey() throws TransportException
+    {
+        doKex();
+    }
+    
+    /**
+     * Opens a {@code session} channel. The returned {@link Session} instance allows
+     * {@link Session#exec(String) executing a remote command},
+     * {@link Session#startSubsysytem(String) starting a subsystem}, or {@link Session#startShell()
+     * starting a shell}.
+     * 
+     * @return the opened {@code session} channel
+     * @throws ConnectionException
+     * @throws TransportException
+     * @see {@link Session}
+     */
     public Session startSession() throws ConnectionException, TransportException
     {
         SessionChannel sess = new SessionChannel(conn);
         sess.open();
         return sess;
+    }
+    
+    /**
+     * Adds {@code zlib} compression to preferred compression algorithms. There is no guarantee that
+     * it will be successfully negotiatied.
+     * <p>
+     * If the client is already connected renegotiation is done; otherwise this method simply
+     * returns and negotation is done upon connecting.
+     * 
+     * @throws TransportException
+     *             if an error occurs during renegotiation
+     * @throws ClassNotFoundException
+     *             if JZlib is not in classpath
+     */
+    @SuppressWarnings("unchecked")
+    public void useZlibCompression() throws TransportException
+    {
+        trans.getConfig().setCompressionFactories(new CompressionDelayedZlib.Factory(), //
+                                                  new CompressionZlib.Factory(), //
+                                                  new CompressionNone.Factory());
+        if (isConnected())
+            rekey();
     }
     
     /**
@@ -454,6 +525,18 @@ public class SSHClient extends SocketClient
         super._connectAction_();
         trans.init(_socket_);
         
+        doKex();
+    }
+    
+    /**
+     * <em>Pre-condition</em> transport has been initialized with socket <br/>
+     * <em>Post-condition</em> key exchange completed
+     * 
+     * @throws TransportException
+     *             if error during kex
+     */
+    protected void doKex() throws TransportException
+    {
         long start = System.currentTimeMillis();
         trans.getKeyExchanger().startKex(true);
         log.info("Key exchange took {} seconds", (System.currentTimeMillis() - start) / 1000.0);

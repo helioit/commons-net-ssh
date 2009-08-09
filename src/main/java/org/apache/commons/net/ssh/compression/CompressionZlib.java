@@ -79,8 +79,7 @@ public class CompressionZlib implements Compression
                 buffer.putRawBytes(tmpbuf, 0, BUF_SIZE - stream.avail_out);
                 break;
             default:
-                throw new TransportException(DisconnectReason.COMPRESSION_ERROR,
-                        "compress: deflate returned " + status);
+                throw new TransportException(DisconnectReason.COMPRESSION_ERROR, "compress: deflate returned " + status);
             }
         } while (stream.avail_out == 0);
     }
@@ -116,10 +115,10 @@ public class CompressionZlib implements Compression
                 to.putRawBytes(tmpbuf, 0, BUF_SIZE - stream.avail_out);
                 break;
             case JZlib.Z_BUF_ERROR:
-                return;
+                return; // wtf.. but this works *head spins*
             default:
-                throw new TransportException(DisconnectReason.COMPRESSION_ERROR,
-                        "uncompress: inflate returned " + status);
+                throw new TransportException(DisconnectReason.COMPRESSION_ERROR, "uncompress: inflate returned "
+                        + status);
             }
         }
     }

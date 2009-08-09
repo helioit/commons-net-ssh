@@ -46,13 +46,6 @@ public class CompressionDelayedZlib extends CompressionZlib
         }
     }
     
-    /**
-     * Create a new instance of a delayed ZLib compression
-     */
-    public CompressionDelayedZlib()
-    {
-    }
-    
     @Override
     public boolean isDelayed()
     {
