@@ -4,13 +4,13 @@ import java.io.Closeable;
 import java.io.InputStream;
 import java.io.OutputStream;
 
+import org.apache.commons.net.ssh.ErrorNotifiable;
 import org.apache.commons.net.ssh.PacketHandler;
-import org.apache.commons.net.ssh.SSHException;
 import org.apache.commons.net.ssh.connection.OpenFailException.Reason;
 import org.apache.commons.net.ssh.transport.Transport;
 import org.apache.commons.net.ssh.transport.TransportException;
 
-public interface Channel extends Closeable, PacketHandler
+public interface Channel extends Closeable, PacketHandler, ErrorNotifiable
 {
     
     interface Direct extends Channel
@@ -56,8 +56,6 @@ public interface Channel extends Closeable, PacketHandler
     String getType();
     
     boolean isOpen();
-    
-    void notifyError(SSHException exception);
     
     void sendEOF() throws TransportException;
     

@@ -49,11 +49,6 @@ public abstract class AbstractService implements Service
         trans.sendUnimplemented();
     }
     
-    public void notifyError(SSHException ex)
-    {
-        log.error("Notified of {}", ex.toString());
-    }
-    
     public void notifyUnimplemented(long seqNum) throws SSHException
     {
         throw new SSHException(DisconnectReason.PROTOCOL_ERROR, "Unexpected: SSH_MSG_UNIMPLEMENTED");

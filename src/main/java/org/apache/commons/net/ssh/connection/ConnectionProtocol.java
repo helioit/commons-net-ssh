@@ -25,6 +25,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.net.ssh.AbstractService;
+import org.apache.commons.net.ssh.ErrorNotifiable;
 import org.apache.commons.net.ssh.SSHException;
 import org.apache.commons.net.ssh.connection.OpenFailException.Reason;
 import org.apache.commons.net.ssh.transport.Transport;
@@ -141,13 +142,11 @@ public class ConnectionProtocol extends AbstractService implements Connection
         return nextID.getAndIncrement();
     }
     
-    @Override
     public synchronized void notifyError(SSHException ex)
     {
-        super.notifyError(ex);
-        Future.Util.<Buffer, ConnectionException> notifyError(ex, globalReqs);
-        for (Channel chan : channels.values())
-            chan.notifyError(ex);
+        ErrorNotifiable.Util.alertAll(ex, (ErrorNotifiable[]) globalReqs.toArray());
+        ErrorNotifiable.Util.alertAll(ex, (ErrorNotifiable[]) channels.values().toArray());
+        globalReqs.clear();
         channels.clear();
     }
     

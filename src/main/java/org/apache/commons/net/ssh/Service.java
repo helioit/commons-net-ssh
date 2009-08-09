@@ -31,7 +31,7 @@ import org.apache.commons.net.ssh.util.Constants.Message;
  * @see UserAuth
  * @see Connection
  */
-public interface Service extends PacketHandler
+public interface Service extends PacketHandler, ErrorNotifiable
 {
     /**
      * Get the assigned name for this SSH service.
@@ -55,17 +55,6 @@ public interface Service extends PacketHandler
      * @throws SSHException
      */
     void handle(Message msg, Buffer buffer) throws SSHException;
-    
-    /**
-     * Notifies this service of an error in the transport layer.
-     * <p>
-     * Meant to be invoked as a callback by the transport layer so that this service can be notified
-     * of unrecoverable errors and cleanup.
-     * 
-     * @param ex
-     *            the exception that occured in session layer
-     */
-    void notifyError(SSHException ex);
     
     /**
      * Notifies this service that a {@code SSH_MSG_UNIMPLEMENTED} was received for packet with given

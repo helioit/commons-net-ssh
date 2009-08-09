@@ -21,6 +21,7 @@ package org.apache.commons.net.ssh.connection;
 import java.io.IOException;
 import java.io.OutputStream;
 
+import org.apache.commons.net.ssh.ErrorNotifiable;
 import org.apache.commons.net.ssh.SSHException;
 import org.apache.commons.net.ssh.util.Buffer;
 import org.apache.commons.net.ssh.util.Constants.Message;
@@ -28,7 +29,7 @@ import org.apache.commons.net.ssh.util.Constants.Message;
 /**
  * @author <a href="mailto:dev@mina.apache.org">Apache MINA SSHD Project</a>
  */
-public class ChannelOutputStream extends OutputStream
+public class ChannelOutputStream extends OutputStream implements ErrorNotifiable
 {
     
     protected final Channel chan;

@@ -16,7 +16,7 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.commons.net.ssh.random;
+package org.apache.commons.net.ssh.prng;
 
 import java.security.SecureRandom;
 
@@ -31,16 +31,16 @@ import org.bouncycastle.crypto.prng.VMPCRandomGenerator;
  * 
  * @author <a href="mailto:dev@mina.apache.org">Apache MINA SSHD Project</a>
  */
-public class BouncyCastleRandom implements Random
+public class BouncyCastleRandom implements PRNG
 {
     
     /**
      * Named factory for the BouncyCastle <code>Random</code>
      */
-    public static class Factory implements NamedFactory<Random>
+    public static class Factory implements NamedFactory<PRNG>
     {
         
-        public Random create()
+        public PRNG create()
         {
             return new BouncyCastleRandom();
         }

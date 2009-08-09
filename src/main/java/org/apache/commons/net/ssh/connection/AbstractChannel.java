@@ -24,6 +24,7 @@ import java.util.LinkedList;
 import java.util.Queue;
 import java.util.concurrent.locks.ReentrantLock;
 
+import org.apache.commons.net.ssh.ErrorNotifiable;
 import org.apache.commons.net.ssh.SSHException;
 import org.apache.commons.net.ssh.transport.Transport;
 import org.apache.commons.net.ssh.transport.TransportException;
@@ -54,7 +55,8 @@ public abstract class AbstractChannel implements Channel
     protected final ChannelInputStream in = new ChannelInputStream(this, lwin);
     protected final ChannelOutputStream out = new ChannelOutputStream(this, rwin);
     
-    protected final Queue<Event<ConnectionException>> reqs = new LinkedList<Event<ConnectionException>>();
+    protected final Queue<Event<ConnectionException>> chanReqResponseEvents =
+            new LinkedList<Event<ConnectionException>>();
     
     protected final ReentrantLock lock = new ReentrantLock();
     protected final Event<ConnectionException> open;
@@ -166,7 +168,7 @@ public abstract class AbstractChannel implements Channel
             break;
         
         case CHANNEL_WINDOW_ADJUST:
-            gotWindowAdjustment(buf);
+            gotWindowAdjustment(buf.getInt());
             break;
         
         case CHANNEL_REQUEST:
@@ -213,14 +215,11 @@ public abstract class AbstractChannel implements Channel
         }
     }
     
-    @SuppressWarnings("unchecked")
     public void notifyError(SSHException error)
     {
         log.debug("Channel #{} got notified of {}", getID(), error.toString());
-        in.notifyError(error);
-        out.notifyError(error);
-        Event.Util.<ConnectionException> notifyError(error, open, close);
-        Event.Util.<ConnectionException> notifyError(error, reqs);
+        ErrorNotifiable.Util.alertAll(error, open, close, in, out);
+        ErrorNotifiable.Util.alertAll(error, (ErrorNotifiable[]) chanReqResponseEvents.toArray());
         finishOff();
     }
     
@@ -256,9 +255,8 @@ public abstract class AbstractChannel implements Channel
         }
     }
     
-    private void gotWindowAdjustment(Buffer buf)
+    private void gotWindowAdjustment(int howmuch)
     {
-        int howmuch = buf.getInt();
         log.info("Received window adjustment for {} bytes", howmuch);
         rwin.expand(howmuch);
     }
@@ -310,7 +308,7 @@ public abstract class AbstractChannel implements Channel
     
     protected synchronized void gotResponse(boolean success) throws ConnectionException
     {
-        Event<ConnectionException> responseEvent = reqs.poll();
+        Event<ConnectionException> responseEvent = chanReqResponseEvents.poll();
         if (responseEvent != null) {
             if (success)
                 responseEvent.set();
@@ -352,17 +350,17 @@ public abstract class AbstractChannel implements Channel
     protected synchronized Event<ConnectionException> sendChannelRequest(String reqType, boolean wantReply,
             Buffer reqSpecific) throws TransportException
     {
-        log.info("Making channel request for `{}`", reqType);
-        Buffer reqBuf = newBuffer(Message.CHANNEL_REQUEST).putString(reqType) //
-                                                          .putBoolean(wantReply) //
-                                                          .putBuffer(reqSpecific);
-        trans.writePacket(reqBuf);
-        Event<ConnectionException> event = null;
+        log.info("Sending channel request for `{}`", reqType);
+        trans.writePacket(newBuffer(Message.CHANNEL_REQUEST).putString(reqType) //
+                                                            .putBoolean(wantReply) //
+                                                            .putBuffer(reqSpecific));
+        
+        Event<ConnectionException> responseEvent = null;
         if (wantReply) {
-            event = newEvent("chanreq for " + reqType);
-            reqs.add(event);
+            responseEvent = newEvent("chanreq for " + reqType);
+            chanReqResponseEvents.add(responseEvent);
         }
-        return event;
+        return responseEvent;
     }
     
     protected synchronized void sendClose() throws TransportException

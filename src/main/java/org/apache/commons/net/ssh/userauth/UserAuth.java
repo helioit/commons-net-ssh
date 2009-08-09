@@ -18,6 +18,8 @@
  */
 package org.apache.commons.net.ssh.userauth;
 
+import java.util.Deque;
+
 import org.apache.commons.net.ssh.Service;
 import org.apache.commons.net.ssh.transport.TransportException;
 
@@ -38,6 +40,8 @@ public interface UserAuth
      * @return the banner, or {@code null} if none was received
      */
     String getBanner();
+    
+    Deque<UserAuthException> getSavedExceptions();
     
     int getTimeout();
     

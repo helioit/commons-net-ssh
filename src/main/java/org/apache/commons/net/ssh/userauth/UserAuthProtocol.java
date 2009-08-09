@@ -161,17 +161,9 @@ public class UserAuthProtocol extends AbstractService implements UserAuth, AuthP
         }
     }
     
-    @Override
     public void notifyError(SSHException exception)
     {
-        super.notifyError(exception);
-        lock.lock();
-        try {
-            if (result.hasWaiters())
-                result.error(exception);
-        } finally {
-            lock.unlock();
-        }
+        result.error(exception);
     }
     
     protected void gotBanner(Buffer buf)

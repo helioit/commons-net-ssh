@@ -4,10 +4,12 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 
+import org.apache.commons.net.ssh.ErrorNotifiable;
+import org.apache.commons.net.ssh.SSHException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class Future<V, Ex extends Throwable>
+public class Future<V, Ex extends Throwable> implements ErrorNotifiable
 {
     
     public static class FutureException extends Exception
@@ -15,22 +17,6 @@ public class Future<V, Ex extends Throwable>
         public FutureException(String message)
         {
             super(message);
-        }
-    }
-    
-    public static class Util
-    {
-        public static <V, Ex extends Throwable> void notifyError(Throwable error, Future<V, Ex>... futures)
-        {
-            for (Future<V, Ex> event : futures)
-                event.error(error);
-        }
-        
-        public static <V, Ex extends Throwable> void notifyError(Throwable error,
-                Iterable<? extends Future<V, Ex>> futures)
-        {
-            for (Future<V, Ex> event : futures)
-                event.error(error);
         }
     }
     
@@ -136,6 +122,11 @@ public class Future<V, Ex extends Throwable>
         } finally {
             lock.unlock();
         }
+    }
+    
+    public void notifyError(SSHException error)
+    {
+        error(error);
     }
     
     public void set(V val)

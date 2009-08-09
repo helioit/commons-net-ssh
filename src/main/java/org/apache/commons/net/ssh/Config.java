@@ -8,16 +8,20 @@ import org.apache.commons.net.ssh.compression.Compression;
 import org.apache.commons.net.ssh.kex.KeyExchange;
 import org.apache.commons.net.ssh.keyprovider.FileKeyProvider;
 import org.apache.commons.net.ssh.mac.MAC;
-import org.apache.commons.net.ssh.random.Random;
+import org.apache.commons.net.ssh.prng.PRNG;
 import org.apache.commons.net.ssh.signature.Signature;
+import org.apache.commons.net.ssh.transport.Decoder;
+import org.apache.commons.net.ssh.transport.Encoder;
+import org.apache.commons.net.ssh.transport.KeyExchanger;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Container class for {@link NamedFactory} implementations of {@link KeyExchange}, {@link Cipher},
- * {@link Compression}, {@link MAC}, {@link Signature}, {@link Random}, and {@link FileKeyProvider}.
+ * Holds configuration information, implementations of core classes, and factories.
  * <p>
- * This class is used in {@link Transport} initialization.
+ * This is a container for {@link NamedFactory} implementations of {@link KeyExchange},
+ * {@link Cipher}, {@link Compression}, {@link MAC}, {@link Signature}, {@link PRNG}, and
+ * {@link FileKeyProvider}.
  * 
  * @author <a href="mailto:dev@mina.apache.org">Apache MINA SSHD Project</a>
  * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
@@ -28,13 +32,17 @@ public class Config
     protected static final Logger log = LoggerFactory.getLogger(Config.class);
     
     protected String version;
+    protected KeyExchanger kexer;
+    protected Encoder encoder;
+    protected Decoder decoder;
+    
     protected List<NamedFactory<KeyExchange>> keyExchangeFactories;
     protected List<NamedFactory<Cipher>> cipherFactories;
     protected List<NamedFactory<Compression>> compressionFactories;
     protected List<NamedFactory<MAC>> macFactories;
     protected List<NamedFactory<Signature>> signatureFactories;
     protected List<NamedFactory<FileKeyProvider>> fileKeyProviderFactories;
-    protected NamedFactory<Random> randomFactory;
+    protected NamedFactory<PRNG> prngFactory;
     
     /**
      * Retrieve the list of named factories for <code>Cipher</code>.
@@ -54,6 +62,16 @@ public class Config
     public List<NamedFactory<Compression>> getCompressionFactories()
     {
         return compressionFactories;
+    }
+    
+    public Decoder getDecoder()
+    {
+        return decoder;
+    }
+    
+    public Encoder getEncoder()
+    {
+        return encoder;
     }
     
     /**
@@ -76,6 +94,11 @@ public class Config
         return keyExchangeFactories;
     }
     
+    public KeyExchanger getKeyExchanger()
+    {
+        return kexer;
+    }
+    
     /**
      * Retrieve the list of named factories for <code>MAC</code>.
      * 
@@ -87,13 +110,13 @@ public class Config
     }
     
     /**
-     * Retrieve the {@link Random} factory to be used.
+     * Retrieve the {@link PRNG} factory to be used.
      * 
-     * @return the {@link Random} factory, never {@code null}
+     * @return the {@link PRNG} factory, never {@code null}
      */
-    public NamedFactory<Random> getRandomFactory()
+    public NamedFactory<PRNG> getPRNGFactory()
     {
-        return randomFactory;
+        return prngFactory;
     }
     
     /**
@@ -131,6 +154,16 @@ public class Config
         setCompressionFactories(Arrays.<NamedFactory<Compression>> asList(compressionFactories));
     }
     
+    public void setDecoder(Decoder decoder)
+    {
+        this.decoder = decoder;
+    }
+    
+    public void setEncoder(Encoder encoder)
+    {
+        this.encoder = encoder;
+    }
+    
     public void setFileKeyProviderFactories(List<NamedFactory<FileKeyProvider>> fileKeyProviderFactories)
     {
         this.fileKeyProviderFactories = fileKeyProviderFactories;
@@ -151,6 +184,11 @@ public class Config
         setKeyExchangeFactories(Arrays.<NamedFactory<KeyExchange>> asList(keyExchangeFactories));
     }
     
+    public void setKeyExchanger(KeyExchanger kexer)
+    {
+        this.kexer = kexer;
+    }
+    
     public void setMACFactories(List<NamedFactory<MAC>> macFactories)
     {
         this.macFactories = macFactories;
@@ -161,9 +199,9 @@ public class Config
         setMACFactories(Arrays.<NamedFactory<MAC>> asList(macFactories));
     }
     
-    public void setRandomFactory(NamedFactory<Random> randomFactory)
+    public void setPRNGFactory(NamedFactory<PRNG> prngFactory)
     {
-        this.randomFactory = randomFactory;
+        this.prngFactory = prngFactory;
     }
     
     public void setSignatureFactories(List<NamedFactory<Signature>> signatureFactories)

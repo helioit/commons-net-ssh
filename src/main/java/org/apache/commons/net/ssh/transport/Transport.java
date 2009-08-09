@@ -30,7 +30,7 @@ import org.apache.commons.net.ssh.Service;
 import org.apache.commons.net.ssh.cipher.Cipher;
 import org.apache.commons.net.ssh.compression.Compression;
 import org.apache.commons.net.ssh.mac.MAC;
-import org.apache.commons.net.ssh.random.Random;
+import org.apache.commons.net.ssh.prng.PRNG;
 import org.apache.commons.net.ssh.util.Buffer;
 import org.apache.commons.net.ssh.util.Constants;
 import org.apache.commons.net.ssh.util.Constants.DisconnectReason;
@@ -87,15 +87,13 @@ public interface Transport extends PacketWriter
     String getClientVersion();
     
     /**
-     * Retrieves the {@link Config} associated with this session.
-     * 
-     * @return factory manager for this session
+     * Retrieves the {@link Config} associated with this transport.
      */
     Config getConfig();
     
     KeyExchanger getKeyExchanger();
     
-    Random getPRNG();
+    PRNG getPRNG();
     
     InetAddress getRemoteHost();
     

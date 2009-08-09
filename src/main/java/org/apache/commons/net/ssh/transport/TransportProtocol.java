@@ -29,6 +29,7 @@ import java.util.Queue;
 import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.commons.net.ssh.Config;
+import org.apache.commons.net.ssh.ErrorNotifiable;
 import org.apache.commons.net.ssh.HostKeyVerifier;
 import org.apache.commons.net.ssh.NullService;
 import org.apache.commons.net.ssh.PacketHandler;
@@ -37,7 +38,7 @@ import org.apache.commons.net.ssh.Service;
 import org.apache.commons.net.ssh.cipher.Cipher;
 import org.apache.commons.net.ssh.compression.Compression;
 import org.apache.commons.net.ssh.mac.MAC;
-import org.apache.commons.net.ssh.random.Random;
+import org.apache.commons.net.ssh.prng.PRNG;
 import org.apache.commons.net.ssh.util.Buffer;
 import org.apache.commons.net.ssh.util.Event;
 import org.apache.commons.net.ssh.util.IOUtils;
@@ -92,7 +93,7 @@ public class TransportProtocol implements Transport, PacketHandler
             public void run()
             {
                 try {
-                    byte[] recvbuf = new byte[Decoder.MAX_PACKET_LEN];
+                    byte[] recvbuf = new byte[decoder.getMaxPacketLength()];
                     int needed = 1;
                     int read;
                     while (!Thread.currentThread().isInterrupted()) {
@@ -116,7 +117,7 @@ public class TransportProtocol implements Transport, PacketHandler
     private final Decoder decoder;
     
     /** Psuedo-random number generator as retrieved from the factory manager */
-    private final Random prng;
+    private final PRNG prng;
     
     /** Client version identification string */
     private final String clientID;
@@ -136,17 +137,15 @@ public class TransportProtocol implements Transport, PacketHandler
     
     public TransportProtocol(Config config)
     {
-        this(config, null, null, null);
-    }
-    
-    public TransportProtocol(Config config, KeyExchanger kexer, Encoder encoder, Decoder decoder)
-    {
         this.config = config;
-        this.prng = config.getRandomFactory().create();
-        this.kexer = kexer == null ? new KeyExchanger(this) : kexer;
-        this.encoder = encoder == null ? new Encoder(prng) : encoder;
-        this.decoder = decoder == null ? new Decoder(this) : decoder;
+        this.prng = config.getPRNGFactory().create();
+        this.kexer = config.getKeyExchanger();
+        this.encoder = config.getEncoder();
+        this.decoder = config.getDecoder();
         
+        this.encoder.init(prng);
+        this.kexer.init(this);
+        this.decoder.init(this);
         clientID = "SSH-2.0-" + config.getVersion();
     }
     
@@ -208,7 +207,7 @@ public class TransportProtocol implements Transport, PacketHandler
         return kexer;
     }
     
-    public Random getPRNG()
+    public PRNG getPRNG()
     {
         return prng;
     }
@@ -254,10 +253,10 @@ public class TransportProtocol implements Transport, PacketHandler
      * {@link Service#handle}.
      * <p
      * Even among the transport layer specific packets, key exchange packets are delegated to
-     * {@link KeyExchanger#handle}.
+     * {@link DefaultKeyExchanger#handle}.
      * <p>
      * This method is called in the context of the {@link #dispatcher} thread via
-     * {@link Converter#munch} when a full packet has been decoded.
+     * {@link BaseConverter#munch} when a full packet has been decoded.
      * 
      * @param buf
      *            buffer containg the packet
@@ -361,7 +360,7 @@ public class TransportProtocol implements Transport, PacketHandler
     
     public long sendUnimplemented() throws TransportException
     {
-        long seq = decoder.getSequenceNumber() - 1;
+        long seq = decoder.getSequenceNumber();
         log.info("Sending SSH_MSG_UNIMPLEMENTED for packet #{}", seq);
         return writePacket(new Buffer(Message.UNIMPLEMENTED).putInt(seq));
     }
@@ -425,7 +424,7 @@ public class TransportProtocol implements Transport, PacketHandler
                 Message m = Message.fromByte(payload.array()[payload.rpos()]);
                 if (!m.in(1, 49) || m == Message.SERVICE_REQUEST)
                     kexer.waitForDone();
-            } else if (encoder.getSequenceNumber() == 0)
+            } else if (encoder.getSequenceNumber() == 1)
                 kexer.startKex(true);
             
             long seq = encoder.encode(payload);
@@ -437,15 +436,18 @@ public class TransportProtocol implements Transport, PacketHandler
             }
             
             return seq;
-            
         }
     }
     
-    @SuppressWarnings("unchecked")
     private void die(Exception ex)
     {
         log.error("Dying because - {}", ex.toString());
+        
         SSHException causeOfDeath = SSHException.chainer.chain(ex);
+        
+        ErrorNotifiable.Util.alertAll(causeOfDeath, close, serviceAccept, kexer);
+        getService().notifyError(causeOfDeath);
+        setService(nullService);
         
         shutdownInput();
         
@@ -458,12 +460,6 @@ public class TransportProtocol implements Transport, PacketHandler
         
         shutdownOutput();
         close.set();
-        
-        Event.Util.<TransportException> notifyError(causeOfDeath, close, serviceAccept);
-        kexer.notifyError(causeOfDeath);
-        getService().notifyError(causeOfDeath);
-        
-        setService(nullService);
     }
     
     private void gotDebug(Buffer buf)

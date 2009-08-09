@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InterruptedIOException;
 
+import org.apache.commons.net.ssh.ErrorNotifiable;
 import org.apache.commons.net.ssh.SSHException;
 import org.apache.commons.net.ssh.transport.TransportException;
 import org.apache.commons.net.ssh.util.Buffer;
@@ -12,7 +13,7 @@ import org.apache.commons.net.ssh.util.Buffer;
  * @author <a href="mailto:dev@mina.apache.org">Apache MINA SSHD Project</a>
  * @author shikhar
  */
-public class ChannelInputStream extends InputStream
+public class ChannelInputStream extends InputStream implements ErrorNotifiable
 {
     
     protected final Channel chan;

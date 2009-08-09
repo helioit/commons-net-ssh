@@ -10,4 +10,8 @@ public class NullService extends AbstractService
         super("null-service", trans);
     }
     
+    public void notifyError(SSHException error)
+    {
+    }
+    
 }
