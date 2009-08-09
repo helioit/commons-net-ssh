@@ -93,7 +93,7 @@ public class SecurityUtils
      * @return name of the key file format
      * @throws IOException
      */
-    public static String detectKeyFileFormat(String location) throws IOException
+    public static FileKeyProvider.Format detectKeyFileFormat(String location) throws IOException
     {
         BufferedReader br = new BufferedReader(new FileReader(location));
         String firstLine = br.readLine();
@@ -102,15 +102,15 @@ public class SecurityUtils
             throw new IOException("Empty file");
         if (firstLine.startsWith("-----BEGIN") && firstLine.endsWith("PRIVATE KEY-----"))
             if (new File(location + ".pub").exists())
-                // can delay asking for password since have unencrypted pubkey
-                return "OpenSSH";
+                // Can delay asking for password since have unencrypted pubkey
+                return FileKeyProvider.Format.OpenSSH;
             else
-                // more general
-                return "PKCS8";
+                // More general
+                return FileKeyProvider.Format.PKCS8;
         /*
          * TODO: Tectia, PuTTY (.ppk) ...
          */
-        return "unknown";
+        return FileKeyProvider.Format.OpenSSH;
     }
     
     /**

@@ -1,5 +1,6 @@
 package org.apache.commons.net.ssh.connection;
 
+import org.apache.commons.net.ssh.connection.OpenFailException.Reason;
 import org.apache.commons.net.ssh.transport.Transport;
 import org.apache.commons.net.ssh.transport.TransportException;
 import org.apache.commons.net.ssh.util.Buffer;
@@ -35,10 +36,11 @@ public interface Connection
     
     int nextID();
     
+    void sendOpenFailure(int recipient, Reason reason, String message) throws TransportException;
+    
     void setMaxPacketSize(int maxPacketSize);
     
     void setTimeout(int timeout);
     
     void setWindowSize(int windowSize);
-    
 }

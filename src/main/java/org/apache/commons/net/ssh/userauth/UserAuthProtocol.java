@@ -22,6 +22,7 @@ import java.util.ArrayDeque;
 import java.util.Arrays;
 import java.util.Deque;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.Set;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -45,11 +46,10 @@ public class UserAuthProtocol extends AbstractService implements UserAuth, AuthP
     protected final ReentrantLock lock = new ReentrantLock();
     protected final Event<UserAuthException> result =
             new Event<UserAuthException>("userauth result", UserAuthException.chainer, lock);
-    
     protected final Deque<UserAuthException> savedEx = new ArrayDeque<UserAuthException>();
     protected final Set<String> allowed = new HashSet<String>();
     
-    protected AuthMethod method; // currently active method
+    protected AuthMethod currentMethod = new AuthNone(); // currently active method
     protected String banner; // auth banner
     
     protected boolean partialSuccess;
@@ -68,50 +68,40 @@ public class UserAuthProtocol extends AbstractService implements UserAuth, AuthP
         this.username = username;
         this.nextService = nextService;
         
-        {
-            /*
-             * Standard practice is to try "none" auth which would give us the real allowed methods
-             * list when it fails... maybe should be doing that.
-             */
-            for (AuthMethod meth : methods)
-                // Initially assume all methods allowed
-                allowed.add(meth.getName());
-        }
-        
         request(); // Request "ssh-userauth" service
         
-        for (AuthMethod meth : methods) {
+        allowed.add(currentMethod.getName()); // "none" auth
+        
+        Iterator<AuthMethod> iter = methods.iterator();
+        
+        for (;;) {
             
-            if (!allowed.contains(meth.getName()))
-                save(meth.getName() + " auth not allowed by server");
-            else
-                log.info("Trying {} auth...", meth.getName());
+            if (!allowed.contains(currentMethod.getName())) {
+                save(currentMethod.getName() + " auth not allowed by server");
+                break;
+            } else
+                log.info("Trying `{}` auth...", currentMethod.getName());
             
-            this.method = meth;
-            meth.init(this);
-            result.clear();
             boolean success = false;
-            
             try {
-                meth.request();
-                success = result.get(timeout);
-            } catch (UserAuthException e) {
-                // Let's give other methods a shot
+                success = tryWith(currentMethod);
+            } catch (UserAuthException e) { // Give other methods a shot
                 save(e);
             }
             
             if (success) {
-                // Puts delayed compression into force if applicable
-                trans.setAuthenticated();
-                // We aren't in charge anymore, next service is
-                trans.setService(nextService);
+                log.info("`{}` auth successful", currentMethod.getName());
                 return;
-            } else if (hadPartialSuccess())
-                log.info("Authentication partially successful");
-            else
-                log.info("Authentication failed");
+            } else {
+                log.info("`{}` auth failed", currentMethod.getName());
+                if (iter.hasNext())
+                    currentMethod = iter.next();
+                else {
+                    currentMethod = null;
+                    break;
+                }
+            }
             
-            method = null;
         }
         
         log.debug("Had {} saved exception(s)", savedEx.size());
@@ -149,52 +139,76 @@ public class UserAuthProtocol extends AbstractService implements UserAuth, AuthP
         return partialSuccess;
     }
     
+    @Override
     public void handle(Message msg, Buffer buf) throws SSHException
     {
-        // ssh-userauth packets have message numbers between 50-80
-        if (!msg.in(50, 80))
+        if (!msg.in(50, 80)) // ssh-userauth packets have message numbers between 50-80
             throw new TransportException(DisconnectReason.PROTOCOL_ERROR);
         
-        lock.lock();
-        try {
-            if (msg == Message.USERAUTH_BANNER)
-                banner = buf.getString();
-            else if (result.hasWaiters()) { // i.e. we made an auth req & are waiting for result 
-                if (msg == Message.USERAUTH_SUCCESS)
-                    result.set(true);
-                else if (msg == Message.USERAUTH_FAILURE) {
-                    allowed.clear();
-                    allowed.addAll(Arrays.<String> asList(buf.getString().split(",")));
-                    partialSuccess |= buf.getBoolean();
-                    if (allowed.contains(method.getName()) && method.shouldRetry())
-                        method.request();
-                    else {
-                        save(method.getName() + " auth failed");
-                        result.set(false);
-                    }
-                } else {
-                    log.debug("Asking {} method to handle {} packet", method.getName(), msg);
-                    try {
-                        method.handle(msg, buf);
-                    } catch (UserAuthException e) {
-                        result.error(e);
-                    }
-                }
-            } else
-                trans.sendUnimplemented();
-        } finally {
-            lock.unlock();
+        switch (msg)
+        {
+        case USERAUTH_BANNER:
+            gotBanner(buf);
+            break;
+        case USERAUTH_SUCCESS:
+            gotSuccess();
+            break;
+        case USERAUTH_FAILURE:
+            gotFailure(buf);
+            break;
+        default:
+            gotUnknown(msg, buf);
         }
     }
     
+    @Override
     public void notifyError(SSHException exception)
     {
+        super.notifyError(exception);
         lock.lock();
         try {
             if (result.hasWaiters())
                 result.error(exception);
         } finally {
             lock.unlock();
+        }
+    }
+    
+    protected void gotBanner(Buffer buf)
+    {
+        banner = buf.getString();
+    }
+    
+    protected void gotFailure(Buffer buf) throws UserAuthException, TransportException
+    {
+        allowed.clear();
+        allowed.addAll(Arrays.<String> asList(buf.getString().split(",")));
+        partialSuccess |= buf.getBoolean();
+        if (allowed.contains(currentMethod.getName()) && currentMethod.shouldRetry())
+            currentMethod.request();
+        else {
+            save(currentMethod.getName() + " auth failed");
+            result.set(false);
+        }
+    }
+    
+    protected void gotSuccess()
+    {
+        trans.setAuthenticated(); // So it can put delayed compression into force if applicable
+        trans.setService(nextService); // We aren't in charge anymore, next service is
+        result.set(true);
+    }
+    
+    protected void gotUnknown(Message msg, Buffer buf) throws SSHException
+    {
+        if (result == null)
+            trans.sendUnimplemented();
+        
+        log.debug("Asking {} method to handle {} packet", currentMethod.getName(), msg);
+        try {
+            currentMethod.handle(msg, buf);
+        } catch (UserAuthException e) {
+            result.error(e);
         }
     }
     
@@ -207,6 +221,14 @@ public class UserAuthProtocol extends AbstractService implements UserAuth, AuthP
     {
         log.error("Saving for later - {}", e.toString());
         savedEx.push(e);
+    }
+    
+    protected boolean tryWith(AuthMethod meth) throws UserAuthException, TransportException
+    {
+        meth.init(this);
+        result.clear();
+        meth.request();
+        return result.get(timeout);
     }
     
 }

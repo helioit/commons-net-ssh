@@ -113,11 +113,6 @@ public class LocalPortForwarder
         ss.bind(listeningAddr);
     }
     
-    public void join(int timeout) throws ConnectionException
-    {
-        close.await(timeout);
-    }
-    
     public void startListening()
     {
         listener.start();

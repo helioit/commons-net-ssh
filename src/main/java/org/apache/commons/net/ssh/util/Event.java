@@ -63,16 +63,6 @@ public class Event<Ex extends Throwable> extends Future<Boolean, Ex>
         super.get(timeout);
     }
     
-    public boolean hasError()
-    {
-        lock.lock();
-        try {
-            return pendingEx != null;
-        } finally {
-            lock.unlock();
-        }
-    }
-    
     public void set()
     {
         super.set(true);

@@ -108,6 +108,16 @@ public class Future<V, Ex extends Throwable>
         return val;
     }
     
+    public boolean hasError()
+    {
+        lock.lock();
+        try {
+            return pendingEx != null;
+        } finally {
+            lock.unlock();
+        }
+    }
+    
     public boolean hasWaiters()
     {
         lock.lock();

@@ -178,12 +178,12 @@ public class SessionChannel extends AbstractDirectChannel implements Session, Se
     }
     
     @Override
-    protected void handleExtendedData(int dataTypeCode, Buffer buf) throws ConnectionException, TransportException
+    protected void gotExtendedData(int dataTypeCode, Buffer buf) throws ConnectionException, TransportException
     {
         if (dataTypeCode == 1)
             doWrite(buf, err);
         else
-            super.handleExtendedData(dataTypeCode, buf);
+            super.gotExtendedData(dataTypeCode, buf);
     }
     
 }

@@ -17,9 +17,9 @@ import org.slf4j.LoggerFactory;
 public class Encoder extends Converter
 {
     
-    private final Logger log = LoggerFactory.getLogger(getClass());
+    protected final Logger log = LoggerFactory.getLogger(getClass());
     
-    private final Random prng;
+    protected final Random prng;
     
     Encoder(Random prng)
     {
@@ -47,19 +47,17 @@ public class Encoder extends Converter
             buffer = nb;
         }
         
-        // Grab the length of the packet (excluding the 5 header bytes)
-        int len = buffer.available();
-        int off = buffer.rpos() - 5;
-        
         // Debug log the packet
         if (log.isTraceEnabled())
             log.trace("Sending packet #{}: {}", seq, buffer.printHex());
         
         // Compress the packet if needed
-        if (compression != null && (authed || !compression.isDelayed())) {
+        if (compression != null && (authed || !compression.isDelayed()))
             compression.compress(buffer);
-            len = buffer.available();
-        }
+        
+        // Grab the length of the packet (excluding the 5 header bytes)
+        int len = buffer.available();
+        int off = buffer.rpos() - 5;
         
         // Compute padding length
         int bsize = cipherSize;

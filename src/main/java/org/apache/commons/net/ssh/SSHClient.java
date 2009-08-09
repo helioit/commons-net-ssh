@@ -18,8 +18,6 @@
  */
 package org.apache.commons.net.ssh;
 
-import static org.apache.commons.net.ssh.util.Constants.DEFAULT_PORT;
-
 import java.io.File;
 import java.io.IOException;
 import java.net.SocketAddress;
@@ -111,6 +109,8 @@ import org.slf4j.LoggerFactory;
  */
 public class SSHClient extends SocketClient
 {
+    
+    public static final int DEFAULT_PORT = 22;
     
     protected static final Logger log = LoggerFactory.getLogger(SSHClient.class);
     
@@ -272,6 +272,15 @@ public class SSHClient extends SocketClient
         authPublickey(username, base + "id_rsa", base + "id_dsa");
     }
     
+    public void authPublickey(String username, Iterable<KeyProvider> keyProviders) throws UserAuthException,
+            TransportException
+    {
+        List<AuthMethod> am = new LinkedList<AuthMethod>();
+        for (KeyProvider kp : keyProviders)
+            am.add(new AuthPublickey(kp));
+        auth(username, am);
+    }
+    
     /**
      * Attempts authentication using the {@code "publickey"} authentication method.
      * <p>
@@ -287,10 +296,7 @@ public class SSHClient extends SocketClient
     public void authPublickey(String username, KeyProvider... keyProviders) throws UserAuthException,
             TransportException
     {
-        AuthMethod[] am = new AuthMethod[keyProviders.length];
-        for (int i = 0; i < keyProviders.length; i++)
-            am[i] = new AuthPublickey(keyProviders[i]);
-        auth(username, am);
+        authPublickey(username, Arrays.<KeyProvider> asList(keyProviders));
     }
     
     public void authPublickey(String username, String... locations) throws UserAuthException, TransportException
@@ -301,7 +307,7 @@ public class SSHClient extends SocketClient
                 keyProviders.add(loadKeyFile(loc));
             } catch (IOException ignore) {
             }
-        authPublickey(username, keyProviders.<KeyProvider> toArray(new KeyProvider[keyProviders.size()]));
+        authPublickey(username, keyProviders);
     }
     
     @Override
@@ -434,8 +440,9 @@ public class SSHClient extends SocketClient
      */
     public KeyProvider loadKeyFile(String location, PasswordFinder pwdf) throws IOException
     {
-        String format = SecurityUtils.detectKeyFileFormat(location);
-        FileKeyProvider fkp = NamedFactory.Utils.create(trans.getConfig().getFileKeyProviderFactories(), format);
+        FileKeyProvider.Format format = SecurityUtils.detectKeyFileFormat(location);
+        FileKeyProvider fkp =
+                NamedFactory.Utils.create(trans.getConfig().getFileKeyProviderFactories(), format.toString());
         if (fkp == null)
             throw new SSHException("No provider available for " + format + " key file");
         fkp.init(location, pwdf);
@@ -524,7 +531,6 @@ public class SSHClient extends SocketClient
     {
         super._connectAction_();
         trans.init(_socket_);
-        
         doKex();
     }
     

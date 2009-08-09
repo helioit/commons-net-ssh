@@ -47,17 +47,23 @@ public abstract class AbstractChannel implements Channel
     
     protected final Transport trans;
     protected final Connection conn;
+    
     protected final LocalWindow lwin = new LocalWindow(this);
     protected final RemoteWindow rwin = new RemoteWindow(this);
+    
     protected final ChannelInputStream in = new ChannelInputStream(this, lwin);
     protected final ChannelOutputStream out = new ChannelOutputStream(this, rwin);
+    
     protected final Queue<Event<ConnectionException>> reqs = new LinkedList<Event<ConnectionException>>();
+    
     protected final ReentrantLock lock = new ReentrantLock();
     protected final Event<ConnectionException> open;
     protected final Event<ConnectionException> close;
+    
     protected final String type;
     protected final int id;
     protected int recipient;
+    
     protected boolean eofSent;
     protected boolean eofGot;
     protected boolean closeReqd;
@@ -76,16 +82,23 @@ public abstract class AbstractChannel implements Channel
     
     public void close() throws ConnectionException, TransportException
     {
+        lock.lock();
         try {
-            sendClose();
-        } catch (TransportException e) {
-            if (!close.hasError())
-                throw e;
-        }
-        try {
-            close.await(conn.getTimeout());
+            if (!close.isSet()) {
+                try {
+                    sendClose();
+                } catch (TransportException e) {
+                    if (!close.hasError())
+                        throw e;
+                }
+                try {
+                    close.await(conn.getTimeout());
+                } finally {
+                    finishOff();
+                }
+            }
         } finally {
-            finishOff();
+            lock.unlock();
         }
     }
     
@@ -147,45 +160,37 @@ public abstract class AbstractChannel implements Channel
         case CHANNEL_DATA:
             doWrite(buf, in);
             break;
+        
         case CHANNEL_EXTENDED_DATA:
-            handleExtendedData(buf.getInt(), buf);
+            gotExtendedData(buf.getInt(), buf);
             break;
+        
         case CHANNEL_WINDOW_ADJUST:
-            int howmuch = buf.getInt();
-            log.info("Received window adjustment for {} bytes", howmuch);
-            rwin.expand(howmuch);
+            gotWindowAdjustment(buf);
             break;
         
         case CHANNEL_REQUEST:
-            String reqType = buf.getString();
-            buf.getBoolean(); // We don't ever reply to requests, so ignore this value
-            log.info("Got request for `{}`", reqType);
-            handleRequest(reqType, buf);
+            gotChannelRequest(buf);
             break;
+        
         case CHANNEL_SUCCESS:
             gotResponse(true);
             break;
+        
         case CHANNEL_FAILURE:
             gotResponse(false);
             break;
         
         case CHANNEL_EOF:
-            log.info("Got EOF");
             gotEOF();
             break;
         
         case CHANNEL_CLOSE:
-            log.info("Got close");
-            try {
-                closeStreams();
-                sendClose();
-            } finally {
-                finishOff();
-            }
+            gotClose();
             break;
         
         default:
-            trans.sendUnimplemented();
+            gotUnknown(msg, buf);
             
         }
     }
@@ -211,11 +216,12 @@ public abstract class AbstractChannel implements Channel
     @SuppressWarnings("unchecked")
     public void notifyError(SSHException error)
     {
-        finishOff();
+        log.debug("Channel #{} got notified of {}", getID(), error.toString());
         in.notifyError(error);
         out.notifyError(error);
         Event.Util.<ConnectionException> notifyError(error, open, close);
         Event.Util.<ConnectionException> notifyError(error, reqs);
+        finishOff();
     }
     
     public synchronized void sendEOF() throws TransportException
@@ -237,6 +243,24 @@ public abstract class AbstractChannel implements Channel
     {
         return "< " + type + " channel: id=" + id + ", recipient=" + recipient + ", localWin=" + lwin + ", remoteWin="
                 + rwin + " >";
+    }
+    
+    private void gotClose() throws TransportException
+    {
+        log.info("Got close");
+        try {
+            closeStreams();
+            sendClose();
+        } finally {
+            finishOff();
+        }
+    }
+    
+    private void gotWindowAdjustment(Buffer buf)
+    {
+        int howmuch = buf.getInt();
+        log.info("Received window adjustment for {} bytes", howmuch);
+        rwin.expand(howmuch);
     }
     
     protected void closeStreams()
@@ -261,12 +285,27 @@ public abstract class AbstractChannel implements Channel
         close.set();
     }
     
+    protected void gotChannelRequest(Buffer buf) throws ConnectionException, TransportException
+    {
+        String reqType = buf.getString();
+        buf.getBoolean(); // We don't care about the 'want-reply' value
+        log.info("Got request for `{}`", reqType);
+        handleRequest(reqType, buf);
+    }
+    
     protected synchronized void gotEOF() throws TransportException
     {
+        log.info("Got EOF");
         eofGot = true;
         in.eof();
         if (eofSent)
             sendClose();
+    }
+    
+    protected void gotExtendedData(int dataTypeCode, Buffer buf) throws ConnectionException, TransportException
+    {
+        throw new ConnectionException(DisconnectReason.PROTOCOL_ERROR, "Extended data not supported on " + type
+                + " channel");
     }
     
     protected synchronized void gotResponse(boolean success) throws ConnectionException
@@ -282,12 +321,19 @@ public abstract class AbstractChannel implements Channel
                                           "Received response to channel request when none was requested");
     }
     
-    protected void handleExtendedData(int dataTypeCode, Buffer buf) throws ConnectionException, TransportException
+    protected void gotUnknown(Message msg, Buffer buf) throws ConnectionException, TransportException
     {
-        throw new ConnectionException(DisconnectReason.PROTOCOL_ERROR, "Extended data not supported on " + type
-                + " channel");
+        trans.sendUnimplemented();
     }
     
+    /**
+     * Subclasses can override this method to handle specific requests.
+     * 
+     * @param reqType
+     * @param buf
+     * @throws ConnectionException
+     * @throws TransportException
+     */
     protected void handleRequest(String reqType, Buffer buf) throws ConnectionException, TransportException
     {
         trans.writePacket(newBuffer(Message.CHANNEL_FAILURE));

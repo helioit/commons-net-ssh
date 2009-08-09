@@ -52,7 +52,7 @@ public class ConnectionProtocol extends AbstractService implements Connection
             new LinkedList<Future<Buffer, ConnectionException>>();
     
     protected int windowSize = 2048 * 1024;
-    protected int maxPacketSize = 128 * 1024;
+    protected int maxPacketSize = 32 * 1024;
     
     public ConnectionProtocol(Transport trans)
     {
@@ -104,6 +104,7 @@ public class ConnectionProtocol extends AbstractService implements Connection
         return windowSize;
     }
     
+    @Override
     public void handle(Message msg, Buffer buf) throws SSHException
     {
         if (msg.in(91, 100))
@@ -119,14 +120,7 @@ public class ConnectionProtocol extends AbstractService implements Connection
                 gotResponse(null);
                 break;
             case CHANNEL_OPEN:
-                String type = buf.getString();
-                log.debug("Received CHANNEL_OPEN for `{}` channel", type);
-                if (openers.containsKey(type))
-                    openers.get(type).handleOpen(buf);
-                else {
-                    log.warn("No opener found for `{}` CHANNEL_OPEN request -- rejecting", type);
-                    sendOpenFailure(buf.getInt(), OpenFailException.Reason.UNKNOWN_CHANNEL_TYPE, "");
-                }
+                gotChannelOpen(buf);
                 break;
             default:
                 trans.sendUnimplemented();
@@ -147,13 +141,13 @@ public class ConnectionProtocol extends AbstractService implements Connection
         return nextID.getAndIncrement();
     }
     
+    @Override
     public synchronized void notifyError(SSHException ex)
     {
+        super.notifyError(ex);
         Future.Util.<Buffer, ConnectionException> notifyError(ex, globalReqs);
-        for (Channel chan : channels.values()) {
-            log.debug("Notifying channel #{}", chan.getID());
+        for (Channel chan : channels.values())
             chan.notifyError(ex);
-        }
         channels.clear();
     }
     
@@ -180,6 +174,14 @@ public class ConnectionProtocol extends AbstractService implements Connection
         return future;
     }
     
+    public void sendOpenFailure(int recipient, Reason reason, String message) throws TransportException
+    {
+        trans.writePacket(new Buffer(Message.CHANNEL_OPEN_FAILURE) //
+                                                                  .putInt(recipient) //
+                                                                  .putInt(reason.getCode()) //
+                                                                  .putString(message));
+    }
+    
     public void setMaxPacketSize(int maxPacketSize)
     {
         this.maxPacketSize = maxPacketSize;
@@ -196,11 +198,23 @@ public class ConnectionProtocol extends AbstractService implements Connection
         Channel channel = get(recipient);
         if (channel == null) {
             buffer.rpos(buffer.rpos() - 5);
-            Constants.Message cmd = buffer.getMessageID();
-            throw new ConnectionException(DisconnectReason.PROTOCOL_ERROR, "Received " + cmd + " on unknown channel #"
+            Constants.Message msg = buffer.getMessageID();
+            throw new ConnectionException(DisconnectReason.PROTOCOL_ERROR, "Received " + msg + " on unknown channel #"
                     + recipient);
         }
         return channel;
+    }
+    
+    protected void gotChannelOpen(Buffer buf) throws ConnectionException, TransportException
+    {
+        String type = buf.getString();
+        log.debug("Received CHANNEL_OPEN for `{}` channel", type);
+        if (openers.containsKey(type))
+            openers.get(type).handleOpen(buf);
+        else {
+            log.warn("No opener found for `{}` CHANNEL_OPEN request -- rejecting", type);
+            sendOpenFailure(buf.getInt(), OpenFailException.Reason.UNKNOWN_CHANNEL_TYPE, "");
+        }
     }
     
     protected synchronized void gotResponse(Buffer response) throws ConnectionException
@@ -214,14 +228,6 @@ public class ConnectionProtocol extends AbstractService implements Connection
         } else
             throw new ConnectionException(DisconnectReason.PROTOCOL_ERROR,
                                           "Got a global request response when none was requested");
-    }
-    
-    protected void sendOpenFailure(int recipient, Reason reason, String message) throws TransportException
-    {
-        trans.writePacket(new Buffer(Message.CHANNEL_OPEN_FAILURE) //
-                                                                  .putInt(recipient) //
-                                                                  .putInt(reason.getCode()) //
-                                                                  .putString(message));
     }
     
 }

@@ -33,9 +33,7 @@ import java.security.interfaces.RSAPublicKey;
 public interface Constants
 {
     
-    //
-    // Disconnect error codes
-    //
+    /** Disconnect error codes */
     enum DisconnectReason
     {
         
@@ -85,17 +83,17 @@ public interface Constants
         /**
          * SSH identifier for RSA keys
          */
-        RSA("ssh-rsa"),
+        RSA,
 
         /**
          * SSH identifier for DSA keys
          */
-        DSA("ssh-dss"),
+        DSA,
 
         /**
          * Unrecognized
          */
-        UNKNOWN("unknown");
+        UNKNOWN;
         
         public static KeyType fromKey(Key key)
         {
@@ -103,39 +101,34 @@ public interface Constants
                 return RSA;
             else if (key instanceof DSAPublicKey || key instanceof DSAPrivateKey)
                 return DSA;
-            else
-                assert false;
             return UNKNOWN;
         }
         
         public static KeyType fromString(String sType)
         {
-            if (RSA.type.equals(sType))
-                return RSA;
-            else if (DSA.type.equals(sType))
-                return DSA;
-            else
-                return UNKNOWN;
-        }
-        
-        private final String type;
-        
-        private KeyType(String type)
-        {
-            this.type = type;
+            for (KeyType kt : values())
+                if (kt.toString().equals(sType))
+                    return kt;
+            return UNKNOWN;
         }
         
         @Override
         public String toString()
         {
-            return type;
+            switch (this)
+            {
+            case RSA:
+                return "ssh-rsa";
+            case DSA:
+                return "ssh-dss";
+            default:
+                return "unknown";
+            }
         }
         
     }
     
-    /**
-     * SSH message identifiers
-     */
+    /** SSH message identifiers */
     enum Message
     {
         
@@ -238,10 +231,5 @@ public interface Constants
         }
         
     }
-    
-    /**
-     * Default SSH port
-     */
-    int DEFAULT_PORT = 22;
     
 }

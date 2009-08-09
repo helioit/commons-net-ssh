@@ -24,22 +24,21 @@ public class Decoder extends Converter
     
     protected final Logger log = LoggerFactory.getLogger(getClass());
     
+    /** What we pass decoded packets to */
     protected final PacketHandler packetHandler;
-    
     /** Buffer where as-yet undecoded data lives */
     protected final Buffer inputBuffer = new Buffer();
-    
+    protected final Buffer uncompressBuffer = new Buffer();
+    /** MAC result is stored here */
     protected byte[] macResult;
-    
+    /** -1 if packet length not yet been decoded, else the packet length */
     protected int packetLength = -1;
-    
-    protected Buffer uncompressBuffer;
     
     /**
      * How many bytes do we need, before a call to decode() can succeed at decoding at least packet
      * length, OR the whole packet?
      */
-    protected int needed = 8;
+    private int needed = 8;
     
     Decoder(PacketHandler packetHandler)
     {
@@ -145,26 +144,23 @@ public class Decoder extends Converter
                     // Get padding
                     byte pad = inputBuffer.getByte();
                     
-                    Buffer buf;
+                    Buffer decoded;
                     // Decompress if needed
                     if (compression != null && (authed || !compression.isDelayed())) {
-                        if (uncompressBuffer == null)
-                            uncompressBuffer = new Buffer();
-                        else
-                            uncompressBuffer.clear();
+                        uncompressBuffer.clear();
                         inputBuffer.wpos(inputBuffer.rpos() + packetLength - 1 - pad);
                         compression.uncompress(inputBuffer, uncompressBuffer);
-                        buf = uncompressBuffer;
+                        decoded = uncompressBuffer;
                     } else {
                         inputBuffer.wpos(packetLength + 4 - pad);
-                        buf = inputBuffer;
+                        decoded = inputBuffer;
                     }
                     
                     if (log.isTraceEnabled())
-                        log.trace("Received packet #{}: {}", seq, buf.printHex());
+                        log.trace("Received packet #{}: {}", seq, decoded.printHex());
                     
                     // ------------------------------------------------- //
-                    packetHandler.handle(buf.getMessageID(), buf); // process the decoded packet //
+                    packetHandler.handle(decoded.getMessageID(), decoded); // process the decoded packet //
                     // ------------------------------------------------- //
                     
                     // Set ready to handle next packet

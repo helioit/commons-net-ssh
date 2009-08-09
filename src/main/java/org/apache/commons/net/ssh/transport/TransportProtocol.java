@@ -179,7 +179,6 @@ public class TransportProtocol implements Transport, PacketHandler
                                                                              .putString(msg) //                                                                             
                                                                              .putString("")); // lang tag
                 } finally {
-                    killDispatcher();
                     shutdownInput();
                     shutdownOutput();
                     close.set();
@@ -282,10 +281,7 @@ public class TransportProtocol implements Transport, PacketHandler
             {
             case DISCONNECT:
             {
-                DisconnectReason code = DisconnectReason.fromInt(buf.getInt());
-                String message = buf.getString();
-                log.info("Received SSH_MSG_DISCONNECT (reason={}, msg={})", code, message);
-                throw new TransportException(code, "Disconnected; server said: " + message);
+                gotDisconnect(buf);
             }
             case IGNORE:
             {
@@ -294,24 +290,17 @@ public class TransportProtocol implements Transport, PacketHandler
             }
             case UNIMPLEMENTED:
             {
-                long seqNum = buf.getLong();
-                log.info("Received SSH_MSG_UNIMPLEMENTED #{}", seqNum);
-                gotUnimplemented(seqNum);
+                gotUnimplemented(buf);
                 break;
             }
             case DEBUG:
             {
-                boolean display = buf.getBoolean();
-                String message = buf.getString();
-                log.info("Received SSH_MSG_DEBUG (display={}) '{}'", display, message);
+                gotDebug(buf);
                 break;
             }
             case SERVICE_ACCEPT:
             {
-                if (!serviceAccept.hasWaiters())
-                    throw new TransportException(DisconnectReason.PROTOCOL_ERROR,
-                                                 "Got a service accept notification when none was awaited");
-                serviceAccept.set();
+                gotServiceAccept();
                 break;
             }
             default:
@@ -460,7 +449,7 @@ public class TransportProtocol implements Transport, PacketHandler
         
         shutdownInput();
         
-        {
+        { // Perhaps can send disconnect packet to server
             final boolean didNotReceiveDisconnect = msg != Message.DISCONNECT;
             final boolean gotRequiredInfo = causeOfDeath.getDisconnectReason() != DisconnectReason.UNKNOWN;
             if (didNotReceiveDisconnect && gotRequiredInfo)
@@ -470,17 +459,34 @@ public class TransportProtocol implements Transport, PacketHandler
         shutdownOutput();
         close.set();
         
-        {
-            Event.Util.<TransportException> notifyError(causeOfDeath, close, serviceAccept);
-            
-            log.debug("Notifying {}", kexer);
-            kexer.notifyError(causeOfDeath);
-            
-            log.debug("Notifying {}", getService());
-            getService().notifyError(causeOfDeath);
-        }
+        Event.Util.<TransportException> notifyError(causeOfDeath, close, serviceAccept);
+        kexer.notifyError(causeOfDeath);
+        getService().notifyError(causeOfDeath);
         
         setService(nullService);
+    }
+    
+    private void gotDebug(Buffer buf)
+    {
+        boolean display = buf.getBoolean();
+        String message = buf.getString();
+        log.info("Received SSH_MSG_DEBUG (display={}) '{}'", display, message);
+    }
+    
+    private void gotDisconnect(Buffer buf) throws TransportException
+    {
+        DisconnectReason code = DisconnectReason.fromInt(buf.getInt());
+        String message = buf.getString();
+        log.info("Received SSH_MSG_DISCONNECT (reason={}, msg={})", code, message);
+        throw new TransportException(code, "Disconnected; server said: " + message);
+    }
+    
+    private void gotServiceAccept() throws TransportException
+    {
+        if (!serviceAccept.hasWaiters())
+            throw new TransportException(DisconnectReason.PROTOCOL_ERROR,
+                                         "Got a service accept notification when none was awaited");
+        serviceAccept.set();
     }
     
     /**
@@ -489,19 +495,13 @@ public class TransportProtocol implements Transport, PacketHandler
      * @param seqNum
      * @throws TransportException
      */
-    private void gotUnimplemented(long seqNum) throws SSHException
+    private void gotUnimplemented(Buffer buf) throws SSHException
     {
+        long seqNum = buf.getLong();
+        log.info("Received SSH_MSG_UNIMPLEMENTED #{}", seqNum);
         if (kexer.isKexOngoing())
             throw new TransportException("Received SSH_MSG_UNIMPLEMENTED while exchanging keys");
         getService().notifyUnimplemented(seqNum);
-    }
-    
-    private void killDispatcher()
-    {
-        if (dispatcher.isAlive()) {
-            log.info("Killing dispatcher thread");
-            dispatcher.interrupt();
-        }
     }
     
     private Event<TransportException> newEvent(String name)
@@ -581,19 +581,16 @@ public class TransportProtocol implements Transport, PacketHandler
         writePacket(new Buffer(Message.SERVICE_REQUEST).putString(serviceName));
     }
     
-    private synchronized void shutdownInput()
+    private void shutdownInput()
     {
-        if (dispatcher.isAlive()) {
-            log.info("Killing dispatcher thread");
-            dispatcher.interrupt();
-        }
+        dispatcher.interrupt();
         try {
             socket.shutdownInput();
         } catch (IOException ignore) {
         }
     }
     
-    private synchronized void shutdownOutput()
+    private void shutdownOutput()
     {
         try {
             socket.shutdownOutput();

@@ -1,6 +1,5 @@
 package org.apache.commons.net.ssh.connection;
 
-import org.apache.commons.net.ssh.SSHException;
 import org.apache.commons.net.ssh.transport.TransportException;
 import org.apache.commons.net.ssh.util.Buffer;
 import org.apache.commons.net.ssh.util.Constants.Message;
@@ -16,7 +15,7 @@ public abstract class AbstractDirectChannel extends AbstractChannel implements C
     }
     
     @Override
-    public void handle(Message cmd, Buffer buf) throws SSHException
+    public void gotUnknown(Message cmd, Buffer buf) throws ConnectionException, TransportException
     {
         switch (cmd)
         {
@@ -31,7 +30,7 @@ public abstract class AbstractDirectChannel extends AbstractChannel implements C
             conn.forget(this);
             
         default:
-            super.handle(cmd, buf);
+            super.gotUnknown(cmd, buf);
         }
     }
     

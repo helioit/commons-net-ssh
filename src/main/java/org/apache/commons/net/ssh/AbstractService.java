@@ -2,7 +2,9 @@ package org.apache.commons.net.ssh;
 
 import org.apache.commons.net.ssh.transport.Transport;
 import org.apache.commons.net.ssh.transport.TransportException;
+import org.apache.commons.net.ssh.util.Buffer;
 import org.apache.commons.net.ssh.util.Constants.DisconnectReason;
+import org.apache.commons.net.ssh.util.Constants.Message;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -40,6 +42,16 @@ public abstract class AbstractService implements Service
     public Transport getTransport()
     {
         return trans;
+    }
+    
+    public void handle(Message msg, Buffer buf) throws SSHException
+    {
+        trans.sendUnimplemented();
+    }
+    
+    public void notifyError(SSHException ex)
+    {
+        log.error("Notified of {}", ex.toString());
     }
     
     public void notifyUnimplemented(long seqNum) throws SSHException

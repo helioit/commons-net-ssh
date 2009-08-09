@@ -27,6 +27,11 @@ import org.apache.commons.net.ssh.util.PasswordFinder;
 public interface FileKeyProvider extends KeyProvider
 {
     
+    enum Format
+    {
+        PKCS8, OpenSSH, Unknown
+    }
+
     void init(String location);
     
     void init(String location, PasswordFinder pwdf);
