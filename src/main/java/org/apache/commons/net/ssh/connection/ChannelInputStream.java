@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InterruptedIOException;
 
+import org.apache.commons.net.ssh.SSHException;
 import org.apache.commons.net.ssh.transport.TransportException;
 import org.apache.commons.net.ssh.util.Buffer;
 
@@ -16,11 +17,10 @@ public class ChannelInputStream extends InputStream
     
     protected final Channel chan;
     protected final LocalWindow win;
-    
     protected final Buffer buf;
     protected final byte[] b = new byte[1];
-    
     protected boolean eof;
+    protected SSHException error;
     
     public ChannelInputStream(Channel chan, LocalWindow win)
     {
@@ -44,6 +44,12 @@ public class ChannelInputStream extends InputStream
         eof();
     }
     
+    public synchronized void notifyError(SSHException error)
+    {
+        this.error = error;
+        eof();
+    }
+    
     @Override
     public int read() throws IOException
     {
@@ -55,7 +61,7 @@ public class ChannelInputStream extends InputStream
     @Override
     public int read(byte[] b, int off, int len) throws IOException
     {
-        int avail;
+        int growMax;
         synchronized (buf) {
             while (buf.available() == 0 && !eof)
                 try {
@@ -64,15 +70,18 @@ public class ChannelInputStream extends InputStream
                     throw (IOException) new InterruptedIOException().initCause(e);
                 }
             if (eof)
-                return -1;
+                if (error != null)
+                    throw error;
+                else
+                    return -1;
             if (len > buf.available())
                 len = buf.available();
             buf.getRawBytes(b, off, len);
             if (buf.rpos() > win.getMaxPacketSize() || buf.available() == 0)
                 buf.compact();
-            avail = win.getInitialSize() - buf.available();
+            growMax = win.getInitialSize() - buf.available();
         }
-        win.check(avail);
+        win.check(growMax);
         return len;
     }
     
@@ -102,4 +111,5 @@ public class ChannelInputStream extends InputStream
             }
         }
     }
+    
 }

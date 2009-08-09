@@ -45,26 +45,19 @@ public abstract class AbstractChannel implements Channel
     
     protected final Logger log;
     
-    protected final String type;
-    
     protected final Transport trans;
     protected final Connection conn;
-    protected final int id;
-    
     protected final LocalWindow lwin = new LocalWindow(this);
     protected final RemoteWindow rwin = new RemoteWindow(this);
-    
-    protected Queue<Event<ConnectionException>> reqs = new LinkedList<Event<ConnectionException>>();
-    
+    protected final ChannelInputStream in = new ChannelInputStream(this, lwin);
+    protected final ChannelOutputStream out = new ChannelOutputStream(this, rwin);
+    protected final Queue<Event<ConnectionException>> reqs = new LinkedList<Event<ConnectionException>>();
     protected final ReentrantLock lock = new ReentrantLock();
     protected final Event<ConnectionException> open;
     protected final Event<ConnectionException> close;
-    
+    protected final String type;
+    protected final int id;
     protected int recipient;
-    
-    protected ChannelInputStream in = new ChannelInputStream(this, lwin);
-    protected ChannelOutputStream out = new ChannelOutputStream(this, rwin);
-    
     protected boolean eofSent;
     protected boolean eofGot;
     protected boolean closeReqd;
@@ -86,13 +79,10 @@ public abstract class AbstractChannel implements Channel
     
     public void close() throws ConnectionException, TransportException
     {
-        sendClose();
-        close.await(conn.getTimeout());
-    }
-    
-    public void ensureLocalWinAtLeast(int size) throws TransportException
-    {
-        lwin.ensureIsAtLeast(size);
+        if (isOpen()) {
+            sendClose();
+            close.await(conn.getTimeout());
+        }
     }
     
     public int getID()
@@ -150,71 +140,55 @@ public abstract class AbstractChannel implements Channel
         return type;
     }
     
-    public void handle(Message cmd, Buffer buf) throws SSHException
+    public void handle(Message msg, Buffer buf) throws SSHException
     {
-        switch (cmd)
+        switch (msg)
         {
+        
+        case CHANNEL_DATA:
+            doWrite(buf, in);
+            break;
+        case CHANNEL_EXTENDED_DATA:
+            handleExtendedData(buf.getInt(), buf);
+            break;
+        case CHANNEL_WINDOW_ADJUST:
+            int howmuch = buf.getInt();
+            log.info("Received window adjustment for {} bytes", howmuch);
+            rwin.expand(howmuch);
+            break;
+        
+        case CHANNEL_REQUEST:
+            String reqType = buf.getString();
+            buf.getBoolean(); // We don't ever reply to requests, so ignore this value
+            log.info("Got request for `{}`", reqType);
+            handleRequest(reqType, buf);
+            break;
+        case CHANNEL_SUCCESS:
+            gotResponse(true);
+            break;
+        case CHANNEL_FAILURE:
+            gotResponse(false);
+            break;
+        
+        case CHANNEL_EOF:
+            log.info("Got EOF");
+            gotEOF();
+            break;
+        
+        case CHANNEL_CLOSE:
+            log.info("Got close");
+            try {
+                closeStreams();
+                sendClose();
+            } finally {
+                close.set();
+                conn.forget(this);
+            }
+            break;
+        
+        default:
+            trans.sendUnimplemented();
             
-            case CHANNEL_DATA:
-            {
-                doWrite(buf, in);
-                break;
-            }
-            case CHANNEL_EXTENDED_DATA:
-            {
-                handleExtendedData(buf.getInt(), buf);
-                break;
-            }
-            case CHANNEL_WINDOW_ADJUST:
-            {
-                int howmuch = buf.getInt();
-                log.info("Received window adjustment for {} bytes", howmuch);
-                rwin.expand(howmuch);
-                break;
-            }
-                
-            case CHANNEL_REQUEST:
-            {
-                String reqType = buf.getString();
-                buf.getBoolean(); // We don't ever reply to requests, so ignore this value
-                log.info("Got request for `{}`", reqType);
-                handleRequest(reqType, buf);
-                break;
-            }
-            case CHANNEL_SUCCESS:
-            {
-                gotResponse(true);
-                break;
-            }
-            case CHANNEL_FAILURE:
-            {
-                gotResponse(false);
-                break;
-            }
-                
-            case CHANNEL_EOF:
-            {
-                log.info("Got EOF");
-                gotEOF();
-                break;
-            }
-            case CHANNEL_CLOSE:
-            {
-                log.info("Got close");
-                try {
-                    closeStreams();
-                    sendClose();
-                } finally {
-                    close.set();
-                    conn.forget(this);
-                }
-                break;
-            }
-                
-            default:
-            {
-                gotUnknown(cmd, buf);
-            }
         }
     }
     
@@ -237,10 +211,12 @@ public abstract class AbstractChannel implements Channel
     }
     
     @SuppressWarnings("unchecked")
-    public void notifyError(SSHException exception)
+    public void notifyError(SSHException error)
     {
-        Event.Util.<ConnectionException> notifyError(exception, open, close);
-        Event.Util.<ConnectionException> notifyError(exception, reqs);
+        in.notifyError(error);
+        out.notifyError(error);
+        Event.Util.<ConnectionException> notifyError(error, open, close);
+        Event.Util.<ConnectionException> notifyError(error, reqs);
     }
     
     public synchronized void sendEOF() throws TransportException
@@ -304,11 +280,6 @@ public abstract class AbstractChannel implements Channel
         } else
             throw new ConnectionException(DisconnectReason.PROTOCOL_ERROR,
                                           "Received response to channel request when none was requested");
-    }
-    
-    protected void gotUnknown(Message cmd, Buffer buf) throws TransportException
-    {
-        trans.sendUnimplemented();
     }
     
     protected void handleExtendedData(int dataTypeCode, Buffer buf) throws ConnectionException, TransportException

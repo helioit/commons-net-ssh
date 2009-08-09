@@ -94,10 +94,12 @@ public class RemotePortForwarder implements ForwardedChannelOpener
     
     public static RemotePortForwarder getInstance(Connection conn)
     {
-        RemotePortForwarder rpf = (RemotePortForwarder) conn.get(ForwardedTCPIPChannel.TYPE);
-        if (rpf == null)
-            conn.attach(rpf = new RemotePortForwarder(conn));
-        return rpf;
+        synchronized (conn) {
+            RemotePortForwarder rpf = (RemotePortForwarder) conn.get(ForwardedTCPIPChannel.TYPE);
+            if (rpf == null)
+                conn.attach(rpf = new RemotePortForwarder(conn));
+            return rpf;
+        }
     }
     
     protected final Logger log = LoggerFactory.getLogger(getClass());

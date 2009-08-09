@@ -21,6 +21,7 @@ package org.apache.commons.net.ssh.connection;
 import java.io.IOException;
 import java.io.OutputStream;
 
+import org.apache.commons.net.ssh.SSHException;
 import org.apache.commons.net.ssh.util.Buffer;
 import org.apache.commons.net.ssh.util.Constants.Message;
 
@@ -30,14 +31,15 @@ import org.apache.commons.net.ssh.util.Constants.Message;
 public class ChannelOutputStream extends OutputStream
 {
     
+    //protected final Logger log = LoggerFactory.getLogger(getClass());
+    
     protected final Channel chan;
     protected final RemoteWindow win;
-    
+    protected final Buffer buffer = new Buffer();
     protected final byte[] b = new byte[1];
-    
-    protected Buffer buffer;
     protected int bufferLength;
     protected boolean closed;
+    protected SSHException error;
     
     public ChannelOutputStream(Channel chan, RemoteWindow win)
     {
@@ -60,12 +62,11 @@ public class ChannelOutputStream extends OutputStream
     @Override
     public synchronized void flush() throws IOException
     {
-        if (closed)
-            throw new ConnectionException("Stream closed");
-        int pos = buffer.wpos();
+        checkClose();
         if (bufferLength <= 0)
             // No data to send
             return;
+        int pos = buffer.wpos();
         buffer.wpos(10);
         buffer.putInt(bufferLength);
         buffer.wpos(pos);
@@ -73,13 +74,18 @@ public class ChannelOutputStream extends OutputStream
             win.waitAndConsume(bufferLength);
             chan.getTransport().writePacket(buffer);
         } finally {
-            newBuffer();
+            prepBuffer();
         }
     }
     
     public void init()
     {
-        newBuffer();
+        prepBuffer();
+    }
+    
+    public synchronized void notifyError(SSHException error)
+    {
+        this.error = error;
     }
     
     @Override
@@ -91,8 +97,7 @@ public class ChannelOutputStream extends OutputStream
     @Override
     public synchronized void write(byte[] data, int off, int len) throws IOException
     {
-        if (closed)
-            throw new ConnectionException("Stream closed");
+        checkClose();
         while (len > 0) {
             int x = Math.min(len, win.getMaxPacketSize() - bufferLength);
             if (x <= 0) {
@@ -113,15 +118,27 @@ public class ChannelOutputStream extends OutputStream
         write(b, 0, 1);
     }
     
-    private void newBuffer()
+    protected void checkClose() throws SSHException
     {
-        buffer = new Buffer(Message.CHANNEL_DATA);
-        buffer.putInt(chan.getRecipient());
-        buffer.putInt(0);
-        bufferLength = 0;
+        if (closed)
+            if (error != null)
+                throw error;
+            else
+                throw new ConnectionException("Stream closed");
     }
     
-    synchronized boolean isClosed()
+    protected void prepBuffer()
+    {
+        bufferLength = 0;
+        buffer.rpos(5);
+        buffer.wpos(5);
+        buffer.putMessageID(Message.CHANNEL_DATA);
+        buffer.putInt(chan.getRecipient());
+        buffer.putInt(0); // Dummy value meant to be the data length; is filled in during flush()
+        
+    }
+    
+    boolean isClosed()
     {
         return closed;
     }

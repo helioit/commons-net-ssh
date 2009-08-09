@@ -12,10 +12,11 @@ public class X11Forwarder implements ForwardedChannelOpener
     
     public static class X11Channel extends AbstractForwardedChannel
     {
+        
         public static final String TYPE = "x11";
         
-        protected X11Channel(Connection conn, int recipient, int remoteWinSize, int remoteMaxPacketSize,
-                String origIP, int origPort)
+        protected X11Channel(Connection conn, int recipient, int remoteWinSize, int remoteMaxPacketSize, String origIP,
+                int origPort)
         {
             super(TYPE, conn, recipient, remoteWinSize, remoteMaxPacketSize, origIP, origPort);
         }

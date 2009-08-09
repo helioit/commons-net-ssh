@@ -59,13 +59,13 @@ public class ConnectionProtocol extends AbstractService implements Connection
         super("ssh-connection", trans);
     }
     
-    public void attach(Channel chan)
+    public synchronized void attach(Channel chan)
     {
         log.info("Attaching `{}` channel (#{})", chan.getType(), chan.getID());
         channels.put(chan.getID(), chan);
     }
     
-    public void attach(ForwardedChannelOpener opener)
+    public synchronized void attach(ForwardedChannelOpener opener)
     {
         log.info("Attaching opener for `{}` channels: {}", opener.getChannelType(), opener);
         openers.put(opener.getChannelType(), opener);
@@ -78,7 +78,7 @@ public class ConnectionProtocol extends AbstractService implements Connection
         notifyAll();
     }
     
-    public void forget(ForwardedChannelOpener opener)
+    public synchronized void forget(ForwardedChannelOpener opener)
     {
         log.info("Forgetting opener for `{}` channels: {}", opener.getChannelType(), opener);
         openers.remove(opener.getChannelType());
@@ -89,7 +89,7 @@ public class ConnectionProtocol extends AbstractService implements Connection
         return channels.get(id);
     }
     
-    public ForwardedChannelOpener get(String chanType)
+    public synchronized ForwardedChannelOpener get(String chanType)
     {
         return openers.get(chanType);
     }
@@ -97,12 +97,6 @@ public class ConnectionProtocol extends AbstractService implements Connection
     public int getMaxPacketSize()
     {
         return maxPacketSize;
-    }
-    
-    @Override
-    public Transport getTransport()
-    {
-        return trans;
     }
     
     public int getWindowSize()
@@ -118,24 +112,24 @@ public class ConnectionProtocol extends AbstractService implements Connection
         else if (msg.in(80, 90))
             switch (msg)
             {
-                case REQUEST_SUCCESS:
-                    gotResponse(buf);
-                    break;
-                case REQUEST_FAILURE:
-                    gotResponse(null);
-                    break;
-                case CHANNEL_OPEN:
-                    String type = buf.getString();
-                    log.debug("Received CHANNEL_OPEN for `{}` channel", type);
-                    if (openers.containsKey(type))
-                        openers.get(type).handleOpen(buf);
-                    else {
-                        log.warn("No opener found for `{}` CHANNEL_OPEN request -- rejecting", type);
-                        sendOpenFailure(buf.getInt(), OpenFailException.Reason.UNKNOWN_CHANNEL_TYPE, "");
-                    }
-                    break;
-                default:
-                    trans.sendUnimplemented();
+            case REQUEST_SUCCESS:
+                gotResponse(buf);
+                break;
+            case REQUEST_FAILURE:
+                gotResponse(null);
+                break;
+            case CHANNEL_OPEN:
+                String type = buf.getString();
+                log.debug("Received CHANNEL_OPEN for `{}` channel", type);
+                if (openers.containsKey(type))
+                    openers.get(type).handleOpen(buf);
+                else {
+                    log.warn("No opener found for `{}` CHANNEL_OPEN request -- rejecting", type);
+                    sendOpenFailure(buf.getInt(), OpenFailException.Reason.UNKNOWN_CHANNEL_TYPE, "");
+                }
+                break;
+            default:
+                trans.sendUnimplemented();
             }
         
         else
@@ -199,7 +193,7 @@ public class ConnectionProtocol extends AbstractService implements Connection
     protected Channel getChannel(Buffer buffer) throws ConnectionException
     {
         int recipient = buffer.getInt();
-        Channel channel = channels.get(recipient);
+        Channel channel = get(recipient);
         if (channel == null) {
             buffer.rpos(buffer.rpos() - 5);
             Constants.Message cmd = buffer.getMessageID();
@@ -218,7 +212,8 @@ public class ConnectionProtocol extends AbstractService implements Connection
             else
                 gr.error("Global request failed");
         } else
-            throw new ConnectionException(DisconnectReason.PROTOCOL_ERROR);
+            throw new ConnectionException(DisconnectReason.PROTOCOL_ERROR,
+                                          "Got a global request response when none was requested");
     }
     
     protected void sendOpenFailure(int recipient, Reason reason, String message) throws TransportException

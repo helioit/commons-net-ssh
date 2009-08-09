@@ -12,18 +12,15 @@ public class LocalWindow extends Window
         super(chan, true);
     }
     
+    /*
+     * This is slightly confusing and not sure I completely understand but works well
+     */
     public synchronized void check(int max) throws TransportException
     {
         int threshold = Math.min(maxPacketSize * 8, max / 4);
         int diff = max - size;
         if (diff > maxPacketSize && (diff > threshold || size < threshold))
             growBy(diff);
-    }
-    
-    public synchronized void ensureIsAtLeast(int size) throws TransportException
-    {
-        if (this.size < size)
-            growBy(size - this.size);
     }
     
     protected synchronized void growBy(int inc) throws TransportException
@@ -34,7 +31,7 @@ public class LocalWindow extends Window
     
     protected synchronized void sendWindowAdjust(int inc) throws TransportException
     {
-        log.debug("Sending SSH_MSG_CHANNEL_WINDOW_ADJUST to #{} for {} bytes", chan.getRecipient(), inc);
+        log.info("Sending SSH_MSG_CHANNEL_WINDOW_ADJUST to #{} for {} bytes", chan.getRecipient(), inc);
         chan.getTransport().writePacket(new Buffer(Message.CHANNEL_WINDOW_ADJUST) //
                                                                                  .putInt(chan.getRecipient()) //
                                                                                  .putInt(inc));

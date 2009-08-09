@@ -68,7 +68,7 @@ public class OpenFailException extends ConnectionException
     @Override
     public String toString()
     {
-        return "Opening " + channelType + " channel failed: " + getMessage();
+        return "Opening `" + channelType + "` channel failed: " + getMessage();
     }
     
 }
