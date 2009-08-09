@@ -62,8 +62,6 @@ public abstract class AbstractChannel implements Channel
     protected boolean eofGot;
     protected boolean closeReqd;
     
-    protected int timeout;
-    
     protected AbstractChannel(String type, Connection conn)
     {
         this.type = type;
@@ -74,14 +72,20 @@ public abstract class AbstractChannel implements Channel
         log = LoggerFactory.getLogger("chan#" + id);
         open = newEvent("open");
         close = newEvent("close");
-        timeout = conn.getTimeout();
     }
     
     public void close() throws ConnectionException, TransportException
     {
-        if (isOpen()) {
+        try {
             sendClose();
+        } catch (TransportException e) {
+            if (!close.hasError())
+                throw e;
+        }
+        try {
             close.await(conn.getTimeout());
+        } finally {
+            finishOff();
         }
     }
     
@@ -123,11 +127,6 @@ public abstract class AbstractChannel implements Channel
     public int getRemoteWinSize()
     {
         return rwin.getSize();
-    }
-    
-    public int getTimeout()
-    {
-        return timeout;
     }
     
     public Transport getTransport()
@@ -181,8 +180,7 @@ public abstract class AbstractChannel implements Channel
                 closeStreams();
                 sendClose();
             } finally {
-                close.set();
-                conn.forget(this);
+                finishOff();
             }
             break;
         
@@ -213,6 +211,7 @@ public abstract class AbstractChannel implements Channel
     @SuppressWarnings("unchecked")
     public void notifyError(SSHException error)
     {
+        finishOff();
         in.notifyError(error);
         out.notifyError(error);
         Event.Util.<ConnectionException> notifyError(error, open, close);
@@ -231,11 +230,6 @@ public abstract class AbstractChannel implements Channel
         } finally {
             eofSent = true;
         }
-    }
-    
-    public void setTimeout(int timeout)
-    {
-        this.timeout = timeout;
     }
     
     @Override
@@ -261,6 +255,12 @@ public abstract class AbstractChannel implements Channel
         stream.receive(buf.array(), buf.rpos(), len);
     }
     
+    protected void finishOff()
+    {
+        conn.forget(this);
+        close.set();
+    }
+    
     protected synchronized void gotEOF() throws TransportException
     {
         eofGot = true;
@@ -271,12 +271,12 @@ public abstract class AbstractChannel implements Channel
     
     protected synchronized void gotResponse(boolean success) throws ConnectionException
     {
-        Event<ConnectionException> event = reqs.poll();
-        if (event != null) {
+        Event<ConnectionException> responseEvent = reqs.poll();
+        if (responseEvent != null) {
             if (success)
-                event.set();
+                responseEvent.set();
             else
-                event.error("Request failed");
+                responseEvent.error("Request failed");
         } else
             throw new ConnectionException(DisconnectReason.PROTOCOL_ERROR,
                                           "Received response to channel request when none was requested");
@@ -290,7 +290,7 @@ public abstract class AbstractChannel implements Channel
     
     protected void handleRequest(String reqType, Buffer buf) throws ConnectionException, TransportException
     {
-        trans.writePacket(new Buffer(Message.CHANNEL_FAILURE));
+        trans.writePacket(newBuffer(Message.CHANNEL_FAILURE));
     }
     
     protected Buffer newBuffer(Message cmd)

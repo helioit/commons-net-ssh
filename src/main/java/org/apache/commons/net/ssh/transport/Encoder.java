@@ -9,6 +9,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
+ * A thread encoding and sending packets is required to hold this object's monitor while doing so.
+ * 
  * @author <a href="mailto:dev@mina.apache.org">Apache MINA SSHD Project</a>
  * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
  */
@@ -38,7 +40,8 @@ public class Encoder extends Converter
         if (buffer.rpos() < 5) {
             log.warn("Performance cost: when sending a packet, ensure that "
                     + "5 bytes are available in front of the buffer");
-            Buffer nb = new Buffer();
+            Buffer nb = new Buffer(buffer.available() + 5);
+            nb.rpos(5);
             nb.wpos(5);
             nb.putBuffer(buffer);
             buffer = nb;

@@ -51,8 +51,6 @@ public interface Channel extends Closeable, PacketHandler
     
     int getRemoteWinSize();
     
-    int getTimeout();
-    
     Transport getTransport();
     
     String getType();
@@ -62,7 +60,5 @@ public interface Channel extends Closeable, PacketHandler
     void notifyError(SSHException exception);
     
     void sendEOF() throws TransportException;
-    
-    void setTimeout(int timeout);
     
 }

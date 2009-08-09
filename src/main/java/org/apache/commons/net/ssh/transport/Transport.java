@@ -122,11 +122,7 @@ public interface Transport extends PacketWriter
     int getTimeout();
     
     /**
-     * Initializes this session by exchanging identification information and performing key exchange
-     * and algorithm negotiation with the SSH server.
-     * <p>
-     * When this method returns, the session is ready for requesting a SSH service (typically, user
-     * authentication).
+     * Initialize this session with given {@code socket} by exchanging identification information.
      * 
      * @param socket
      *            the socket on which connection to SSH server has already been established
@@ -138,10 +134,10 @@ public interface Transport extends PacketWriter
     boolean isAuthenticated();
     
     /**
-     * Whether this session is active.
+     * Whether this transport is active.
      * <p>
-     * The session is considered to be running if it has been initialized, is not in an error state
-     * and has not been disconnected.
+     * The transport is considered to be running if it has been initialized without error and has
+     * not been disconnected.
      * 
      * @return {@code true} or {@code false} indicating whether the session is running
      */

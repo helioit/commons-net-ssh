@@ -31,8 +31,6 @@ import org.apache.commons.net.ssh.util.Constants.Message;
 public class ChannelOutputStream extends OutputStream
 {
     
-    //protected final Logger log = LoggerFactory.getLogger(getClass());
-    
     protected final Channel chan;
     protected final RemoteWindow win;
     protected final Buffer buffer = new Buffer();
@@ -63,19 +61,22 @@ public class ChannelOutputStream extends OutputStream
     public synchronized void flush() throws IOException
     {
         checkClose();
-        if (bufferLength <= 0)
-            // No data to send
+        
+        if (bufferLength <= 0) // No data to send
             return;
+        
         int pos = buffer.wpos();
         buffer.wpos(10);
         buffer.putInt(bufferLength);
         buffer.wpos(pos);
+        
         try {
             win.waitAndConsume(bufferLength);
             chan.getTransport().writePacket(buffer);
         } finally {
             prepBuffer();
         }
+        
     }
     
     public void init()
@@ -134,13 +135,7 @@ public class ChannelOutputStream extends OutputStream
         buffer.wpos(5);
         buffer.putMessageID(Message.CHANNEL_DATA);
         buffer.putInt(chan.getRecipient());
-        buffer.putInt(0); // Dummy value meant to be the data length; is filled in during flush()
-        
-    }
-    
-    boolean isClosed()
-    {
-        return closed;
+        buffer.putInt(0); // Dummy value; meant to be the data length that is filled in during flush()        
     }
     
 }

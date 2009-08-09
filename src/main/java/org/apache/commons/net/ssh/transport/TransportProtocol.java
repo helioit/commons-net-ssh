@@ -49,7 +49,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * {@link Transport} implementation.
+ * A thread-safe {@link Transport} implementation.
  * 
  * @author <a href="mailto:dev@mina.apache.org">Apache MINA SSHD Project</a>
  * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
@@ -92,12 +92,15 @@ public class TransportProtocol implements Transport, PacketHandler
             public void run()
             {
                 try {
-                    byte[] recvbuf = new byte[Decoder.maxPacketLength + 32];
+                    byte[] recvbuf = new byte[Decoder.MAX_PACKET_LEN];
                     int needed = 1;
                     int read;
                     while (!Thread.currentThread().isInterrupted()) {
                         read = input.read(recvbuf, 0, needed);
-                        needed = decoder.received(recvbuf, read);
+                        if (read == -1)
+                            throw new TransportException("Broken transport; encountered EOF");
+                        else
+                            needed = decoder.received(recvbuf, read);
                     }
                 } catch (Exception e) {
                     if (Thread.currentThread().isInterrupted()) {
@@ -164,15 +167,26 @@ public class TransportProtocol implements Transport, PacketHandler
     
     public void disconnect(DisconnectReason reason, String msg)
     {
-        close();
-        
-        if (msg == null)
-            msg = "";
-        log.debug("Sending SSH_MSG_DISCONNECT: reason=[{}], msg=[{}]", reason, msg);
-        IOUtils.writeQuietly(this, new Buffer(Message.DISCONNECT) //
-                                                                 .putInt(reason.toInt()) //
-                                                                 .putString(msg) //
-                                                                 .putString("")); // lang tag
+        lock.lock();
+        try {
+            if (!close.isSet())
+                try {
+                    if (msg == null)
+                        msg = "";
+                    log.debug("Sending SSH_MSG_DISCONNECT: reason=[{}], msg=[{}]", reason, msg);
+                    IOUtils.writeQuietly(this, new Buffer(Message.DISCONNECT) //
+                                                                             .putInt(reason.toInt()) //
+                                                                             .putString(msg) //                                                                             
+                                                                             .putString("")); // lang tag
+                } finally {
+                    killDispatcher();
+                    shutdownInput();
+                    shutdownOutput();
+                    close.set();
+                }
+        } finally {
+            lock.unlock();
+        }
     }
     
     public String getClientID()
@@ -266,46 +280,45 @@ public class TransportProtocol implements Transport, PacketHandler
         else
             switch (msg)
             {
-                case DISCONNECT:
-                {
-                    DisconnectReason code = DisconnectReason.fromInt(buf.getInt());
-                    String message = buf.getString();
-                    log.info("Received SSH_MSG_DISCONNECT (reason={}, msg={})", code, message);
-                    throw new TransportException(code, message);
-                }
-                case IGNORE:
-                {
-                    log.info("Received SSH_MSG_IGNORE");
-                    break;
-                }
-                case UNIMPLEMENTED:
-                {
-                    long seqNum = buf.getLong();
-                    log.info("Received SSH_MSG_UNIMPLEMENTED #{}", seqNum);
-                    gotUnimplemented(seqNum);
-                    break;
-                }
-                case DEBUG:
-                {
-                    boolean display = buf.getBoolean();
-                    String message = buf.getString();
-                    log.info("Received SSH_MSG_DEBUG (display={}) '{}'", display, message);
-                    break;
-                }
-                case SERVICE_ACCEPT:
-                {
-                    if (!serviceAccept.hasWaiters())
-                        throw new TransportException(DisconnectReason.PROTOCOL_ERROR,
-                                                     "Got a service accept notification when none was awaited");
-                    serviceAccept.set();
-                    break;
-                }
-                default:
-                    sendUnimplemented();
+            case DISCONNECT:
+            {
+                DisconnectReason code = DisconnectReason.fromInt(buf.getInt());
+                String message = buf.getString();
+                log.info("Received SSH_MSG_DISCONNECT (reason={}, msg={})", code, message);
+                throw new TransportException(code, "Disconnected; server said: " + message);
+            }
+            case IGNORE:
+            {
+                log.info("Received SSH_MSG_IGNORE");
+                break;
+            }
+            case UNIMPLEMENTED:
+            {
+                long seqNum = buf.getLong();
+                log.info("Received SSH_MSG_UNIMPLEMENTED #{}", seqNum);
+                gotUnimplemented(seqNum);
+                break;
+            }
+            case DEBUG:
+            {
+                boolean display = buf.getBoolean();
+                String message = buf.getString();
+                log.info("Received SSH_MSG_DEBUG (display={}) '{}'", display, message);
+                break;
+            }
+            case SERVICE_ACCEPT:
+            {
+                if (!serviceAccept.hasWaiters())
+                    throw new TransportException(DisconnectReason.PROTOCOL_ERROR,
+                                                 "Got a service accept notification when none was awaited");
+                serviceAccept.set();
+                break;
+            }
+            default:
+                sendUnimplemented();
             }
     }
     
-    // Documented in interface
     public void init(Socket socket) throws TransportException
     {
         try {
@@ -439,48 +452,35 @@ public class TransportProtocol implements Transport, PacketHandler
         }
     }
     
-    private void close()
-    {
-        log.info("Killing dispatcher thread");
-        dispatcher.interrupt();
-        try {
-            socket.shutdownInput();
-        } catch (IOException ignore) {
-        }
-        try {
-            socket.shutdownOutput();
-        } catch (IOException ignore) {
-        }
-        close.set();
-    }
-    
     @SuppressWarnings("unchecked")
     private void die(Exception ex)
     {
         log.error("Dying because - {}", ex.toString());
-        
         SSHException causeOfDeath = SSHException.chainer.chain(ex);
         
-        // Throw the exception in any thread waiting for state change
-        Event.Util.<TransportException> notifyError(causeOfDeath, close, serviceAccept);
+        shutdownInput();
         
-        kexer.notifyError(causeOfDeath);
-        
-        log.debug("Notifying {}", getService());
-        try {
-            getService().notifyError(causeOfDeath);
-        } catch (Exception ignored) {
-            log.debug("Service spewed - {}", ignored.toString());
+        {
+            final boolean didNotReceiveDisconnect = msg != Message.DISCONNECT;
+            final boolean gotRequiredInfo = causeOfDeath.getDisconnectReason() != DisconnectReason.UNKNOWN;
+            if (didNotReceiveDisconnect && gotRequiredInfo)
+                disconnect(causeOfDeath.getDisconnectReason(), causeOfDeath.getMessage());
         }
+        
+        shutdownOutput();
+        close.set();
+        
+        {
+            Event.Util.<TransportException> notifyError(causeOfDeath, close, serviceAccept);
+            
+            log.debug("Notifying {}", kexer);
+            kexer.notifyError(causeOfDeath);
+            
+            log.debug("Notifying {}", getService());
+            getService().notifyError(causeOfDeath);
+        }
+        
         setService(nullService);
-        
-        final boolean gotRequiredInfo = causeOfDeath.getDisconnectReason() != DisconnectReason.UNKNOWN;
-        final boolean didNotReceiveDisconnect = msg != Message.DISCONNECT;
-        
-        if (gotRequiredInfo && didNotReceiveDisconnect)
-            disconnect(causeOfDeath.getDisconnectReason(), causeOfDeath.getMessage());
-        
-        close();
     }
     
     /**
@@ -496,6 +496,14 @@ public class TransportProtocol implements Transport, PacketHandler
         getService().notifyUnimplemented(seqNum);
     }
     
+    private void killDispatcher()
+    {
+        if (dispatcher.isAlive()) {
+            log.info("Killing dispatcher thread");
+            dispatcher.interrupt();
+        }
+    }
+    
     private Event<TransportException> newEvent(String name)
     {
         return new Event<TransportException>(name, TransportException.chainer, lock);
@@ -506,10 +514,12 @@ public class TransportProtocol implements Transport, PacketHandler
      * sent upon connection by the server. It takes the form of, e.g. "SSH-2.0-OpenSSH_ver".
      * <p>
      * Several concerns are taken care of here, e.g. verifying protocol version, correct line
-     * endings as specified in RFC and such. It is not very efficient but this is only done once.
+     * endings as specified in RFC and such.
      * <p>
-     * It should be called from a loop like {@code String id = null; while ((id =
-     * readIdentification) == null) ; }
+     * It should be called from a loop like {@code String id; while ((id = readIdentification) ==
+     * null) ; }
+     * <p>
+     * This is not effcient but is only done once.
      * 
      * @param buffer
      * @return
@@ -569,6 +579,26 @@ public class TransportProtocol implements Transport, PacketHandler
     {
         log.debug("Sending SSH_MSG_SERVICE_REQUEST for {}", serviceName);
         writePacket(new Buffer(Message.SERVICE_REQUEST).putString(serviceName));
+    }
+    
+    private synchronized void shutdownInput()
+    {
+        if (dispatcher.isAlive()) {
+            log.info("Killing dispatcher thread");
+            dispatcher.interrupt();
+        }
+        try {
+            socket.shutdownInput();
+        } catch (IOException ignore) {
+        }
+    }
+    
+    private synchronized void shutdownOutput()
+    {
+        try {
+            socket.shutdownOutput();
+        } catch (IOException ignore) {
+        }
     }
     
 }

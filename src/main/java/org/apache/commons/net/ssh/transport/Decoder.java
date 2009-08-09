@@ -12,11 +12,16 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
+ * Not thread-safe; single producer assumed.
+ * 
  * @author <a href="mailto:dev@mina.apache.org">Apache MINA SSHD Project</a>
  * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
  */
 public class Decoder extends Converter
 {
+    
+    public static final int MAX_PACKET_LEN = 256 * 1024;
+    
     protected final Logger log = LoggerFactory.getLogger(getClass());
     
     protected final PacketHandler packetHandler;
@@ -24,13 +29,11 @@ public class Decoder extends Converter
     /** Buffer where as-yet undecoded data lives */
     protected final Buffer inputBuffer = new Buffer();
     
-    public static final int maxPacketLength = 256 * 1024;
+    protected byte[] macResult;
     
     protected int packetLength = -1;
     
     protected Buffer uncompressBuffer;
-    
-    protected byte[] macResult;
     
     /**
      * How many bytes do we need, before a call to decode() can succeed at decoding at least packet
@@ -60,7 +63,7 @@ public class Decoder extends Converter
     }
     
     @Override
-    public synchronized void setAlgorithms(Cipher cipher, MAC mac, Compression compression)
+    public void setAlgorithms(Cipher cipher, MAC mac, Compression compression)
     {
         super.setAlgorithms(cipher, mac, compression);
         macResult = new byte[mac.getBlockSize()];
@@ -70,7 +73,7 @@ public class Decoder extends Converter
     
     /**
      * Decodes incoming buffer; when a packet has been decoded hooks in to
-     * {@link TransportProtocol#handle(Buffer)}.
+     * {@link PacketHandler#handle}.
      * <p>
      * Returns advised number of bytes that should be made available in decoderBuffer before the
      * method should be called again.
@@ -80,10 +83,13 @@ public class Decoder extends Converter
     protected int decode() throws SSHException
     {
         int need;
+        
         // Decoding loop
         for (;;)
+            
             if (packetLength == -1) // Waiting for beginning of packet
             {
+                
                 // The read position should always be 0 at this point because we have compacted this
                 // buffer
                 assert inputBuffer.rpos() == 0;
@@ -96,25 +102,31 @@ public class Decoder extends Converter
                     // Read packet length
                     packetLength = inputBuffer.getInt();
                     // Check packet length validity
-                    if (packetLength < 5 || packetLength > maxPacketLength) {
+                    if (packetLength < 5 || packetLength > MAX_PACKET_LEN) {
                         log.info("Error decoding packet (invalid length) {}", inputBuffer.printHex());
                         throw new TransportException(DisconnectReason.PROTOCOL_ERROR, "invalid packet length: "
                                 + packetLength);
                     }
                 } else
                     break;
+                
             } else {
+                
                 // The read position should always be 4 at this point
                 assert inputBuffer.rpos() == 4;
+                
                 int macSize = mac != null ? mac.getBlockSize() : 0;
+                
                 // Check if the packet has been fully received
                 need = packetLength + macSize - inputBuffer.available();
                 if (need <= 0) {
+                    
                     byte[] data = inputBuffer.array();
-                    // Decrypt the remaining of the packet
+                    
+                    // Decrypt the rest of the packet
                     if (cipher != null)
                         cipher.update(data, cipherSize, packetLength + 4 - cipherSize);
-                    // Check the MAC of the packet
+                    
                     if (mac != null) {
                         // Update MAC with packet id
                         mac.update(seq);
@@ -127,12 +139,13 @@ public class Decoder extends Converter
                         if (!BufferUtils.equals(macResult, 0, data, packetLength + 4, macSize))
                             throw new TransportException(DisconnectReason.MAC_ERROR, "MAC Error");
                     }
-                    // Increment incoming packet sequence number (i.e. applicable to next packet)
-                    seq = seq + 1 & 0xffffffffL;
+                    
+                    int wpos = inputBuffer.wpos();
+                    
                     // Get padding
                     byte pad = inputBuffer.getByte();
+                    
                     Buffer buf;
-                    int wpos = inputBuffer.wpos();
                     // Decompress if needed
                     if (compression != null && (authed || !compression.isDelayed())) {
                         if (uncompressBuffer == null)
@@ -146,6 +159,7 @@ public class Decoder extends Converter
                         inputBuffer.wpos(packetLength + 4 - pad);
                         buf = inputBuffer;
                     }
+                    
                     if (log.isTraceEnabled())
                         log.trace("Received packet #{}: {}", seq, buf.printHex());
                     
@@ -158,10 +172,16 @@ public class Decoder extends Converter
                     inputBuffer.wpos(wpos);
                     inputBuffer.compact();
                     packetLength = -1;
+                    
+                    // Increment incoming packet sequence number (i.e. applicable to next packet)
+                    seq = seq + 1 & 0xffffffffL;
+                    
                 } else
                     // need more data
                     break;
+                
             }
+        
         return need;
     }
     

@@ -98,14 +98,20 @@ public class SSHException extends IOException
     }
     
     @Override
-    public String toString()
+    public String getMessage()
     {
-        if (getMessage() != null)
-            return getMessage();
-        else if (this.getCause() != null && this.getCause().getMessage() != null)
-            return this.getCause().getMessage();
+        if (super.getMessage() != null)
+            return super.getMessage();
+        else if (getCause() != null && getCause().getMessage() != null)
+            return getCause().getMessage();
         else
             return super.toString();
+    }
+    
+    @Override
+    public String toString()
+    {
+        return (code != DisconnectReason.UNKNOWN ? "[" + code + "] " : "") + getMessage();
     }
     
 }
