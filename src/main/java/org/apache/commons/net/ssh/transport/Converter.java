@@ -27,9 +27,13 @@ class Converter
     
     protected Cipher cipher;
     protected int cipherSize = 8;
+    
     protected MAC mac;
+    
     protected Compression compression;
+    
     protected long seq = -1;
+    
     protected boolean authed;
     
     public long getSequenceNumber()

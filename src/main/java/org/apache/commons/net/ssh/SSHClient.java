@@ -274,6 +274,7 @@ public class SSHClient extends SocketClient
      */
     public void auth(String username, AuthMethod... methods) throws UserAuthException, TransportException
     {
+        assert isConnected();
         auth(username, Arrays.<AuthMethod> asList(methods));
     }
     
@@ -297,7 +298,7 @@ public class SSHClient extends SocketClient
      * password} array is blanked out after use.
      * 
      * @param username
-     *            the username to authenticate
+     *            user to authenticate
      * @param pfinder
      *            the {@link password} to use for authentication
      * @throws UserAuthException
@@ -312,7 +313,7 @@ public class SSHClient extends SocketClient
      * Authenticate {@code username} using the {@code "password"} authentication method.
      * 
      * @param username
-     *            the username to authenticate
+     *            user to authenticate
      * @param pfinder
      *            the {@link PasswordFinder} to use for authentication
      * @throws UserAuthException
@@ -327,7 +328,7 @@ public class SSHClient extends SocketClient
      * Authenticate {@code username} using the {@code "password"} authentication method.
      * 
      * @param username
-     *            the usern to authenticate
+     *            user to authenticate
      * @param password
      *            the password to use for authentication
      * @throws UserAuthException
@@ -345,7 +346,7 @@ public class SSHClient extends SocketClient
      * ~/.ssh/id_dsa}.
      * 
      * @param username
-     *            the user to authenticate
+     *            user to authenticate
      * @throws UserAuthException
      * @throws TransportException
      */
@@ -365,7 +366,7 @@ public class SSHClient extends SocketClient
      * long as the {@code "publickey"} authentication method is available.
      * 
      * @param username
-     *            the username to authenticate
+     *            user to authenticate
      * @param keyProviders
      *            one or more {@link KeyProvider} instances
      * @throws UserAuthException
@@ -390,7 +391,7 @@ public class SSHClient extends SocketClient
      * long as the {@code "publickey"} authentication method is available.
      * 
      * @param username
-     *            the username to authenticate
+     *            user to authenticate
      * @param keyProviders
      *            one or more {@link KeyProvider} instances
      * @throws UserAuthException
@@ -415,7 +416,7 @@ public class SSHClient extends SocketClient
      * key file it is ignored.
      * 
      * @param username
-     *            the username to authenticate
+     *            user to authenticate
      * @param locations
      *            one or more locations in the file system containing the private key
      * @throws UserAuthException
@@ -443,9 +444,11 @@ public class SSHClient extends SocketClient
     @Override
     public void disconnect() throws IOException
     {
+        assert isConnected();
         trans.disconnect();
         assert !trans.isRunning();
         super.disconnect();
+        assert !isConnected();
     }
     
     /**
@@ -684,8 +687,10 @@ public class SSHClient extends SocketClient
      */
     public Session startSession() throws ConnectionException, TransportException
     {
+        assert isConnected() && isAuthenticated();
         SessionChannel sess = new SessionChannel(conn);
         sess.open();
+        assert sess.isOpen();
         return sess;
     }
     
@@ -725,17 +730,16 @@ public class SSHClient extends SocketClient
     }
     
     /**
-     * <em>Pre:</em> transport has been initialized via {@link Transport#init(java.net.Socket)}<br/>
-     * <em>Post:</em> key exchange completed
-     * 
      * @throws TransportException
      *             if error during kex
      */
     protected void doKex() throws TransportException
     {
+        assert trans.isRunning();
         long start = System.currentTimeMillis();
         trans.getKeyExchanger().startKex(true);
         log.info("Key exchange took {} seconds", (System.currentTimeMillis() - start) / 1000.0);
+        assert trans.getKeyExchanger().isKexDone();
     }
     
 }

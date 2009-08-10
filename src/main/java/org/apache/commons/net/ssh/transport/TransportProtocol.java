@@ -47,7 +47,7 @@ import org.slf4j.LoggerFactory;
  * @author <a href="mailto:dev@mina.apache.org">Apache MINA SSHD Project</a>
  * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
  */
-public class TransportProtocol implements Transport
+public final class TransportProtocol implements Transport
 {
     
     private final Logger log = LoggerFactory.getLogger(getClass());

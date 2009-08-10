@@ -50,7 +50,7 @@ import org.slf4j.LoggerFactory;
  * @author <a href="mailto:dev@mina.apache.org">Apache MINA SSHD Project</a>
  * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
  */
-public class KeyExchanger implements PacketHandler, ErrorNotifiable
+public final class KeyExchanger implements PacketHandler, ErrorNotifiable
 {
     
     private static enum Expected
