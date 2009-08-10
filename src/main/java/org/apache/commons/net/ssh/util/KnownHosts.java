@@ -19,10 +19,13 @@
 package org.apache.commons.net.ssh.util;
 
 import java.io.BufferedReader;
-import java.io.FileReader;
+import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.net.InetAddress;
 import java.security.PublicKey;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
@@ -54,7 +57,7 @@ public class KnownHosts implements HostKeyVerifier
      * 
      * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
      */
-    private static class Entry
+    protected static class Entry
     {
         
         private final String[] hosts;
@@ -94,7 +97,7 @@ public class KnownHosts implements HostKeyVerifier
         {
             if (hosts[0].startsWith("|1|")) { // hashed hostname
                 String[] splitted = hosts[0].split("\\|");
-                if (splitted.length != 3)
+                if (splitted.length != 4)
                     return null;
                 byte[] salt, host;
                 try {
@@ -159,6 +162,24 @@ public class KnownHosts implements HostKeyVerifier
     private final Logger log = LoggerFactory.getLogger(getClass());
     private final List<Entry> entries = new LinkedList<Entry>();
     
+    public KnownHosts(InputStream stream) throws IOException
+    {
+        BufferedReader br = new BufferedReader(new InputStreamReader(stream));
+        String line;
+        try {
+            // read in the file, storing each line as an entry
+            while ((line = br.readLine()) != null)
+                try {
+                    entries.add(new Entry(line));
+                } catch (SSHException ignore) {
+                    log.debug("Bad line ({}): {} ", ignore.toString(), line);
+                    continue;
+                }
+        } finally {
+            IOUtils.closeQuietly(br);
+        }
+    }
+    
     /**
      * Constructs a {@code KnownHosts} object from a file location
      * 
@@ -169,20 +190,12 @@ public class KnownHosts implements HostKeyVerifier
      */
     public KnownHosts(String loc) throws IOException
     {
-        BufferedReader br = new BufferedReader(new FileReader(loc));
-        String line;
-        try {
-            // read in the file, storing each line as an entry
-            while ((line = br.readLine()) != null)
-                try {
-                    entries.add(new Entry(line));
-                } catch (SSHException ignore) {
-                    log.debug("{} - bad line: {} - ", loc, ignore);
-                    continue;
-                }
-        } finally {
-            IOUtils.closeQuietly(br);
-        }
+        this(new FileInputStream(loc));
+    }
+    
+    public List<Entry> getEntries()
+    {
+        return Collections.unmodifiableList(entries);
     }
     
     /**
