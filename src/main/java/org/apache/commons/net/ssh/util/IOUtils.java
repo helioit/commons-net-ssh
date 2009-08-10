@@ -21,7 +21,7 @@ package org.apache.commons.net.ssh.util;
 import java.io.Closeable;
 import java.io.IOException;
 
-import org.apache.commons.net.ssh.transport.PacketWriter;
+import org.apache.commons.net.ssh.transport.Transport;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -46,12 +46,12 @@ public class IOUtils
             }
     }
     
-    public static long writeQuietly(PacketWriter pw, Buffer payload)
+    public static long writeQuietly(Transport trans, Buffer payload)
     {
         try {
-            return pw.writePacket(payload);
+            return trans.writePacket(payload);
         } catch (IOException logged) {
-            LOG.warn("Error writing packet to {} - {}", pw, logged);
+            LOG.warn("Error writing packet to {} - {}", trans, logged);
             return -1;
         }
     }

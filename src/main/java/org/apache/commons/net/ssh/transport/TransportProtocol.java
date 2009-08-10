@@ -27,7 +27,6 @@ import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.commons.net.ssh.Config;
 import org.apache.commons.net.ssh.ErrorNotifiable;
-import org.apache.commons.net.ssh.PacketHandler;
 import org.apache.commons.net.ssh.SSHException;
 import org.apache.commons.net.ssh.Service;
 import org.apache.commons.net.ssh.cipher.Cipher;
@@ -48,7 +47,7 @@ import org.slf4j.LoggerFactory;
  * @author <a href="mailto:dev@mina.apache.org">Apache MINA SSHD Project</a>
  * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
  */
-public class TransportProtocol implements Transport, PacketHandler
+public class TransportProtocol implements Transport
 {
     
     private final Logger log = LoggerFactory.getLogger(getClass());
@@ -124,21 +123,11 @@ public class TransportProtocol implements Transport, PacketHandler
     
     public TransportProtocol(Config config)
     {
-        this(config, null, null, null);
-    }
-    
-    public TransportProtocol(Config config, KeyExchanger kexer, Encoder encoder, Decoder decoder)
-    {
         this.config = config;
         this.prng = config.getRandomFactory().create();
-        this.kexer = kexer == null ? new DefaultKeyExchanger() : kexer;
-        this.encoder = kexer == null ? new DefaultEncoder() : encoder;
-        this.decoder = kexer == null ? new DefaultDecoder() : decoder;
-        
-        this.kexer.init(this);
-        this.encoder.init(prng);
-        this.decoder.init(this);
-        
+        this.kexer = new KeyExchanger(this);
+        this.encoder = new Encoder(prng);
+        this.decoder = new Decoder(this);
         clientID = "SSH-2.0-" + config.getVersion();
     }
     

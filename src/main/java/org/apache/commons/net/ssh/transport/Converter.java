@@ -22,13 +22,32 @@ import org.apache.commons.net.ssh.cipher.Cipher;
 import org.apache.commons.net.ssh.compression.Compression;
 import org.apache.commons.net.ssh.mac.MAC;
 
-interface Converter
+class Converter
 {
     
-    long getSequenceNumber();
+    protected Cipher cipher;
+    protected int cipherSize = 8;
+    protected MAC mac;
+    protected Compression compression;
+    protected long seq = -1;
+    protected boolean authed;
     
-    void setAlgorithms(Cipher cipher, MAC mac, Compression compression);
+    public long getSequenceNumber()
+    {
+        return seq;
+    }
     
-    void setAuthenticated();
+    public synchronized void setAlgorithms(Cipher cipher, MAC mac, Compression compression)
+    {
+        this.cipher = cipher;
+        this.mac = mac;
+        this.compression = compression;
+        this.cipherSize = cipher.getIVSize();
+    }
+    
+    public synchronized void setAuthenticated()
+    {
+        this.authed = true;
+    }
     
 }

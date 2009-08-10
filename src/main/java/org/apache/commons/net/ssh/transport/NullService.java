@@ -20,7 +20,7 @@ package org.apache.commons.net.ssh.transport;
 
 import org.apache.commons.net.ssh.AbstractService;
 
-public class NullService extends AbstractService
+class NullService extends AbstractService
 {
     
     public NullService(Transport trans)

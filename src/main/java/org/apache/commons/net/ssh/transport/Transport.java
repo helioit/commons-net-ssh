@@ -23,6 +23,7 @@ import java.net.InetAddress;
 import java.net.Socket;
 
 import org.apache.commons.net.ssh.Config;
+import org.apache.commons.net.ssh.PacketHandler;
 import org.apache.commons.net.ssh.SSHException;
 import org.apache.commons.net.ssh.Service;
 import org.apache.commons.net.ssh.cipher.Cipher;
@@ -38,7 +39,7 @@ import org.apache.commons.net.ssh.util.Constants.DisconnectReason;
  * 
  * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
  */
-public interface Transport extends PacketWriter
+public interface Transport extends PacketHandler
 {
     
     /**
@@ -176,5 +177,7 @@ public interface Transport extends PacketWriter
     void setService(Service service);
     
     void setTimeout(int timeout);
+    
+    long writePacket(Buffer payload) throws TransportException;
     
 }
