@@ -22,9 +22,17 @@ import org.apache.commons.net.ssh.SSHException;
 import org.apache.commons.net.ssh.util.FriendlyChainer;
 import org.apache.commons.net.ssh.util.Constants.DisconnectReason;
 
+/**
+ * Transport-layer exception
+ * 
+ * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
+ */
 public class TransportException extends SSHException
 {
     
+    /**
+     * @see {@link FriendlyChainer}
+     */
     public static final FriendlyChainer<TransportException> chainer = new FriendlyChainer<TransportException>()
         {
             public TransportException chain(Throwable t)

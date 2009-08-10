@@ -65,7 +65,7 @@ public final class KeyExchanger implements PacketHandler, ErrorNotifiable
     
     private final Logger log = LoggerFactory.getLogger(getClass());
     
-    private final Transport trans;
+    private final TransportProtocol transport;
     private final AtomicBoolean kexOngoing = new AtomicBoolean();
     
     /** What we are expecting from the next packet */
@@ -112,9 +112,9 @@ public final class KeyExchanger implements PacketHandler, ErrorNotifiable
     
     private final Event<TransportException> kexInitSent = newEvent("kexinit sent");
     
-    KeyExchanger(Transport trans)
+    KeyExchanger(TransportProtocol trans)
     {
-        this.trans = trans;
+        this.transport = trans;
     }
     
     /**
@@ -153,7 +153,7 @@ public final class KeyExchanger implements PacketHandler, ErrorNotifiable
             ensureReceivedMatchesExpected(msg, Message.KEXINIT);
             log.info("Received SSH_MSG_KEXINIT");
             startKex(false);
-            kexInitSent.await(trans.getTimeout());
+            kexInitSent.await(transport.getTimeout());
             gotKexInit(buf);
             expected = Expected.FOLLOWUP;
             break;
@@ -212,20 +212,20 @@ public final class KeyExchanger implements PacketHandler, ErrorNotifiable
     
     public void waitForDone() throws TransportException
     {
-        done.await(trans.getTimeout());
+        done.await(transport.getTimeout());
     }
     
     private String[] createProposal()
     {
         return new String[] { //
-        Factory.Util.getNames(trans.getConfig().getKeyExchangeFactories()), // PROP_KEX_ALG 
-                Factory.Util.getNames(trans.getConfig().getSignatureFactories()), // PROP_SRVR_HOST_KEY_ALG
-                Factory.Util.getNames(trans.getConfig().getCipherFactories()), // PROP_ENC_ALG_C2S
-                Factory.Util.getNames(trans.getConfig().getCipherFactories()), // PROP_ENC_ALG_S2C
-                Factory.Util.getNames(trans.getConfig().getMACFactories()), // PROP_MAC_ALG_C2S
-                Factory.Util.getNames(trans.getConfig().getMACFactories()), // PROP_MAC_ALG_S2C
-                Factory.Util.getNames(trans.getConfig().getCompressionFactories()), // PROP_MAC_ALG_C2S
-                Factory.Util.getNames(trans.getConfig().getCompressionFactories()), // PROP_COMP_ALG_S2C
+        Factory.Util.getNames(transport.getConfig().getKeyExchangeFactories()), // PROP_KEX_ALG 
+                Factory.Util.getNames(transport.getConfig().getSignatureFactories()), // PROP_SRVR_HOST_KEY_ALG
+                Factory.Util.getNames(transport.getConfig().getCipherFactories()), // PROP_ENC_ALG_C2S
+                Factory.Util.getNames(transport.getConfig().getCipherFactories()), // PROP_ENC_ALG_S2C
+                Factory.Util.getNames(transport.getConfig().getMACFactories()), // PROP_MAC_ALG_C2S
+                Factory.Util.getNames(transport.getConfig().getMACFactories()), // PROP_MAC_ALG_S2C
+                Factory.Util.getNames(transport.getConfig().getCompressionFactories()), // PROP_MAC_ALG_C2S
+                Factory.Util.getNames(transport.getConfig().getCompressionFactories()), // PROP_COMP_ALG_S2C
                 "", // PROP_LANG_C2S (optional, thus empty string) 
                 "" // PROP_LANG_S2C (optional, thus empty string) 
         };
@@ -263,8 +263,8 @@ public final class KeyExchanger implements PacketHandler, ErrorNotifiable
     {
         extractProposal(buf);
         negotiate();
-        kex = Factory.Util.create(trans.getConfig().getKeyExchangeFactories(), negotiated[PROP_KEX_ALG]);
-        kex.init(trans, trans.getServerID().getBytes(), trans.getClientID().getBytes(), I_S, I_C);
+        kex = Factory.Util.create(transport.getConfig().getKeyExchangeFactories(), negotiated[PROP_KEX_ALG]);
+        kex.init(transport, transport.getServerID().getBytes(), transport.getClientID().getBytes(), I_S, I_C);
     }
     
     /**
@@ -325,25 +325,25 @@ public final class KeyExchanger implements PacketHandler, ErrorNotifiable
         hash.update(buf, 0, pos);
         MACs2c = hash.digest();
         
-        s2ccipher = Factory.Util.create(trans.getConfig().getCipherFactories(), negotiated[PROP_ENC_ALG_S2C]);
+        s2ccipher = Factory.Util.create(transport.getConfig().getCipherFactories(), negotiated[PROP_ENC_ALG_S2C]);
         Es2c = resizeKey(Es2c, s2ccipher.getBlockSize(), hash, K, H);
         s2ccipher.init(Cipher.Mode.Decrypt, Es2c, IVs2c);
         
-        s2cmac = Factory.Util.create(trans.getConfig().getMACFactories(), negotiated[PROP_MAC_ALG_S2C]);
+        s2cmac = Factory.Util.create(transport.getConfig().getMACFactories(), negotiated[PROP_MAC_ALG_S2C]);
         s2cmac.init(MACs2c);
         
-        c2scipher = Factory.Util.create(trans.getConfig().getCipherFactories(), negotiated[PROP_ENC_ALG_C2S]);
+        c2scipher = Factory.Util.create(transport.getConfig().getCipherFactories(), negotiated[PROP_ENC_ALG_C2S]);
         Ec2s = resizeKey(Ec2s, c2scipher.getBlockSize(), hash, K, H);
         c2scipher.init(Cipher.Mode.Encrypt, Ec2s, IVc2s);
         
-        c2smac = Factory.Util.create(trans.getConfig().getMACFactories(), negotiated[PROP_MAC_ALG_C2S]);
+        c2smac = Factory.Util.create(transport.getConfig().getMACFactories(), negotiated[PROP_MAC_ALG_C2S]);
         c2smac.init(MACc2s);
         
-        s2ccomp = Factory.Util.create(trans.getConfig().getCompressionFactories(), negotiated[PROP_COMP_ALG_S2C]);
-        c2scomp = Factory.Util.create(trans.getConfig().getCompressionFactories(), negotiated[PROP_COMP_ALG_C2S]);
+        s2ccomp = Factory.Util.create(transport.getConfig().getCompressionFactories(), negotiated[PROP_COMP_ALG_S2C]);
+        c2scomp = Factory.Util.create(transport.getConfig().getCompressionFactories(), negotiated[PROP_COMP_ALG_C2S]);
         
-        trans.setClientToServerAlgorithms(c2scipher, c2smac, c2scomp);
-        trans.setServerToClientAlgorithms(s2ccipher, s2cmac, s2ccomp);
+        transport.setClientToServerAlgorithms(c2scipher, c2smac, c2scomp);
+        transport.setServerToClientAlgorithms(s2ccipher, s2cmac, s2ccomp);
     }
     
     /**
@@ -421,7 +421,7 @@ public final class KeyExchanger implements PacketHandler, ErrorNotifiable
         // Put cookie
         int p = buf.wpos();
         buf.wpos(p + 16);
-        trans.getPRNG().fill(buf.array(), p, 16);
+        transport.getConfig().getRandomFactory().create().fill(buf.array(), p, 16);
         
         // Put the 10 name-list's
         for (String s : clientProposal = createProposal())
@@ -433,7 +433,7 @@ public final class KeyExchanger implements PacketHandler, ErrorNotifiable
         I_C = buf.getCompactData(); // Store for future
         
         log.info("Sending SSH_MSG_KEXINIT");
-        trans.writePacket(buf);
+        transport.writePacket(buf);
         
         kexInitSent.set();
     }
@@ -441,7 +441,7 @@ public final class KeyExchanger implements PacketHandler, ErrorNotifiable
     private void sendNewKeys() throws TransportException
     {
         log.info("Sending SSH_MSG_NEWKEYS");
-        trans.writePacket(new Buffer(Message.NEWKEYS));
+        transport.writePacket(new Buffer(Message.NEWKEYS));
     }
     
     private void setKexDone()
@@ -462,7 +462,7 @@ public final class KeyExchanger implements PacketHandler, ErrorNotifiable
     {
         for (HostKeyVerifier hkv : hostVerifiers) {
             log.debug("Trying to verify host key with {}", hkv);
-            if (hkv.verify(trans.getRemoteHost(), key))
+            if (hkv.verify(transport.getRemoteHost(), key))
                 return;
         }
         

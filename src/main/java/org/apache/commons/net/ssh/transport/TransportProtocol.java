@@ -171,11 +171,6 @@ public final class TransportProtocol implements Transport
         }
     }
     
-    public String getClientID()
-    {
-        return clientID;
-    }
-    
     public String getClientVersion()
     {
         return clientID.substring(8);
@@ -191,11 +186,6 @@ public final class TransportProtocol implements Transport
         return kexer;
     }
     
-    public Random getPRNG()
-    {
-        return prng;
-    }
-    
     public InetAddress getRemoteHost()
     {
         return socket.getInetAddress();
@@ -204,11 +194,6 @@ public final class TransportProtocol implements Transport
     public int getRemotePort()
     {
         return socket.getPort();
-    }
-    
-    public String getServerID()
-    {
-        return serverID;
     }
     
     public String getServerVersion()
@@ -354,16 +339,6 @@ public final class TransportProtocol implements Transport
         this.authed = true;
         encoder.setAuthenticated();
         decoder.setAuthenticated();
-    }
-    
-    public void setClientToServerAlgorithms(Cipher cipher, MAC mac, Compression comp)
-    {
-        encoder.setAlgorithms(cipher, mac, comp);
-    }
-    
-    public void setServerToClientAlgorithms(Cipher cipher, MAC mac, Compression comp)
-    {
-        decoder.setAlgorithms(cipher, mac, comp);
     }
     
     public synchronized void setService(Service service)
@@ -565,6 +540,26 @@ public final class TransportProtocol implements Transport
             socket.shutdownOutput();
         } catch (IOException ignore) {
         }
+    }
+    
+    String getClientID()
+    {
+        return clientID;
+    }
+    
+    String getServerID()
+    {
+        return serverID;
+    }
+    
+    void setClientToServerAlgorithms(Cipher cipher, MAC mac, Compression comp)
+    {
+        encoder.setAlgorithms(cipher, mac, comp);
+    }
+    
+    void setServerToClientAlgorithms(Cipher cipher, MAC mac, Compression comp)
+    {
+        decoder.setAlgorithms(cipher, mac, comp);
     }
     
 }
