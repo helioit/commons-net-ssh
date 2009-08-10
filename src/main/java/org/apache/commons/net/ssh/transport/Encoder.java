@@ -130,10 +130,10 @@ class Encoder extends Converter
     private void putMAC(Buffer buffer, int startOfPacket, int endOfPadding)
     {
         if (mac != null) {
+            buffer.wpos(endOfPadding + mac.getBlockSize());
             mac.update(seq);
             mac.update(buffer.array(), startOfPacket, endOfPadding);
             mac.doFinal(buffer.array(), endOfPadding);
-            buffer.wpos(endOfPadding + mac.getBlockSize());
         }
     }
     
