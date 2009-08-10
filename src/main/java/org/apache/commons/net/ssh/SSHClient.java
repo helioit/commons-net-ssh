@@ -120,6 +120,9 @@ import org.slf4j.LoggerFactory;
 public class SSHClient extends SocketClient
 {
     
+    /**
+     * Default port for SSH
+     */
     public static final int DEFAULT_PORT = 22;
     
     protected static final Logger log = LoggerFactory.getLogger(SSHClient.class);
@@ -129,15 +132,24 @@ public class SSHClient extends SocketClient
      * are added to the config only if {@link BouncyCastle} is in the classpath.
      * <p>
      * <ul>
-     * <li><em>Client version:</em> {@code "NET_3_0"}</li>
-     * <li><em>Key exchange:</em> {@link DHG14}*, {@link DHG1}
-     * <li><em>PRNG:</em> {@link BouncyCastleRandom}* or {@link JCERandom}</li>
-     * <li><em>Key file support:</em> {@link PKCS8KeyFile}*, {@link OpenSSHKeyFile}*</li>
-     * <li><em>Ciphers:</em> {@link AES128CTR}, {@link AES192CTR}, {@link AES256CTR},
-     * {@link AES128CBC}, {@link AES192CBC}, {@link AES256CBC}, {@link AES192CBC},
-     * {@link TripleDESCBC}, {@link BlowfishCBC}</li>
-     * 
+     * <li>{@link Config#setKeyExchangeFactories Key exchange}: {@link DHG14}*, {@link DHG1}</li>
+     * <li>{@link Config#setCipherFactories Ciphers} [1]: {@link AES128CTR}, {@link AES192CTR},
+     * {@link AES256CTR}, {@link AES128CBC}, {@link AES192CBC}, {@link AES256CBC}, {@link AES192CBC}, {@link TripleDESCBC}, {@link BlowfishCBC}</li>
+     * <li>{@link Config#setMACFactories MAC}: {@link HMACSHA1}, {@link HMACSHA196}, {@link HMACMD5}, {@link HMACMD596}</li>
+     * <li>{@link Config#setCompressionFactories Compression}: {@link CompressionNone}</li>
+     * <li>{@link Config#setSignatureFactories Signature}: {@link SignatureRSA},
+     * {@link SignatureDSA}</li>
+     * <li>{@link Config#setPRNGFactory PRNG}: {@link BouncyCastleRandom}* or {@link JCERandom}</li>
+     * <li>{@link Config#setFileKeyProviderFactories Key file support}: {@link PKCS8KeyFile}*,
+     * {@link OpenSSHKeyFile}*</li>
+     * <li>{@link Config#setEncoder Packet encoder}: {@link DefaultEncoder}</li>
+     * <li>{@link Config#setDecoder Packet decoder}: {@link DefaultDecoder}</li>
+     * <li>{@link Config#setKeyExchanger Key exchanger}: {@link DefaultKeyExchanger}</li>
+     * <li>{@link Config#setVersion Client version}: {@code "NET_3_0"}</li>
      * </ul>
+     * <p>
+     * [1] It is worth noting that Sun's JRE does not have the unlimited cryptography extension
+     * enabled by default. This prevents using the ciphers of strength greater than 128.
      * 
      * @return initialized {@link Config}
      */

@@ -154,7 +154,7 @@ public abstract class AbstractChannel implements Channel
         return type;
     }
     
-    public void handle(Message msg, Buffer buf) throws SSHException
+    public void handle(Message msg, Buffer buf) throws ConnectionException, TransportException
     {
         switch (msg)
         {
@@ -271,7 +271,6 @@ public abstract class AbstractChannel implements Channel
         int len = buf.getInt();
         if (len < 0 || len > getLocalMaxPacketSize())
             throw new ConnectionException(DisconnectReason.PROTOCOL_ERROR, "Bad item length: " + len);
-        // log.debug("Got data");
         if (log.isTraceEnabled())
             log.trace("IN: {}", BufferUtils.printHex(buf.array(), buf.rpos(), len));
         stream.receive(buf.array(), buf.rpos(), len);

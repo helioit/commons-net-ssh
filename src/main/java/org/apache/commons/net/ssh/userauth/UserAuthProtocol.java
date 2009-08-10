@@ -193,7 +193,7 @@ public class UserAuthProtocol extends AbstractService implements UserAuth, AuthP
     
     protected void gotUnknown(Message msg, Buffer buf) throws SSHException
     {
-        if (result == null)
+        if (currentMethod == null || result == null)
             trans.sendUnimplemented();
         
         log.debug("Asking {} method to handle {} packet", currentMethod.getName(), msg);
