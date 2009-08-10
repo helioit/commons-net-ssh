@@ -15,14 +15,14 @@ import org.junit.Test;
  * Sample unit test for testing {@link Buffer} functionality
  * 
  * @author rorywinston
- * 
+ * @author shikhar
  */
 public class BufferTest
 {
     private Buffer posBuf;
     private Buffer handyBuf;
     
-    @Before()
+    @Before
     public void setUp() throws UnsupportedEncodingException, GeneralSecurityException
     {
         // for position test
@@ -35,7 +35,7 @@ public class BufferTest
     public void testCommand()
     {
         // message identifier
-        assertEquals(handyBuf.putCommand(Message.IGNORE).getCommand(), Message.IGNORE);
+        assertEquals(handyBuf.putMessageID(Message.IGNORE).getMessageID(), Message.IGNORE);
     }
     
     @Test
@@ -58,7 +58,7 @@ public class BufferTest
         assertEquals(handyBuf.putString("some string").getString(), "some string");
         
         // uint32
-        assertEquals(handyBuf.putInt(0xffffffffL).getInt(), 0xffffffffL);
+        assertEquals(handyBuf.putInt(0xffffffffL).getLong(), 0xffffffffL);
     }
     
     @Test
