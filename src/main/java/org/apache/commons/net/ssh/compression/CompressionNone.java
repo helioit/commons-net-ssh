@@ -18,8 +18,6 @@
  */
 package org.apache.commons.net.ssh.compression;
 
-import org.apache.commons.net.ssh.NamedFactory;
-
 /**
  * No-op <code>Compression</code>. This is actually an abstract class, because no compression will
  * be identified by a <code>null</code> <code>Compression</code> object.
@@ -33,7 +31,7 @@ public abstract class CompressionNone implements Compression
      * Named factory for the no-op <code>Compression</code>. This factory will simply return
      * <code>null</code>.
      */
-    public static class Factory implements NamedFactory<Compression>
+    public static class Factory implements org.apache.commons.net.ssh.Factory.Named<Compression>
     {
         public Compression create()
         {

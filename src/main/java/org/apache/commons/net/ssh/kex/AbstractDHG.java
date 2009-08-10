@@ -20,7 +20,7 @@ package org.apache.commons.net.ssh.kex;
 
 import java.security.PublicKey;
 
-import org.apache.commons.net.ssh.NamedFactory;
+import org.apache.commons.net.ssh.Factory;
 import org.apache.commons.net.ssh.digest.Digest;
 import org.apache.commons.net.ssh.digest.SHA1;
 import org.apache.commons.net.ssh.signature.Signature;
@@ -122,8 +122,8 @@ public abstract class AbstractDHG implements KeyExchange
         sha.update(buffer.array(), 0, buffer.available());
         H = sha.digest();
         
-        Signature verif = NamedFactory.Utils.create(trans.getConfig().getSignatureFactories(), // 
-                                                    KeyType.fromKey(hostKey).toString());
+        Signature verif = Factory.Util.create(trans.getConfig().getSignatureFactories(), // 
+                                              KeyType.fromKey(hostKey).toString());
         verif.init(hostKey, null);
         verif.update(H, 0, H.length);
         if (!verif.verify(sig))

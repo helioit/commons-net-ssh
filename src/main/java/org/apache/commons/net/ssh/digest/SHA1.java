@@ -18,7 +18,6 @@
  */
 package org.apache.commons.net.ssh.digest;
 
-import org.apache.commons.net.ssh.NamedFactory;
 
 /**
  * SHA1 Digest.
@@ -31,7 +30,7 @@ public class SHA1 extends BaseDigest
     /**
      * Named factory for SHA1 digest
      */
-    public static class Factory implements NamedFactory<Digest>
+    public static class Factory implements org.apache.commons.net.ssh.Factory.Named<Digest>
     {
         
         public Digest create()

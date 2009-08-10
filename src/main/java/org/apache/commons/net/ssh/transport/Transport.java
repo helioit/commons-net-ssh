@@ -21,16 +21,14 @@ package org.apache.commons.net.ssh.transport;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.Socket;
-import java.security.PublicKey;
 
 import org.apache.commons.net.ssh.Config;
-import org.apache.commons.net.ssh.HostKeyVerifier;
 import org.apache.commons.net.ssh.SSHException;
 import org.apache.commons.net.ssh.Service;
 import org.apache.commons.net.ssh.cipher.Cipher;
 import org.apache.commons.net.ssh.compression.Compression;
 import org.apache.commons.net.ssh.mac.MAC;
-import org.apache.commons.net.ssh.prng.PRNG;
+import org.apache.commons.net.ssh.random.Random;
 import org.apache.commons.net.ssh.util.Buffer;
 import org.apache.commons.net.ssh.util.Constants;
 import org.apache.commons.net.ssh.util.Constants.DisconnectReason;
@@ -42,18 +40,6 @@ import org.apache.commons.net.ssh.util.Constants.DisconnectReason;
  */
 public interface Transport extends PacketWriter
 {
-    
-    /**
-     * Add a callback for host key verification.
-     * <p>
-     * Any of the {@link HostKeyVerifier} implementations added this way can deem a host key to be
-     * acceptable, allowing the connection to proceed. Otherwise, a {@link TransportException} will
-     * result during session initialization.
-     * 
-     * @param hkv
-     *            object whose {@link HostKeyVerifier#verify} method will be invoked
-     */
-    void addHostKeyVerifier(HostKeyVerifier hkv);
     
     /**
      * Send a disconnection packet with reason as {@link Constants#SSH_DISCONNECT_BY_APPLICATION},
@@ -93,7 +79,7 @@ public interface Transport extends PacketWriter
     
     KeyExchanger getKeyExchanger();
     
-    PRNG getPRNG();
+    Random getPRNG();
     
     InetAddress getRemoteHost();
     
@@ -190,7 +176,5 @@ public interface Transport extends PacketWriter
     void setService(Service service);
     
     void setTimeout(int timeout);
-    
-    void verifyHost(PublicKey key) throws TransportException;
     
 }

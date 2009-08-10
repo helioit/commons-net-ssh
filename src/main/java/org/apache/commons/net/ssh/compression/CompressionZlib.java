@@ -18,7 +18,6 @@
  */
 package org.apache.commons.net.ssh.compression;
 
-import org.apache.commons.net.ssh.NamedFactory;
 import org.apache.commons.net.ssh.transport.TransportException;
 import org.apache.commons.net.ssh.util.Buffer;
 import org.apache.commons.net.ssh.util.Constants.DisconnectReason;
@@ -37,7 +36,7 @@ public class CompressionZlib implements Compression
     /**
      * Named factory for the ZLib Compression.
      */
-    public static class Factory implements NamedFactory<Compression>
+    public static class Factory implements org.apache.commons.net.ssh.Factory.Named<Compression>
     {
         public Compression create()
         {

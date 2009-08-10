@@ -18,8 +18,6 @@
  */
 package org.apache.commons.net.ssh.compression;
 
-import org.apache.commons.net.ssh.NamedFactory;
-
 /**
  * ZLib delayed compression.
  * 
@@ -33,7 +31,7 @@ public class CompressionDelayedZlib extends CompressionZlib
     /**
      * Named factory for the ZLib Delayed Compression.
      */
-    public static class Factory implements NamedFactory<Compression>
+    public static class Factory implements org.apache.commons.net.ssh.Factory.Named<Compression>
     {
         public Compression create()
         {

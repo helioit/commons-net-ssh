@@ -83,22 +83,21 @@ public abstract class AbstractChannel implements Channel
     }
     
     public void close() throws ConnectionException, TransportException
-    {
+    { // wow this sure is a mess
         lock.lock();
         try {
-            if (!close.isSet()) {
+            if (!close.isSet())
                 try {
-                    sendClose();
-                } catch (TransportException e) {
-                    if (!close.hasError())
-                        throw e;
-                }
-                try {
+                    try {
+                        sendClose();
+                    } catch (TransportException e) {
+                        if (!close.hasError())
+                            throw e;
+                    }
                     close.await(conn.getTimeout());
                 } finally {
                     finishOff();
                 }
-            }
         } finally {
             lock.unlock();
         }

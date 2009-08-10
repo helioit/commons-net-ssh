@@ -142,10 +142,12 @@ public class ConnectionProtocol extends AbstractService implements Connection
         return nextID.getAndIncrement();
     }
     
-    public synchronized void notifyError(SSHException ex)
+    @Override
+    public void notifyError(SSHException error)
     {
-        ErrorNotifiable.Util.alertAll(ex, (ErrorNotifiable[]) globalReqs.toArray());
-        ErrorNotifiable.Util.alertAll(ex, (ErrorNotifiable[]) channels.values().toArray());
+        super.notifyError(error);
+        ErrorNotifiable.Util.alertAll(error, (ErrorNotifiable[]) globalReqs.toArray());
+        ErrorNotifiable.Util.alertAll(error, (ErrorNotifiable[]) channels.values().toArray());
         globalReqs.clear();
         channels.clear();
     }

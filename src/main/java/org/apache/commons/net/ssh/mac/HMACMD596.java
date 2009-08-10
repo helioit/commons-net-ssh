@@ -18,8 +18,6 @@
  */
 package org.apache.commons.net.ssh.mac;
 
-import org.apache.commons.net.ssh.NamedFactory;
-
 /**
  * HMAC-MD5-96 <code>Mac</code>
  * 
@@ -31,7 +29,7 @@ public class HMACMD596 extends BaseMAC
     /**
      * Named factory for the HMAC-MD5-96 <code>Mac</code>
      */
-    public static class Factory implements NamedFactory<MAC>
+    public static class Factory implements org.apache.commons.net.ssh.Factory.Named<MAC>
     {
         
         public MAC create()

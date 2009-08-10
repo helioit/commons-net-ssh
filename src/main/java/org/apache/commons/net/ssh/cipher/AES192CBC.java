@@ -18,7 +18,6 @@
  */
 package org.apache.commons.net.ssh.cipher;
 
-import org.apache.commons.net.ssh.NamedFactory;
 
 /**
  * AES192CBC Cipher
@@ -31,7 +30,7 @@ public class AES192CBC extends BaseCipher
     /**
      * Named factory for AES192CBC Cipher
      */
-    public static class Factory implements NamedFactory<Cipher>
+    public static class Factory implements org.apache.commons.net.ssh.Factory.Named<Cipher>
     {
         public Cipher create()
         {

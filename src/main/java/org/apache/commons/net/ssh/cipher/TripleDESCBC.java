@@ -18,8 +18,6 @@
  */
 package org.apache.commons.net.ssh.cipher;
 
-import org.apache.commons.net.ssh.NamedFactory;
-
 /**
  * TripleDESCBC Cipher
  * 
@@ -31,7 +29,7 @@ public class TripleDESCBC extends BaseCipher
     /**
      * Named factory for TripleDESCBC Cipher
      */
-    public static class Factory implements NamedFactory<Cipher>
+    public static class Factory implements org.apache.commons.net.ssh.Factory.Named<Cipher>
     {
         public Cipher create()
         {

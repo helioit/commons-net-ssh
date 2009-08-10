@@ -25,7 +25,6 @@ import java.security.KeyPair;
 import java.security.PrivateKey;
 import java.security.PublicKey;
 
-import org.apache.commons.net.ssh.NamedFactory;
 import org.apache.commons.net.ssh.util.IOUtils;
 import org.apache.commons.net.ssh.util.PasswordFinder;
 import org.apache.commons.net.ssh.util.Constants.KeyType;
@@ -41,7 +40,7 @@ import org.slf4j.LoggerFactory;
 public class PKCS8KeyFile implements FileKeyProvider
 {
     
-    public static class Factory implements NamedFactory<FileKeyProvider>
+    public static class Factory implements org.apache.commons.net.ssh.Factory.Named<FileKeyProvider>
     {
         public FileKeyProvider create()
         {

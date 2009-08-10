@@ -16,40 +16,16 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.commons.net.ssh.prng;
+package org.apache.commons.net.ssh.transport;
 
-import org.apache.commons.net.ssh.NamedFactory;
+import org.apache.commons.net.ssh.AbstractService;
 
-/**
- * A random factory wrapper that uses a single random instance. The underlying random instance has
- * to be thread safe.
- * 
- * @author <a href="mailto:dev@mina.apache.org">Apache MINA SSHD Project</a>
- */
-public class SingletonRandomFactory implements PRNG, NamedFactory<PRNG>
+public class NullService extends AbstractService
 {
     
-    private final NamedFactory<PRNG> factory;
-    private final PRNG random;
-    
-    public SingletonRandomFactory(NamedFactory<PRNG> factory)
+    public NullService(Transport trans)
     {
-        this.factory = factory;
-        random = factory.create();
+        super("null-service", trans);
     }
     
-    public PRNG create()
-    {
-        return this;
-    }
-    
-    public void fill(byte[] bytes, int start, int len)
-    {
-        random.fill(bytes, start, len);
-    }
-    
-    public String getName()
-    {
-        return factory.getName();
-    }
 }

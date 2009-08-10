@@ -20,7 +20,6 @@ package org.apache.commons.net.ssh.signature;
 
 import java.security.SignatureException;
 
-import org.apache.commons.net.ssh.NamedFactory;
 import org.apache.commons.net.ssh.SSHRuntimeException;
 import org.apache.commons.net.ssh.util.Constants.KeyType;
 
@@ -35,7 +34,7 @@ public class SignatureRSA extends AbstractSignature
     /**
      * A named factory for RSA {@link Signature}
      */
-    public static class Factory implements NamedFactory<Signature>
+    public static class Factory implements org.apache.commons.net.ssh.Factory.Named<Signature>
     {
         
         public Signature create()

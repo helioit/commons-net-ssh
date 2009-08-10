@@ -24,7 +24,6 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.security.PublicKey;
 
-import org.apache.commons.net.ssh.NamedFactory;
 import org.apache.commons.net.ssh.util.Base64;
 import org.apache.commons.net.ssh.util.Buffer;
 import org.apache.commons.net.ssh.util.Constants.KeyType;
@@ -36,7 +35,7 @@ import org.apache.commons.net.ssh.util.Constants.KeyType;
 public class OpenSSHKeyFile extends PKCS8KeyFile
 {
     
-    public static class Factory implements NamedFactory<FileKeyProvider>
+    public static class Factory implements org.apache.commons.net.ssh.Factory.Named<FileKeyProvider>
     {
         
         public FileKeyProvider create()

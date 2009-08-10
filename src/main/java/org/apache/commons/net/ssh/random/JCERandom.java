@@ -16,27 +16,25 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.commons.net.ssh.prng;
+package org.apache.commons.net.ssh.random;
 
 import java.security.SecureRandom;
 
-import org.apache.commons.net.ssh.NamedFactory;
-
 /**
- * A {@link PRNG} implementation using the built-in {@link SecureRandom} PRNG.
+ * A {@link Random} implementation using the built-in {@link SecureRandom} PRNG.
  * 
  * @author <a href="mailto:dev@mina.apache.org">Apache MINA SSHD Project</a>
  */
-public class JCERandom implements PRNG
+public class JCERandom implements Random
 {
     
     /**
-     * Named factory for the JCE {@link PRNG}
+     * Named factory for the JCE {@link Random}
      */
-    public static class Factory implements NamedFactory<PRNG>
+    public static class Factory implements org.apache.commons.net.ssh.Factory.Named<Random>
     {
         
-        public PRNG create()
+        public Random create()
         {
             return new JCERandom();
         }

@@ -16,50 +16,26 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.commons.net.ssh.cipher;
+package org.apache.commons.net.ssh.random;
 
 /**
- * Represents a no-op cipher. This cipher can not really be used during authentication and should
- * only be used after, so that authentication remains secured, but not the remaining of the
- * exchanges.
+ * A pseudo random number generator.
  * 
  * @author <a href="mailto:dev@mina.apache.org">Apache MINA SSHD Project</a>
  */
-public class CipherNone implements Cipher
+public interface Random
 {
     
     /**
-     * Named factory for the no-op Cipher
+     * Fill part of bytes with random values.
+     * 
+     * @param bytes
+     *            byte array to be filled.
+     * @param start
+     *            index to start filling at.
+     * @param len
+     *            length of segment to fill.
      */
-    public static class Factory implements org.apache.commons.net.ssh.Factory.Named<Cipher>
-    {
-        public Cipher create()
-        {
-            return new CipherNone();
-        }
-        
-        public String getName()
-        {
-            return "none";
-        }
-    }
-    
-    public int getBlockSize()
-    {
-        return 16;
-    }
-    
-    public int getIVSize()
-    {
-        return 8;
-    }
-    
-    public void init(Mode mode, byte[] bytes, byte[] bytes1)
-    {
-    }
-    
-    public void update(byte[] input, int inputOffset, int inputLen)
-    {
-    }
+    void fill(byte[] bytes, int start, int len);
     
 }

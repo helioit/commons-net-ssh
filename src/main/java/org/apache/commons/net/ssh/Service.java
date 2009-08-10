@@ -68,7 +68,7 @@ public interface Service extends PacketHandler, ErrorNotifiable
     void notifyUnimplemented(long seqNum) throws SSHException;
     
     /**
-     * Request and install this service with the associated session.
+     * Request and install this service with the associated transport.
      * 
      * @throws SSHException
      */

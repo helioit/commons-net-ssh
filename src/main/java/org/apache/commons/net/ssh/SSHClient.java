@@ -28,6 +28,7 @@ import java.util.LinkedList;
 import java.util.List;
 
 import org.apache.commons.net.SocketClient;
+import org.apache.commons.net.ssh.Factory.Named;
 import org.apache.commons.net.ssh.cipher.AES128CBC;
 import org.apache.commons.net.ssh.cipher.AES128CTR;
 import org.apache.commons.net.ssh.cipher.AES192CBC;
@@ -58,15 +59,12 @@ import org.apache.commons.net.ssh.mac.HMACMD5;
 import org.apache.commons.net.ssh.mac.HMACMD596;
 import org.apache.commons.net.ssh.mac.HMACSHA1;
 import org.apache.commons.net.ssh.mac.HMACSHA196;
-import org.apache.commons.net.ssh.prng.BouncyCastleRandom;
-import org.apache.commons.net.ssh.prng.JCERandom;
-import org.apache.commons.net.ssh.prng.SingletonRandomFactory;
+import org.apache.commons.net.ssh.random.BouncyCastleRandom;
+import org.apache.commons.net.ssh.random.JCERandom;
+import org.apache.commons.net.ssh.random.SingletonRandomFactory;
 import org.apache.commons.net.ssh.scp.SCPClient;
 import org.apache.commons.net.ssh.signature.SignatureDSA;
 import org.apache.commons.net.ssh.signature.SignatureRSA;
-import org.apache.commons.net.ssh.transport.DefaultDecoder;
-import org.apache.commons.net.ssh.transport.DefaultEncoder;
-import org.apache.commons.net.ssh.transport.DefaultKeyExchanger;
 import org.apache.commons.net.ssh.transport.Transport;
 import org.apache.commons.net.ssh.transport.TransportException;
 import org.apache.commons.net.ssh.transport.TransportProtocol;
@@ -139,12 +137,9 @@ public class SSHClient extends SocketClient
      * <li>{@link Config#setCompressionFactories Compression}: {@link CompressionNone}</li>
      * <li>{@link Config#setSignatureFactories Signature}: {@link SignatureRSA},
      * {@link SignatureDSA}</li>
-     * <li>{@link Config#setPRNGFactory PRNG}: {@link BouncyCastleRandom}* or {@link JCERandom}</li>
+     * <li>{@link Config#setRandomFactory PRNG}: {@link BouncyCastleRandom}* or {@link JCERandom}</li>
      * <li>{@link Config#setFileKeyProviderFactories Key file support}: {@link PKCS8KeyFile}*,
      * {@link OpenSSHKeyFile}*</li>
-     * <li>{@link Config#setEncoder Packet encoder}: {@link DefaultEncoder}</li>
-     * <li>{@link Config#setDecoder Packet decoder}: {@link DefaultDecoder}</li>
-     * <li>{@link Config#setKeyExchanger Key exchanger}: {@link DefaultKeyExchanger}</li>
      * <li>{@link Config#setVersion Client version}: {@code "NET_3_0"}</li>
      * </ul>
      * <p>
@@ -158,41 +153,38 @@ public class SSHClient extends SocketClient
     {
         Config conf = new Config();
         conf.setVersion("NET_3_0");
-        conf.setEncoder(new DefaultEncoder());
-        conf.setDecoder(new DefaultDecoder());
-        conf.setKeyExchanger(new DefaultKeyExchanger());
         
         if (SecurityUtils.isBouncyCastleRegistered()) {
             
             conf.setKeyExchangeFactories(new DHG14.Factory(), //
                                          new DHG1.Factory());
             
-            conf.setPRNGFactory(new SingletonRandomFactory(new BouncyCastleRandom.Factory()));
+            conf.setRandomFactory(new SingletonRandomFactory(new BouncyCastleRandom.Factory()));
             
             conf.setFileKeyProviderFactories(new PKCS8KeyFile.Factory(), //
                                              new OpenSSHKeyFile.Factory());
             
         } else {
             conf.setKeyExchangeFactories(new DHG1.Factory());
-            conf.setPRNGFactory(new SingletonRandomFactory(new JCERandom.Factory()));
+            conf.setRandomFactory(new SingletonRandomFactory(new JCERandom.Factory()));
         }
         
-        List<NamedFactory<Cipher>> avail = new LinkedList<NamedFactory<Cipher>> //
-                (Arrays.<NamedFactory<Cipher>> asList(new AES128CTR.Factory(), //
-                                                      new AES192CTR.Factory(), //
-                                                      new AES256CTR.Factory(), //
-                                                      new AES128CBC.Factory(), //
-                                                      new AES192CBC.Factory(), // 
-                                                      new AES256CBC.Factory(), //
-                                                      new TripleDESCBC.Factory(), //
-                                                      new BlowfishCBC.Factory()));
+        List<Named<Cipher>> avail = new LinkedList<Named<Cipher>> //
+                (Arrays.<Named<Cipher>> asList(new AES128CTR.Factory(), //
+                                               new AES192CTR.Factory(), //
+                                               new AES256CTR.Factory(), //
+                                               new AES128CBC.Factory(), //
+                                               new AES192CBC.Factory(), // 
+                                               new AES256CBC.Factory(), //
+                                               new TripleDESCBC.Factory(), //
+                                               new BlowfishCBC.Factory()));
         
         { /*
            * @see https://issues.apache.org/jira/browse/SSHD-24:
            * "AES256 and AES192 requires unlimited cryptography extension"
            */
-            for (Iterator<NamedFactory<Cipher>> i = avail.iterator(); i.hasNext();) {
-                final NamedFactory<Cipher> f = i.next();
+            for (Iterator<Named<Cipher>> i = avail.iterator(); i.hasNext();) {
+                final Named<Cipher> f = i.next();
                 try {
                     final Cipher c = f.create();
                     final byte[] key = new byte[c.getBlockSize()];
@@ -254,7 +246,7 @@ public class SSHClient extends SocketClient
      */
     public void addHostKeyVerifier(HostKeyVerifier hostKeyVerifier)
     {
-        trans.addHostKeyVerifier(hostKeyVerifier);
+        trans.getKeyExchanger().addHostKeyVerifier(hostKeyVerifier);
     }
     
     /**
@@ -621,8 +613,7 @@ public class SSHClient extends SocketClient
     public KeyProvider loadKeys(String location, PasswordFinder passwordFinder) throws IOException
     {
         FileKeyProvider.Format format = SecurityUtils.detectKeyFileFormat(location);
-        FileKeyProvider fkp =
-                NamedFactory.Utils.create(trans.getConfig().getFileKeyProviderFactories(), format.toString());
+        FileKeyProvider fkp = Factory.Util.create(trans.getConfig().getFileKeyProviderFactories(), format.toString());
         if (fkp == null)
             throw new SSHException("No provider available for " + format + " key file");
         fkp.init(location, passwordFinder);

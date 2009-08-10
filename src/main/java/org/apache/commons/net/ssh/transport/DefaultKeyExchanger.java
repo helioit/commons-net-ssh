@@ -18,11 +18,16 @@
  */
 package org.apache.commons.net.ssh.transport;
 
+import java.net.InetAddress;
+import java.security.PublicKey;
+import java.util.LinkedList;
+import java.util.Queue;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.commons.net.ssh.ErrorNotifiable;
-import org.apache.commons.net.ssh.NamedFactory;
+import org.apache.commons.net.ssh.Factory;
+import org.apache.commons.net.ssh.HostKeyVerifier;
 import org.apache.commons.net.ssh.PacketHandler;
 import org.apache.commons.net.ssh.SSHException;
 import org.apache.commons.net.ssh.cipher.Cipher;
@@ -32,7 +37,9 @@ import org.apache.commons.net.ssh.kex.KeyExchange;
 import org.apache.commons.net.ssh.mac.MAC;
 import org.apache.commons.net.ssh.util.Buffer;
 import org.apache.commons.net.ssh.util.Event;
+import org.apache.commons.net.ssh.util.SecurityUtils;
 import org.apache.commons.net.ssh.util.Constants.DisconnectReason;
+import org.apache.commons.net.ssh.util.Constants.KeyType;
 import org.apache.commons.net.ssh.util.Constants.Message;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -59,18 +66,23 @@ public class DefaultKeyExchanger implements PacketHandler, KeyExchanger
     private final Logger log = LoggerFactory.getLogger(getClass());
     
     private Transport trans;
-    
     private final AtomicBoolean kexOngoing = new AtomicBoolean();
+    
     /** What we are expecting from the next packet */
     private Expected expected = Expected.KEXINIT;
-    
     /** Negotiated algorithms */
     private String[] negotiated;
     /** Server's proposed algorithms - each string comma-delimited in order of preference */
     private String[] serverProposal;
+    
+    /**
+     * {@link HostKeyVerifier#verify(InetAddress, PublicKey)} is invoked by
+     * {@link #verifyHost(PublicKey)} when we are ready to verify the the server's host key.
+     */
+    private final Queue<HostKeyVerifier> hostVerifiers = new LinkedList<HostKeyVerifier>();
+    
     /** Client's proposed algorithms - each string comma-delimited in order of preference */
     private String[] clientProposal;
-    
     // Friendlier names for array indexes w.r.t the above 3 arrays
     private static final int PROP_KEX_ALG = 0;
     //private static final int PROP_SRVR_HOST_KEY_ALG = 1;
@@ -82,12 +94,13 @@ public class DefaultKeyExchanger implements PacketHandler, KeyExchanger
     private static final int PROP_COMP_ALG_S2C = 7;
     private static final int PROP_LANG_C2S = 8;
     private static final int PROP_LANG_S2C = 9;
-    private static final int PROP_MAX = 10;
     
+    private static final int PROP_MAX = 10;
     /** Instance of negotiated key exchange algorithm */
     private KeyExchange kex;
     /** Payload of our SSH_MSG_KEXINIT; is passed on to the KeyExchange alg */
     private byte[] I_C;
+    
     /** Payload of server's SSH_MSG_KEXINIT; is passed on to the KeyExchange alg */
     private byte[] I_S;
     
@@ -95,9 +108,14 @@ public class DefaultKeyExchanger implements PacketHandler, KeyExchanger
     private byte[] sessionID;
     
     private final ReentrantLock lock = new ReentrantLock();
-    
     private final Event<TransportException> done = newEvent("kex done");
+    
     private final Event<TransportException> kexInitSent = newEvent("kexinit sent");
+    
+    public synchronized void addHostKeyVerifier(HostKeyVerifier hkv)
+    {
+        hostVerifiers.add(hkv);
+    }
     
     public byte[] getSessionID()
     {
@@ -123,7 +141,7 @@ public class DefaultKeyExchanger implements PacketHandler, KeyExchanger
             log.info("Received kex followup data");
             buf.rpos(buf.rpos() - 1); // un-read the message byte
             if (kex.next(buf)) {
-                trans.verifyHost(kex.getHostKey());
+                verifyHost(kex.getHostKey());
                 sendNewKeys();
                 expected = Expected.NEWKEYS;
             }
@@ -183,14 +201,14 @@ public class DefaultKeyExchanger implements PacketHandler, KeyExchanger
     private String[] createProposal()
     {
         return new String[] { //
-        NamedFactory.Utils.getNames(trans.getConfig().getKeyExchangeFactories()), // PROP_KEX_ALG 
-                NamedFactory.Utils.getNames(trans.getConfig().getSignatureFactories()), // PROP_SRVR_HOST_KEY_ALG
-                NamedFactory.Utils.getNames(trans.getConfig().getCipherFactories()), // PROP_ENC_ALG_C2S
-                NamedFactory.Utils.getNames(trans.getConfig().getCipherFactories()), // PROP_ENC_ALG_S2C
-                NamedFactory.Utils.getNames(trans.getConfig().getMACFactories()), // PROP_MAC_ALG_C2S
-                NamedFactory.Utils.getNames(trans.getConfig().getMACFactories()), // PROP_MAC_ALG_S2C
-                NamedFactory.Utils.getNames(trans.getConfig().getCompressionFactories()), // PROP_MAC_ALG_C2S
-                NamedFactory.Utils.getNames(trans.getConfig().getCompressionFactories()), // PROP_COMP_ALG_S2C
+        Factory.Util.getNames(trans.getConfig().getKeyExchangeFactories()), // PROP_KEX_ALG 
+                Factory.Util.getNames(trans.getConfig().getSignatureFactories()), // PROP_SRVR_HOST_KEY_ALG
+                Factory.Util.getNames(trans.getConfig().getCipherFactories()), // PROP_ENC_ALG_C2S
+                Factory.Util.getNames(trans.getConfig().getCipherFactories()), // PROP_ENC_ALG_S2C
+                Factory.Util.getNames(trans.getConfig().getMACFactories()), // PROP_MAC_ALG_C2S
+                Factory.Util.getNames(trans.getConfig().getMACFactories()), // PROP_MAC_ALG_S2C
+                Factory.Util.getNames(trans.getConfig().getCompressionFactories()), // PROP_MAC_ALG_C2S
+                Factory.Util.getNames(trans.getConfig().getCompressionFactories()), // PROP_COMP_ALG_S2C
                 "", // PROP_LANG_C2S (optional, thus empty string) 
                 "" // PROP_LANG_S2C (optional, thus empty string) 
         };
@@ -228,7 +246,7 @@ public class DefaultKeyExchanger implements PacketHandler, KeyExchanger
     {
         extractProposal(buf);
         negotiate();
-        kex = NamedFactory.Utils.create(trans.getConfig().getKeyExchangeFactories(), negotiated[PROP_KEX_ALG]);
+        kex = Factory.Util.create(trans.getConfig().getKeyExchangeFactories(), negotiated[PROP_KEX_ALG]);
         kex.init(trans, trans.getServerID().getBytes(), trans.getClientID().getBytes(), I_S, I_C);
     }
     
@@ -290,22 +308,22 @@ public class DefaultKeyExchanger implements PacketHandler, KeyExchanger
         hash.update(buf, 0, pos);
         MACs2c = hash.digest();
         
-        s2ccipher = NamedFactory.Utils.create(trans.getConfig().getCipherFactories(), negotiated[PROP_ENC_ALG_S2C]);
+        s2ccipher = Factory.Util.create(trans.getConfig().getCipherFactories(), negotiated[PROP_ENC_ALG_S2C]);
         Es2c = resizeKey(Es2c, s2ccipher.getBlockSize(), hash, K, H);
         s2ccipher.init(Cipher.Mode.Decrypt, Es2c, IVs2c);
         
-        s2cmac = NamedFactory.Utils.create(trans.getConfig().getMACFactories(), negotiated[PROP_MAC_ALG_S2C]);
+        s2cmac = Factory.Util.create(trans.getConfig().getMACFactories(), negotiated[PROP_MAC_ALG_S2C]);
         s2cmac.init(MACs2c);
         
-        c2scipher = NamedFactory.Utils.create(trans.getConfig().getCipherFactories(), negotiated[PROP_ENC_ALG_C2S]);
+        c2scipher = Factory.Util.create(trans.getConfig().getCipherFactories(), negotiated[PROP_ENC_ALG_C2S]);
         Ec2s = resizeKey(Ec2s, c2scipher.getBlockSize(), hash, K, H);
         c2scipher.init(Cipher.Mode.Encrypt, Ec2s, IVc2s);
         
-        c2smac = NamedFactory.Utils.create(trans.getConfig().getMACFactories(), negotiated[PROP_MAC_ALG_C2S]);
+        c2smac = Factory.Util.create(trans.getConfig().getMACFactories(), negotiated[PROP_MAC_ALG_C2S]);
         c2smac.init(MACc2s);
         
-        s2ccomp = NamedFactory.Utils.create(trans.getConfig().getCompressionFactories(), negotiated[PROP_COMP_ALG_S2C]);
-        c2scomp = NamedFactory.Utils.create(trans.getConfig().getCompressionFactories(), negotiated[PROP_COMP_ALG_C2S]);
+        s2ccomp = Factory.Util.create(trans.getConfig().getCompressionFactories(), negotiated[PROP_COMP_ALG_S2C]);
+        c2scomp = Factory.Util.create(trans.getConfig().getCompressionFactories(), negotiated[PROP_COMP_ALG_C2S]);
         
         trans.setClientToServerAlgorithms(c2scipher, c2smac, c2scomp);
         trans.setServerToClientAlgorithms(s2ccipher, s2cmac, s2ccomp);
@@ -414,6 +432,25 @@ public class DefaultKeyExchanger implements PacketHandler, KeyExchanger
         kexOngoing.set(false);
         kexInitSent.clear();
         done.set();
+    }
+    
+    /**
+     * Tries to validate host key with all the host key verifiers known to this instance (
+     * {@link #hostVerifiers})
+     * 
+     * @param key
+     *            the host key to verify
+     */
+    private synchronized void verifyHost(PublicKey key) throws TransportException
+    {
+        for (HostKeyVerifier hkv : hostVerifiers) {
+            log.debug("Trying to verify host key with {}", hkv);
+            if (hkv.verify(trans.getRemoteHost(), key))
+                return;
+        }
+        
+        throw new TransportException(DisconnectReason.HOST_KEY_NOT_VERIFIABLE, "Could not verify ["
+                + KeyType.fromKey(key) + "] host key with fingerprint [" + SecurityUtils.getFingerprint(key) + "]");
     }
     
 }

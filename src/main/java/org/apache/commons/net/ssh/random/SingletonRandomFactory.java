@@ -16,26 +16,33 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.commons.net.ssh.prng;
+package org.apache.commons.net.ssh.random;
+
+import org.apache.commons.net.ssh.Factory;
 
 /**
- * A pseudo random number generator.
+ * A random factory wrapper that uses a single random instance. The underlying random instance has
+ * to be thread safe.
  * 
  * @author <a href="mailto:dev@mina.apache.org">Apache MINA SSHD Project</a>
  */
-public interface PRNG
+public class SingletonRandomFactory implements Random, Factory<Random>
 {
+    private final Random random;
     
-    /**
-     * Fill part of bytes with random values.
-     * 
-     * @param bytes
-     *            byte array to be filled.
-     * @param start
-     *            index to start filling at.
-     * @param len
-     *            length of segment to fill.
-     */
-    void fill(byte[] bytes, int start, int len);
+    public SingletonRandomFactory(Factory<Random> factory)
+    {
+        random = factory.create();
+    }
+    
+    public Random create()
+    {
+        return this;
+    }
+    
+    public void fill(byte[] bytes, int start, int len)
+    {
+        random.fill(bytes, start, len);
+    }
     
 }

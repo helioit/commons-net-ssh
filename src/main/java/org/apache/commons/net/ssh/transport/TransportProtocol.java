@@ -23,28 +23,21 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.InetAddress;
 import java.net.Socket;
-import java.security.PublicKey;
-import java.util.LinkedList;
-import java.util.Queue;
 import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.commons.net.ssh.Config;
 import org.apache.commons.net.ssh.ErrorNotifiable;
-import org.apache.commons.net.ssh.HostKeyVerifier;
-import org.apache.commons.net.ssh.NullService;
 import org.apache.commons.net.ssh.PacketHandler;
 import org.apache.commons.net.ssh.SSHException;
 import org.apache.commons.net.ssh.Service;
 import org.apache.commons.net.ssh.cipher.Cipher;
 import org.apache.commons.net.ssh.compression.Compression;
 import org.apache.commons.net.ssh.mac.MAC;
-import org.apache.commons.net.ssh.prng.PRNG;
+import org.apache.commons.net.ssh.random.Random;
 import org.apache.commons.net.ssh.util.Buffer;
 import org.apache.commons.net.ssh.util.Event;
 import org.apache.commons.net.ssh.util.IOUtils;
-import org.apache.commons.net.ssh.util.SecurityUtils;
 import org.apache.commons.net.ssh.util.Constants.DisconnectReason;
-import org.apache.commons.net.ssh.util.Constants.KeyType;
 import org.apache.commons.net.ssh.util.Constants.Message;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -69,12 +62,6 @@ public class TransportProtocol implements Transport, PacketHandler
     private Socket socket;
     private InputStream input;
     private OutputStream output;
-    
-    /**
-     * {@link HostKeyVerifier#verify(InetAddress, PublicKey)} is invoked by
-     * {@link #verifyHost(PublicKey)} when we are ready to verify the the server's host key.
-     */
-    private final Queue<HostKeyVerifier> hostVerifiers = new LinkedList<HostKeyVerifier>();
     
     /** For key (re)exchange */
     private final KeyExchanger kexer;
@@ -117,7 +104,7 @@ public class TransportProtocol implements Transport, PacketHandler
     private final Decoder decoder;
     
     /** Psuedo-random number generator as retrieved from the factory manager */
-    private final PRNG prng;
+    private final Random prng;
     
     /** Client version identification string */
     private final String clientID;
@@ -137,21 +124,22 @@ public class TransportProtocol implements Transport, PacketHandler
     
     public TransportProtocol(Config config)
     {
-        this.config = config;
-        this.prng = config.getPRNGFactory().create();
-        this.kexer = config.getKeyExchanger();
-        this.encoder = config.getEncoder();
-        this.decoder = config.getDecoder();
-        
-        this.encoder.init(prng);
-        this.kexer.init(this);
-        this.decoder.init(this);
-        clientID = "SSH-2.0-" + config.getVersion();
+        this(config, null, null, null);
     }
     
-    public synchronized void addHostKeyVerifier(HostKeyVerifier hkv)
+    public TransportProtocol(Config config, KeyExchanger kexer, Encoder encoder, Decoder decoder)
     {
-        hostVerifiers.add(hkv);
+        this.config = config;
+        this.prng = config.getRandomFactory().create();
+        this.kexer = kexer == null ? new DefaultKeyExchanger() : kexer;
+        this.encoder = kexer == null ? new DefaultEncoder() : encoder;
+        this.decoder = kexer == null ? new DefaultDecoder() : decoder;
+        
+        this.kexer.init(this);
+        this.encoder.init(prng);
+        this.decoder.init(this);
+        
+        clientID = "SSH-2.0-" + config.getVersion();
     }
     
     public void disconnect()
@@ -207,7 +195,7 @@ public class TransportProtocol implements Transport, PacketHandler
         return kexer;
     }
     
-    public PRNG getPRNG()
+    public Random getPRNG()
     {
         return prng;
     }
@@ -394,25 +382,6 @@ public class TransportProtocol implements Transport, PacketHandler
     public void setTimeout(int timeout)
     {
         this.timeout = timeout;
-    }
-    
-    /**
-     * Tries to validate host key with all the host key verifiers known to this instance (
-     * {@link #hostVerifiers})
-     * 
-     * @param key
-     *            the host key to verify
-     */
-    public synchronized void verifyHost(PublicKey key) throws TransportException
-    {
-        for (HostKeyVerifier hkv : hostVerifiers) {
-            log.debug("Trying to verify host key with {}", hkv);
-            if (hkv.verify(socket.getInetAddress(), key))
-                return;
-        }
-        
-        throw new TransportException(DisconnectReason.HOST_KEY_NOT_VERIFIABLE, "Could not verify ["
-                + KeyType.fromKey(key) + "] host key with fingerprint [" + SecurityUtils.getFingerprint(key) + "]");
     }
     
     public long writePacket(Buffer payload) throws TransportException

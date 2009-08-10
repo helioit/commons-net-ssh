@@ -18,7 +18,6 @@
  */
 package org.apache.commons.net.ssh.kex;
 
-import org.apache.commons.net.ssh.NamedFactory;
 
 /**
  * Diffie-Hellman key exchange with SHA-1 and Oakley Group 2 [RFC2409] (1024-bit MODP Group).
@@ -32,7 +31,7 @@ public class DHG1 extends AbstractDHG
     /**
      * Named factory for DHG1 key exchange
      */
-    public static class Factory implements NamedFactory<KeyExchange>
+    public static class Factory implements org.apache.commons.net.ssh.Factory.Named<KeyExchange>
     {
         
         public KeyExchange create()

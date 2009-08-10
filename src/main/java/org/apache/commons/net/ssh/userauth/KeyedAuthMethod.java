@@ -4,7 +4,7 @@ import java.io.IOException;
 import java.security.PrivateKey;
 import java.security.PublicKey;
 
-import org.apache.commons.net.ssh.NamedFactory;
+import org.apache.commons.net.ssh.Factory;
 import org.apache.commons.net.ssh.keyprovider.KeyProvider;
 import org.apache.commons.net.ssh.signature.Signature;
 import org.apache.commons.net.ssh.util.Buffer;
@@ -14,16 +14,6 @@ public abstract class KeyedAuthMethod extends AbstractAuthMethod
 {
     protected KeyProvider kProv;
     
-    /**
-     * @param trans
-     *            transport layer
-     * @param nextService
-     *            service to start on successful auth
-     * @param username
-     *            username for this authentication attempt
-     * @param kProv
-     *            key provider
-     */
     public KeyedAuthMethod(String name, KeyProvider kProv)
     {
         super(name);
@@ -54,8 +44,12 @@ public abstract class KeyedAuthMethod extends AbstractAuthMethod
         } catch (IOException ioe) {
             throw new UserAuthException("Problem getting private key", ioe);
         }
+        
         String kt = KeyType.fromKey(key).toString();
-        Signature sigger = NamedFactory.Utils.create(params.getTransport().getConfig().getSignatureFactories(), kt);
+        Signature sigger = Factory.Util.create(params.getTransport().getConfig().getSignatureFactories(), kt);
+        if (sigger == null)
+            throw new UserAuthException("Could not create signature instance for " + kt + " key");
+        
         sigger.init(null, key);
         sigger.update(new Buffer().putString(params.getTransport().getKeyExchanger().getSessionID()) //
                                   .putBuffer(reqBuf) // & rest of the data for sig
