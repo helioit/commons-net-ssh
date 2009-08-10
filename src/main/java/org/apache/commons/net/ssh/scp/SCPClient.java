@@ -165,17 +165,20 @@ public abstract class SCPClient
     
     protected void exit()
     {
-        IOUtils.closeQuietly(scp);
-        
-        if (scp.getExitStatus() != null) {
-            exitStatus = scp.getExitStatus();
-            if (scp.getExitStatus() != 0)
-                log.warn("SCP exit status: {}", scp.getExitStatus());
-        } else
-            exitStatus = -1;
-        
-        if (scp.getExitSignal() != null)
-            log.warn("SCP exit signal: {}", scp.getExitSignal());
+        if (scp != null) {
+            
+            IOUtils.closeQuietly(scp);
+            
+            if (scp.getExitStatus() != null) {
+                exitStatus = scp.getExitStatus();
+                if (scp.getExitStatus() != 0)
+                    log.warn("SCP exit status: {}", scp.getExitStatus());
+            } else
+                exitStatus = -1;
+            
+            if (scp.getExitSignal() != null)
+                log.warn("SCP exit signal: {}", scp.getExitSignal());
+        }
         
         scp = null;
     }

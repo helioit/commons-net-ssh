@@ -39,7 +39,19 @@ class Encoder extends Converter
     }
     
     /**
-     * Encode a buffer into the SSH binary protocol per the current algorithms
+     * Encode a buffer into the SSH binary protocol per the current algorithms.
+     * <p>
+     * From RFC 4253, p. 6
+     * 
+     * <pre>
+     *    Each packet is in the following format:
+     * 
+     *       uint32    packet_length
+     *       byte      padding_length
+     *       byte[n1]  payload; n1 = packet_length - padding_length - 1
+     *       byte[n2]  random padding; n2 = padding_length
+     *       byte[m]   mac (Message Authentication Code - MAC); m = mac_length
+     * </pre>
      * 
      * @param buffer
      *            the buffer to encode
@@ -48,63 +60,40 @@ class Encoder extends Converter
      */
     public long encode(Buffer buffer) throws TransportException
     {
-        // Check that the packet has some free space for the header
-        if (buffer.rpos() < 5) {
-            log.warn("Performance cost: when sending a packet, ensure that "
-                    + "5 bytes are available in front of the buffer");
-            Buffer nb = new Buffer(buffer.available() + 5);
-            nb.rpos(5);
-            nb.wpos(5);
-            nb.putBuffer(buffer);
-            buffer = nb;
-        }
+        buffer = checkHeaderSpace(buffer);
         
-        // Debug log the packet
         if (log.isTraceEnabled())
             log.trace("Sending packet #{}: {}", seq, buffer.printHex());
         
-        // Compress the packet if needed
-        if (compression != null && (authed || !compression.isDelayed()))
-            compression.compress(buffer);
+        compress(buffer);
         
-        // Grab the length of the packet (excluding the 5 header bytes)
-        int len = buffer.available();
-        int off = buffer.rpos() - 5;
+        final int payloadSize = buffer.available();
         
         // Compute padding length
-        int bsize = cipherSize;
-        int oldLen = len;
-        len += 5;
-        int pad = -len & bsize - 1;
-        if (pad < bsize)
-            pad += bsize;
-        len = len + pad - 4;
+        int padLen = -(payloadSize + 5) & cipherSize - 1;
+        if (padLen < cipherSize)
+            padLen += cipherSize;
         
-        // Write 5 header bytes
-        buffer.wpos(off);
-        buffer.putInt(len);
-        buffer.putByte((byte) pad);
+        final int startOfPacket = buffer.rpos() - 5;
+        final int packetLen = payloadSize + 1 + padLen;
         
+        // Put packet header
+        buffer.wpos(startOfPacket);
+        buffer.putInt(packetLen);
+        buffer.putByte((byte) padLen);
+        
+        // Now wpos will mark end of padding
+        buffer.wpos(startOfPacket + 5 + payloadSize + padLen);
         // Fill padding
-        buffer.wpos(off + oldLen + 5 + pad);
-        prng.fill(buffer.array(), buffer.wpos() - pad, pad);
+        prng.fill(buffer.array(), buffer.wpos() - padLen, padLen);
         
         seq = seq + 1 & 0xffffffffL;
-        // Compute MAC
-        if (mac != null) {
-            int macSize = mac.getBlockSize();
-            int l = buffer.wpos();
-            buffer.wpos(l + macSize);
-            mac.update(seq);
-            mac.update(buffer.array(), off, l);
-            mac.doFinal(buffer.array(), l);
-        }
         
-        // Encrypt packet, excluding mac
-        if (cipher != null)
-            cipher.update(buffer.array(), off, len + 4);
+        putMAC(buffer, startOfPacket, buffer.wpos());
         
-        buffer.rpos(off); // Make buffer ready to be read
+        cipher.update(buffer.array(), startOfPacket, 4 + packetLen);
+        
+        buffer.rpos(startOfPacket); // Make ready-to-read
         
         return seq;
     }
@@ -115,6 +104,37 @@ class Encoder extends Converter
         super.setAlgorithms(cipher, mac, compression);
         if (compression != null)
             compression.init(Compression.Type.Deflater, -1);
+    }
+    
+    private Buffer checkHeaderSpace(Buffer buffer)
+    {
+        if (buffer.rpos() < 5) {
+            log.warn("Performance cost: when sending a packet, ensure that "
+                    + "5 bytes are available in front of the buffer");
+            Buffer nb = new Buffer(buffer.available() + 5);
+            nb.rpos(5);
+            nb.wpos(5);
+            nb.putBuffer(buffer);
+            buffer = nb;
+        }
+        return buffer;
+    }
+    
+    private void compress(Buffer buffer) throws TransportException
+    {
+        // Compress the packet if needed
+        if (compression != null && (authed || !compression.isDelayed()))
+            compression.compress(buffer);
+    }
+    
+    private void putMAC(Buffer buffer, int startOfPacket, int endOfPadding)
+    {
+        if (mac != null) {
+            mac.update(seq);
+            mac.update(buffer.array(), startOfPacket, endOfPadding);
+            mac.doFinal(buffer.array(), endOfPadding);
+            buffer.wpos(endOfPadding + mac.getBlockSize());
+        }
     }
     
 }

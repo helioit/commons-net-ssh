@@ -81,6 +81,18 @@ class Decoder extends Converter
             compression.init(Compression.Type.Inflater, -1);
     }
     
+    private void checkMAC(final byte[] data) throws TransportException
+    {
+        if (mac != null) {
+            mac.update(seq); // seq num
+            mac.update(data, 0, packetLength + 4); // entire packet w/o the MAC field 
+            mac.doFinal(macResult, 0); // compute
+            // Check against the received MAC
+            if (!BufferUtils.equals(macResult, 0, data, packetLength + 4, mac.getBlockSize()))
+                throw new TransportException(DisconnectReason.MAC_ERROR, "MAC Error");
+        }
+    }
+    
     /**
      * Decodes incoming buffer; when a packet has been decoded hooks in to
      * {@link PacketHandler#handle}.
@@ -93,101 +105,76 @@ class Decoder extends Converter
     private int decode() throws SSHException
     {
         int need;
-        
-        // Decoding loop
+        /* Decoding loop */
         for (;;)
-            
             if (packetLength == -1) // Waiting for beginning of packet
             {
                 
-                // The read position should always be 0 at this point because we have compacted this
-                // buffer
-                assert inputBuffer.rpos() == 0;
-                // If we have received enough bytes, start processing those
+                assert inputBuffer.rpos() == 0 : "buffer cleared";
                 need = cipherSize - inputBuffer.available();
-                if (need <= 0) {
-                    // Decrypt the first bytes
-                    if (cipher != null)
-                        cipher.update(inputBuffer.array(), 0, cipherSize);
-                    // Read packet length
-                    packetLength = inputBuffer.getInt();
-                    // Check packet length validity
-                    if (packetLength < 5 || packetLength > MAX_PACKET_LEN) {
-                        log.info("Error decoding packet (invalid length) {}", inputBuffer.printHex());
-                        throw new TransportException(DisconnectReason.PROTOCOL_ERROR, "invalid packet length: "
-                                + packetLength);
-                    }
-                } else
+                if (need <= 0)
+                    packetLength = decryptLength();
+                else
+                    // Need more data
                     break;
                 
             } else {
                 
-                // The read position should always be 4 at this point
-                assert inputBuffer.rpos() == 4;
-                
-                int macSize = mac != null ? mac.getBlockSize() : 0;
-                
-                // Check if the packet has been fully received
-                need = packetLength + macSize - inputBuffer.available();
+                assert inputBuffer.rpos() == 4 : "packet length read";
+                need = packetLength + (mac != null ? mac.getBlockSize() : 0) - inputBuffer.available();
                 if (need <= 0) {
                     
-                    byte[] data = inputBuffer.array();
-                    
-                    // Decrypt the rest of the packet
-                    if (cipher != null)
-                        cipher.update(data, cipherSize, packetLength + 4 - cipherSize);
+                    decryptPayload(inputBuffer.array());
                     
                     seq = seq + 1 & 0xffffffffL;
-                    if (mac != null) {
-                        // Update MAC with packet id
-                        mac.update(seq);
-                        // Update MAC with packet data
-                        mac.update(data, 0, packetLength + 4);
-                        // Compute MAC result
-                        mac.doFinal(macResult, 0);
-                        // Check the computed result with the received mac (just
-                        // after the packet data)
-                        if (!BufferUtils.equals(macResult, 0, data, packetLength + 4, macSize))
-                            throw new TransportException(DisconnectReason.MAC_ERROR, "MAC Error");
-                    }
                     
-                    int wpos = inputBuffer.wpos();
+                    checkMAC(inputBuffer.array());
                     
-                    // Get padding
-                    byte pad = inputBuffer.getByte();
+                    inputBuffer.wpos(packetLength + 4 - inputBuffer.getByte()); // Exclude the padding & MAC
                     
-                    Buffer decoded;
-                    // Decompress if needed
-                    if (compression != null && (authed || !compression.isDelayed())) {
-                        uncompressBuffer.clear();
-                        inputBuffer.wpos(inputBuffer.rpos() + packetLength - 1 - pad);
-                        compression.uncompress(inputBuffer, uncompressBuffer);
-                        decoded = uncompressBuffer;
-                    } else {
-                        inputBuffer.wpos(packetLength + 4 - pad);
-                        decoded = inputBuffer;
-                    }
-                    
+                    Buffer plain = decompressed();
                     if (log.isTraceEnabled())
-                        log.trace("Received packet #{}: {}", seq, decoded.printHex());
+                        log.trace("Received packet #{}: {}", seq, plain.printHex());
                     
-                    // ------------------------------------------------- //
-                    packetHandler.handle(decoded.getMessageID(), decoded); // process the decoded packet //
-                    // ------------------------------------------------- //
+                    packetHandler.handle(plain.getMessageID(), plain); // process the decoded packet //                    
                     
-                    // Set ready to handle next packet
-                    inputBuffer.rpos(packetLength + 4 + macSize);
-                    inputBuffer.wpos(wpos);
-                    inputBuffer.compact();
+                    inputBuffer.clear();
                     packetLength = -1;
                     
                 } else
-                    // need more data
+                    // Need more data                    
                     break;
-                
             }
-        
         return need;
+    }
+    
+    private Buffer decompressed() throws TransportException
+    {
+        if (compression != null && (authed || !compression.isDelayed())) {
+            uncompressBuffer.clear();
+            compression.uncompress(inputBuffer, uncompressBuffer);
+            return uncompressBuffer;
+        } else
+            return inputBuffer;
+    }
+    
+    private int decryptLength() throws TransportException
+    {
+        cipher.update(inputBuffer.array(), 0, cipherSize);
+        
+        final int len = inputBuffer.getInt(); // Read packet length
+        
+        if (len < 5 || len > MAX_PACKET_LEN) { // Check packet length validity
+            log.info("Error decoding packet (invalid length) {}", inputBuffer.printHex());
+            throw new TransportException(DisconnectReason.PROTOCOL_ERROR, "invalid packet length: " + len);
+        }
+        
+        return len;
+    }
+    
+    private void decryptPayload(final byte[] data)
+    {
+        cipher.update(data, cipherSize, packetLength + 4 - cipherSize);
     }
     
 }

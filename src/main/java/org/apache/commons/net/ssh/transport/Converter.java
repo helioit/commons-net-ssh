@@ -19,21 +19,19 @@
 package org.apache.commons.net.ssh.transport;
 
 import org.apache.commons.net.ssh.cipher.Cipher;
+import org.apache.commons.net.ssh.cipher.NoneCipher;
 import org.apache.commons.net.ssh.compression.Compression;
 import org.apache.commons.net.ssh.mac.MAC;
 
 class Converter
 {
     
-    protected Cipher cipher;
-    protected int cipherSize = 8;
+    protected Cipher cipher = new NoneCipher();
+    protected MAC mac = null;
+    protected Compression compression = null;
     
-    protected MAC mac;
-    
-    protected Compression compression;
-    
+    protected int cipherSize = cipher.getBlockSize();
     protected long seq = -1;
-    
     protected boolean authed;
     
     public long getSequenceNumber()

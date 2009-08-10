@@ -25,7 +25,7 @@ package org.apache.commons.net.ssh.cipher;
  * 
  * @author <a href="mailto:dev@mina.apache.org">Apache MINA SSHD Project</a>
  */
-public class CipherNone implements Cipher
+public class NoneCipher implements Cipher
 {
     
     /**
@@ -35,7 +35,7 @@ public class CipherNone implements Cipher
     {
         public Cipher create()
         {
-            return new CipherNone();
+            return new NoneCipher();
         }
         
         public String getName()
@@ -46,7 +46,7 @@ public class CipherNone implements Cipher
     
     public int getBlockSize()
     {
-        return 16;
+        return 8;
     }
     
     public int getIVSize()

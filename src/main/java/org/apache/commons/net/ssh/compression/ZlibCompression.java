@@ -30,7 +30,7 @@ import com.jcraft.jzlib.ZStream;
  * 
  * @author <a href="mailto:dev@mina.apache.org">Apache MINA SSHD Project</a>
  */
-public class CompressionZlib implements Compression
+public class ZlibCompression implements Compression
 {
     
     /**
@@ -40,7 +40,7 @@ public class CompressionZlib implements Compression
     {
         public Compression create()
         {
-            return new CompressionZlib();
+            return new ZlibCompression();
         }
         
         public String getName()
@@ -57,7 +57,7 @@ public class CompressionZlib implements Compression
     /**
      * Create a new instance of a ZLib base compression
      */
-    public CompressionZlib()
+    public ZlibCompression()
     {
     }
     

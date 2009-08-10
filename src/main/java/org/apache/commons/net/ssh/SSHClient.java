@@ -38,9 +38,9 @@ import org.apache.commons.net.ssh.cipher.AES256CTR;
 import org.apache.commons.net.ssh.cipher.BlowfishCBC;
 import org.apache.commons.net.ssh.cipher.Cipher;
 import org.apache.commons.net.ssh.cipher.TripleDESCBC;
-import org.apache.commons.net.ssh.compression.CompressionDelayedZlib;
-import org.apache.commons.net.ssh.compression.CompressionNone;
-import org.apache.commons.net.ssh.compression.CompressionZlib;
+import org.apache.commons.net.ssh.compression.DelayedZlibCompression;
+import org.apache.commons.net.ssh.compression.NoneCompression;
+import org.apache.commons.net.ssh.compression.ZlibCompression;
 import org.apache.commons.net.ssh.connection.Connection;
 import org.apache.commons.net.ssh.connection.ConnectionException;
 import org.apache.commons.net.ssh.connection.ConnectionProtocol;
@@ -134,7 +134,7 @@ public class SSHClient extends SocketClient
      * <li>{@link Config#setCipherFactories Ciphers} [1]: {@link AES128CTR}, {@link AES192CTR},
      * {@link AES256CTR}, {@link AES128CBC}, {@link AES192CBC}, {@link AES256CBC}, {@link AES192CBC}, {@link TripleDESCBC}, {@link BlowfishCBC}</li>
      * <li>{@link Config#setMACFactories MAC}: {@link HMACSHA1}, {@link HMACSHA196}, {@link HMACMD5}, {@link HMACMD596}</li>
-     * <li>{@link Config#setCompressionFactories Compression}: {@link CompressionNone}</li>
+     * <li>{@link Config#setCompressionFactories Compression}: {@link NoneCompression}</li>
      * <li>{@link Config#setSignatureFactories Signature}: {@link SignatureRSA},
      * {@link SignatureDSA}</li>
      * <li>{@link Config#setRandomFactory PRNG}: {@link BouncyCastleRandom}* or {@link JCERandom}</li>
@@ -199,7 +199,7 @@ public class SSHClient extends SocketClient
         
         conf.setCipherFactories(avail);
         
-        conf.setCompressionFactories(new CompressionNone.Factory());
+        conf.setCompressionFactories(new NoneCompression.Factory());
         
         conf.setMACFactories(new HMACSHA1.Factory(), //
                              new HMACSHA196.Factory(), //
@@ -710,9 +710,9 @@ public class SSHClient extends SocketClient
     @SuppressWarnings("unchecked")
     public void useZlibCompression() throws TransportException
     {
-        trans.getConfig().setCompressionFactories(new CompressionDelayedZlib.Factory(), //
-                                                  new CompressionZlib.Factory(), //
-                                                  new CompressionNone.Factory());
+        trans.getConfig().setCompressionFactories(new DelayedZlibCompression.Factory(), //
+                                                  new ZlibCompression.Factory(), //
+                                                  new NoneCompression.Factory());
         if (isConnected())
             rekey();
     }

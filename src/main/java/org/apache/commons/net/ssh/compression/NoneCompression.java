@@ -16,16 +16,31 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.commons.net.ssh.transport;
+package org.apache.commons.net.ssh.compression;
 
-import org.apache.commons.net.ssh.AbstractService;
 
-class NullService extends AbstractService
+/**
+ * No-op <code>Compression</code>.
+ * 
+ * @author <a href="mailto:dev@mina.apache.org">Apache MINA SSHD Project</a>
+ */
+public abstract class NoneCompression implements Compression
 {
     
-    public NullService(Transport trans)
+    /**
+     * Named factory for the no-op <code>Compression</code>
+     */
+    public static class Factory implements org.apache.commons.net.ssh.Factory.Named<Compression>
     {
-        super("null-service", trans);
+        public Compression create()
+        {
+            return null;
+        }
+        
+        public String getName()
+        {
+            return "none";
+        }
     }
     
 }

@@ -25,7 +25,7 @@ package org.apache.commons.net.ssh.compression;
  * 
  * @author <a href="mailto:dev@mina.apache.org">Apache MINA SSHD Project</a>
  */
-public class CompressionDelayedZlib extends CompressionZlib
+public class DelayedZlibCompression extends ZlibCompression
 {
     
     /**
@@ -35,7 +35,7 @@ public class CompressionDelayedZlib extends CompressionZlib
     {
         public Compression create()
         {
-            return new CompressionDelayedZlib();
+            return new DelayedZlibCompression();
         }
         
         public String getName()

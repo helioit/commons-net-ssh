@@ -25,6 +25,7 @@ import java.net.InetAddress;
 import java.net.Socket;
 import java.util.concurrent.locks.ReentrantLock;
 
+import org.apache.commons.net.ssh.AbstractService;
 import org.apache.commons.net.ssh.Config;
 import org.apache.commons.net.ssh.ErrorNotifiable;
 import org.apache.commons.net.ssh.SSHException;
@@ -50,23 +51,13 @@ import org.slf4j.LoggerFactory;
 public final class TransportProtocol implements Transport
 {
     
-    private final Logger log = LoggerFactory.getLogger(getClass());
-    
-    private final Config config;
-    
-    private final Service nullService = new NullService(this);
-    /** Currently active service e.g. UserAuthService, ConnectionService */
-    private Service service = nullService;
-    
-    private Socket socket;
-    private InputStream input;
-    private OutputStream output;
-    
-    /** For key (re)exchange */
-    private final KeyExchanger kexer;
-    
-    /** Message identifier for last packet received */
-    private Message msg;
+    private static class NullService extends AbstractService
+    {
+        public NullService(Transport trans)
+        {
+            super("null-service", trans);
+        }
+    }
     
     private final Thread dispatcher = new Thread()
         {
@@ -99,11 +90,29 @@ public final class TransportProtocol implements Transport
             }
         };
     
-    private final Encoder encoder;
-    private final Decoder decoder;
+    private final Logger log = LoggerFactory.getLogger(getClass());
+    private final Config config;
+    private final Service nullService = new NullService(this);
+    
+    /** Currently active service e.g. UserAuthService, ConnectionService */
+    private volatile Service service = nullService;
+    
+    private Socket socket;
+    private InputStream input;
+    private OutputStream output;
     
     /** Psuedo-random number generator as retrieved from the factory manager */
     private final Random prng;
+    
+    /** For key (re)exchange */
+    private final KeyExchanger kexer;
+    /** For encoding packets */
+    private final Encoder encoder;
+    /** For decoding packets */
+    private final Decoder decoder;
+    
+    /** Message identifier for last packet received */
+    private Message msg;
     
     /** Client version identification string */
     private final String clientID;
@@ -112,9 +121,7 @@ public final class TransportProtocol implements Transport
     private String serverID;
     
     private final ReentrantLock lock = new ReentrantLock();
-    
     private final Event<TransportException> serviceAccept = newEvent("service accept");
-    
     private final Event<TransportException> close = newEvent("transport close");
     
     private int timeout = 30;
@@ -209,7 +216,7 @@ public final class TransportProtocol implements Transport
         return serverID == null ? serverID : serverID.substring(8);
     }
     
-    public synchronized Service getService()
+    public Service getService()
     {
         return service;
     }
@@ -247,7 +254,7 @@ public final class TransportProtocol implements Transport
         log.trace("Received packet {}", msg);
         
         if (msg.geq(50)) // not a transport layer packet
-            getService().handle(msg, buf);
+            service.handle(msg, buf);
         
         else if (msg.in(20, 21) || msg.in(30, 49)) // kex packet
             kexer.handle(msg, buf);
@@ -382,7 +389,7 @@ public final class TransportProtocol implements Transport
                 Message m = Message.fromByte(payload.array()[payload.rpos()]);
                 if (!m.in(1, 49) || m == Message.SERVICE_REQUEST)
                     kexer.waitForDone();
-            } else if (encoder.getSequenceNumber() == 1)
+            } else if (encoder.getSequenceNumber() == 0) // We get here every 2**32th packet
                 kexer.startKex(true);
             
             long seq = encoder.encode(payload);
@@ -392,32 +399,40 @@ public final class TransportProtocol implements Transport
             } catch (IOException ioe) {
                 throw new TransportException(ioe);
             }
-            
             return seq;
+            
         }
     }
     
     private void die(Exception ex)
     {
-        log.error("Dying because - {}", ex.toString());
-        
-        SSHException causeOfDeath = SSHException.chainer.chain(ex);
-        
-        ErrorNotifiable.Util.alertAll(causeOfDeath, close, serviceAccept, kexer);
-        getService().notifyError(causeOfDeath);
-        setService(nullService);
-        
-        shutdownInput();
-        
-        { // Perhaps can send disconnect packet to server
-            final boolean didNotReceiveDisconnect = msg != Message.DISCONNECT;
-            final boolean gotRequiredInfo = causeOfDeath.getDisconnectReason() != DisconnectReason.UNKNOWN;
-            if (didNotReceiveDisconnect && gotRequiredInfo)
-                disconnect(causeOfDeath.getDisconnectReason(), causeOfDeath.getMessage());
+        lock.lock();
+        try {
+            if (!close.isSet()) {
+                
+                log.error("Dying because - {}", ex.toString());
+                
+                SSHException causeOfDeath = SSHException.chainer.chain(ex);
+                
+                ErrorNotifiable.Util.alertAll(causeOfDeath, close, serviceAccept, kexer);
+                service.notifyError(causeOfDeath);
+                service = nullService;
+                
+                shutdownInput();
+                
+                { // Perhaps can send disconnect packet to server
+                    final boolean didNotReceiveDisconnect = msg != Message.DISCONNECT;
+                    final boolean gotRequiredInfo = causeOfDeath.getDisconnectReason() != DisconnectReason.UNKNOWN;
+                    if (didNotReceiveDisconnect && gotRequiredInfo)
+                        disconnect(causeOfDeath.getDisconnectReason(), causeOfDeath.getMessage());
+                }
+                
+                shutdownOutput();
+                close.set();
+            }
+        } finally {
+            lock.unlock();
         }
-        
-        shutdownOutput();
-        close.set();
     }
     
     private void gotDebug(Buffer buf)
