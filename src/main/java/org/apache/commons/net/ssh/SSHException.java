@@ -42,7 +42,7 @@ public class SSHException extends IOException
             
         };
     
-    private final DisconnectReason code;
+    private final DisconnectReason reason;
     
     public SSHException()
     {
@@ -62,7 +62,7 @@ public class SSHException extends IOException
     public SSHException(DisconnectReason code, String message, Throwable cause)
     {
         super(message);
-        this.code = code;
+        this.reason = code;
         if (cause != null)
             initCause(cause);
     }
@@ -89,12 +89,12 @@ public class SSHException extends IOException
     
     public int getDisconnectCode()
     {
-        return code.toInt();
+        return reason.toInt();
     }
     
     public DisconnectReason getDisconnectReason()
     {
-        return code;
+        return reason;
     }
     
     @Override
@@ -105,13 +105,16 @@ public class SSHException extends IOException
         else if (getCause() != null && getCause().getMessage() != null)
             return getCause().getMessage();
         else
-            return super.toString();
+            return null;
     }
     
     @Override
     public String toString()
     {
-        return (code != DisconnectReason.UNKNOWN ? "[" + code + "] " : "") + getMessage();
+        String cls = getClass().getName();
+        String code = reason != DisconnectReason.UNKNOWN ? "[" + reason + "] " : "";
+        String msg = getMessage() != null ? getMessage() : "";
+        return cls + (code.equals("") && msg.equals("") ? "" : ": ") + code + msg;
     }
     
 }

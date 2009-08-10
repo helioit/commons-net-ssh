@@ -146,8 +146,8 @@ public class ConnectionProtocol extends AbstractService implements Connection
     public void notifyError(SSHException error)
     {
         super.notifyError(error);
-        ErrorNotifiable.Util.alertAll(error, (ErrorNotifiable[]) globalReqs.toArray());
-        ErrorNotifiable.Util.alertAll(error, (ErrorNotifiable[]) channels.values().toArray());
+        ErrorNotifiable.Util.alertAll(error, globalReqs.toArray());
+        ErrorNotifiable.Util.alertAll(error, channels.values().toArray());
         globalReqs.clear();
         channels.clear();
     }

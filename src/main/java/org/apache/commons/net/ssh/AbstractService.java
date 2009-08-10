@@ -69,7 +69,7 @@ public abstract class AbstractService implements Service
     
     public void notifyError(SSHException error)
     {
-        log.debug("Was notified of {}", error);
+        log.debug("Was notified of {}", error.toString());
     }
     
     public void notifyUnimplemented(long seqNum) throws SSHException

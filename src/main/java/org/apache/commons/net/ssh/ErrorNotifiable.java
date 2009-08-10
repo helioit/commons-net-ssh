@@ -23,10 +23,10 @@ public interface ErrorNotifiable
     
     class Util
     {
-        public static void alertAll(SSHException error, ErrorNotifiable... notifiables)
+        public static void alertAll(SSHException error, Object... notifiables)
         {
-            for (ErrorNotifiable notifiable : notifiables)
-                notifiable.notifyError(error);
+            for (Object notifiable : notifiables)
+                ((ErrorNotifiable) notifiable).notifyError(error);
         }
     }
     

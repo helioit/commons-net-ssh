@@ -196,7 +196,7 @@ public final class KeyExchanger implements PacketHandler, ErrorNotifiable
     
     public void notifyError(SSHException error)
     {
-        log.debug("Got notified of {}", error);
+        log.debug("Got notified of {}", error.toString());
         ErrorNotifiable.Util.alertAll(error, kexInitSent, done);
     }
     
