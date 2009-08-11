@@ -27,7 +27,7 @@ import org.slf4j.LoggerFactory;
 /**
  * This abstract class for {@link AuthMethod} implements common or default functionality.
  * 
- * @author shikhar
+ * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
  */
 public abstract class AbstractAuthMethod implements AuthMethod
 {

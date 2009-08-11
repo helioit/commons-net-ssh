@@ -37,8 +37,9 @@ import org.apache.commons.net.ssh.util.Constants.DisconnectReason;
 import org.apache.commons.net.ssh.util.Constants.Message;
 
 /**
+ * {@link UserAuth} implementation.
  * 
- * @author shikhar
+ * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
  */
 public class UserAuthProtocol extends AbstractService implements UserAuth, AuthParams
 {
@@ -62,6 +63,9 @@ public class UserAuthProtocol extends AbstractService implements UserAuth, AuthP
         super("ssh-userauth", trans);
     }
     
+    /**
+     * 
+     */
     public synchronized void authenticate(String username, Service nextService, Iterable<AuthMethod> methods)
             throws UserAuthException, TransportException
     {

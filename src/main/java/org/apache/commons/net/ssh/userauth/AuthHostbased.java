@@ -22,7 +22,7 @@ import org.apache.commons.net.ssh.keyprovider.KeyProvider;
 import org.apache.commons.net.ssh.util.Buffer;
 
 /**
- * Implements the "hostbased" SSH authentication method.
+ * Implements the {@code hostbased} SSH authentication method.
  * 
  * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
  */

@@ -22,6 +22,11 @@ import org.apache.commons.net.ssh.SSHException;
 import org.apache.commons.net.ssh.util.FriendlyChainer;
 import org.apache.commons.net.ssh.util.Constants.DisconnectReason;
 
+/**
+ * User authentication exception
+ * 
+ * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
+ */
 public class UserAuthException extends SSHException
 {
     

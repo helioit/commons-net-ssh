@@ -24,6 +24,12 @@ import org.apache.commons.net.ssh.util.PasswordFinder;
 import org.apache.commons.net.ssh.util.Constants.Message;
 import org.apache.commons.net.ssh.util.PasswordFinder.Resource;
 
+/**
+ * Implements the {@code password} authentication method. Password-change request handling is not
+ * currently supported.
+ * 
+ * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
+ */
 public class AuthPassword extends AbstractAuthMethod
 {
     
@@ -62,12 +68,20 @@ public class AuthPassword extends AbstractAuthMethod
             super.handle(cmd, buf);
     }
     
+    /**
+     * Returns {@code true} if the associated {@link PasswordFinder} tells that we should retry with
+     * a new password that it will supply.
+     */
     @Override
     public boolean shouldRetry()
     {
         return pwdf.shouldRetry(getResource());
     }
     
+    /**
+     * Returns the associated {@link Resource} for which this method requests password from the
+     * {@link PasswordFinder}.
+     */
     protected Resource getResource()
     {
         return new Resource(Resource.Type.ACCOUNT, params.getUsername() + "@"

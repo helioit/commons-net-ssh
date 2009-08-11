@@ -77,6 +77,7 @@ import org.apache.commons.net.ssh.userauth.UserAuthProtocol;
 import org.apache.commons.net.ssh.util.KnownHosts;
 import org.apache.commons.net.ssh.util.PasswordFinder;
 import org.apache.commons.net.ssh.util.SecurityUtils;
+import org.apache.commons.net.ssh.util.Constants.DisconnectReason;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -736,9 +737,18 @@ public class SSHClient extends SocketClient
     protected void doKex() throws TransportException
     {
         assert trans.isRunning();
+        
         long start = System.currentTimeMillis();
-        trans.getKeyExchanger().startKex(true);
+        
+        try {
+            trans.getKeyExchanger().startKex(true);
+        } catch (TransportException te) {
+            trans.disconnect(DisconnectReason.KEY_EXCHANGE_FAILED);
+            throw te;
+        }
+        
         log.info("Key exchange took {} seconds", (System.currentTimeMillis() - start) / 1000.0);
+        
         assert trans.getKeyExchanger().isKexDone();
     }
     

@@ -25,18 +25,33 @@ import org.apache.commons.net.ssh.transport.TransportException;
  * An authentication method of the <a href="http://www.ietf.org/rfc/rfc4252.txt">SSH Authentication
  * Protocol</a>.
  * 
- * @author shikhar
+ * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
  * @see UserAuth
  */
 public interface AuthMethod extends PacketHandler
 {
     
+    /**
+     * Returns assigned name of this authentication method
+     */
     String getName();
     
+    /**
+     * Initializes this {@link AuthMethod} with the {@link AuthParams parameters} needed for
+     * authentication. This method must be called before requesting authentication with this method.
+     */
     void init(AuthParams params);
     
+    /**
+     * 
+     * @throws UserAuthException
+     * @throws TransportException
+     */
     void request() throws UserAuthException, TransportException;
     
+    /**
+     * Returns whether authentication should be reattempted if it failed.
+     */
     boolean shouldRetry();
     
 }

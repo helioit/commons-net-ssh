@@ -28,20 +28,27 @@ import org.apache.commons.net.ssh.util.Constants.Message;
 /**
  * Implements the {@code "publickey"} SSH authentication method.
  * <p>
- * It is initialised with a {@code KeyProvider>}. It first sends a "feeler" request with just the
- * public key, and if the server responds with {@code SSH_MSG_USERAUTH_PK_OK} indicating that the
- * key is acceptable, it proceeds to send a request signed with the private key.
+ * Requesteing authentication with this method first sends a "feeler" request with just the public
+ * key, and if the server responds with {@code SSH_MSG_USERAUTH_PK_OK} indicating that the key is
+ * acceptable, it proceeds to send a request signed with the private key. Therefore, private keys
+ * are not requested from the associated {@link KeyProvider} unless needed.
  * 
  * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
  */
 public class AuthPublickey extends KeyedAuthMethod
 {
     
+    /**
+     * Initialize this method with the provider for public and private key.
+     */
     public AuthPublickey(KeyProvider kProv)
     {
         super("publickey", kProv);
     }
     
+    /**
+     * Internal use.
+     */
     @Override
     public void handle(Message cmd, Buffer buf) throws UserAuthException, TransportException
     {
@@ -51,12 +58,23 @@ public class AuthPublickey extends KeyedAuthMethod
             super.handle(cmd, buf);
     }
     
+    /**
+     * Builds a feeler request (sans signature).
+     */
     @Override
     protected Buffer buildReq() throws UserAuthException
     {
         return buildReq(false);
     }
     
+    /**
+     * Builds SSH_MSG_USERAUTH_REQUEST packet.
+     * 
+     * @param signed
+     *            whether the request packet will contain signature
+     * @return the {@link Buffer} containing the request packet
+     * @throws UserAuthException
+     */
     protected Buffer buildReq(boolean signed) throws UserAuthException
     {
         try {
@@ -67,6 +85,12 @@ public class AuthPublickey extends KeyedAuthMethod
         return putPubKey(super.buildReq().putBoolean(signed));
     }
     
+    /**
+     * Send SSH_MSG_USERAUTH_REQUEST containing the signature.
+     * 
+     * @throws UserAuthException
+     * @throws TransportException
+     */
     protected void sendSignedReq() throws UserAuthException, TransportException
     {
         log.debug("Sending signed request");

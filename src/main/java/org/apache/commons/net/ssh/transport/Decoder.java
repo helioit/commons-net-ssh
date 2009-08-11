@@ -29,16 +29,36 @@ import org.apache.commons.net.ssh.util.Constants.DisconnectReason;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Decodes packets from the SSH binary protocol per the current algorithms.
+ * <p>
+ * From RFC 4253, p. 6
+ * 
+ * <pre>
+ *    Each packet is in the following format:
+ * 
+ *       uint32    packet_length
+ *       byte      padding_length
+ *       byte[n1]  payload; n1 = packet_length - padding_length - 1
+ *       byte[n2]  random padding; n2 = padding_length
+ *       byte[m]   mac (Message Authentication Code - MAC); m = mac_length
+ * </pre>
+ * 
+ * @author <a href="mailto:dev@mina.apache.org">Apache MINA SSHD Project</a>
+ * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
+ */
 class Decoder extends Converter
 {
     
     private static final int MAX_PACKET_LEN = 256 * 1024;
     
     private final Logger log = LoggerFactory.getLogger(getClass());
+    
     /** What we pass decoded packets to */
     private final PacketHandler packetHandler;
     /** Buffer where as-yet undecoded data lives */
     private final Buffer inputBuffer = new Buffer();
+    /** Used in case compression is active to store the uncompressed data */
     private final Buffer uncompressBuffer = new Buffer();
     /** MAC result is stored here */
     private byte[] macResult;
@@ -62,16 +82,6 @@ class Decoder extends Converter
         return MAX_PACKET_LEN;
     }
     
-    public int received(byte[] b, int len) throws SSHException
-    {
-        inputBuffer.putRawBytes(b, 0, len);
-        if (needed <= len)
-            needed = decode();
-        else
-            needed -= len;
-        return needed;
-    }
-    
     @Override
     public void setAlgorithms(Cipher cipher, MAC mac, Compression compression)
     {
@@ -85,7 +95,7 @@ class Decoder extends Converter
     {
         if (mac != null) {
             mac.update(seq); // seq num
-            mac.update(data, 0, packetLength + 4); // entire packet w/o the MAC field 
+            mac.update(data, 0, packetLength + 4); // packetLength+4 = entire packet w/o mac 
             mac.doFinal(macResult, 0); // compute
             // Check against the received MAC
             if (!BufferUtils.equals(macResult, 0, data, packetLength + 4, mac.getBlockSize()))
@@ -94,9 +104,6 @@ class Decoder extends Converter
     }
     
     /**
-     * Decodes incoming buffer; when a packet has been decoded hooks in to
-     * {@link PacketHandler#handle}.
-     * <p>
      * Returns advised number of bytes that should be made available in decoderBuffer before the
      * method should be called again.
      * 
@@ -105,12 +112,15 @@ class Decoder extends Converter
     private int decode() throws SSHException
     {
         int need;
+        
         /* Decoding loop */
         for (;;)
+            
             if (packetLength == -1) // Waiting for beginning of packet
             {
                 
                 assert inputBuffer.rpos() == 0 : "buffer cleared";
+                
                 need = cipherSize - inputBuffer.available();
                 if (need <= 0)
                     packetLength = decryptLength();
@@ -121,6 +131,7 @@ class Decoder extends Converter
             } else {
                 
                 assert inputBuffer.rpos() == 4 : "packet length read";
+                
                 need = packetLength + (mac != null ? mac.getBlockSize() : 0) - inputBuffer.available();
                 if (need <= 0) {
                     
@@ -145,6 +156,7 @@ class Decoder extends Converter
                     // Need more data                    
                     break;
             }
+        
         return need;
     }
     
@@ -175,6 +187,25 @@ class Decoder extends Converter
     private void decryptPayload(final byte[] data)
     {
         cipher.update(data, cipherSize, packetLength + 4 - cipherSize);
+    }
+    
+    /**
+     * Adds {@code len} bytes from {@code b} to the decoder buffer. When a packet has been
+     * successfully decoded, hooks in to {@link PacketHandler#handle} of the {@link PacketHandler}
+     * this decoder was initialized with.
+     * <p>
+     * Returns the number of bytes expected in the next call in order to decode the packet length,
+     * and if the packet length has already been decoded; to decode the payload. This number is
+     * accurate and should be taken to heart.
+     */
+    int received(byte[] b, int len) throws SSHException
+    {
+        inputBuffer.putRawBytes(b, 0, len);
+        if (needed <= len)
+            needed = decode();
+        else
+            needed -= len;
+        return needed;
     }
     
 }

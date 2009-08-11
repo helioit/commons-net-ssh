@@ -26,6 +26,24 @@ import org.apache.commons.net.ssh.util.Buffer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Encodes packets into the SSH binary protocol per the current algorithms.
+ * <p>
+ * From RFC 4253, p. 6
+ * 
+ * <pre>
+ *    Each packet is in the following format:
+ * 
+ *       uint32    packet_length
+ *       byte      padding_length
+ *       byte[n1]  payload; n1 = packet_length - padding_length - 1
+ *       byte[n2]  random padding; n2 = padding_length
+ *       byte[m]   mac (Message Authentication Code - MAC); m = mac_length
+ * </pre>
+ * 
+ * @author <a href="mailto:dev@mina.apache.org">Apache MINA SSHD Project</a>
+ * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
+ */
 class Encoder extends Converter
 {
     
@@ -40,18 +58,6 @@ class Encoder extends Converter
     
     /**
      * Encode a buffer into the SSH binary protocol per the current algorithms.
-     * <p>
-     * From RFC 4253, p. 6
-     * 
-     * <pre>
-     *    Each packet is in the following format:
-     * 
-     *       uint32    packet_length
-     *       byte      padding_length
-     *       byte[n1]  payload; n1 = packet_length - padding_length - 1
-     *       byte[n2]  random padding; n2 = padding_length
-     *       byte[m]   mac (Message Authentication Code - MAC); m = mac_length
-     * </pre>
      * 
      * @param buffer
      *            the buffer to encode

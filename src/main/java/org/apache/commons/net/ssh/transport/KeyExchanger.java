@@ -45,7 +45,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Algorithm negotiation and key exchange
+ * Algorithm negotiation and key exchange.
  * 
  * @author <a href="mailto:dev@mina.apache.org">Apache MINA SSHD Project</a>
  * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
@@ -66,6 +66,13 @@ public final class KeyExchanger implements PacketHandler, ErrorNotifiable
     private final Logger log = LoggerFactory.getLogger(getClass());
     
     private final TransportProtocol transport;
+    
+    /**
+     * {@link HostKeyVerifier#verify(InetAddress, PublicKey)} is invoked by
+     * {@link #verifyHost(PublicKey)} when we are ready to verify the the server's host key.
+     */
+    private final Queue<HostKeyVerifier> hostVerifiers = new LinkedList<HostKeyVerifier>();
+    
     private final AtomicBoolean kexOngoing = new AtomicBoolean();
     
     /** What we are expecting from the next packet */
@@ -74,12 +81,6 @@ public final class KeyExchanger implements PacketHandler, ErrorNotifiable
     private String[] negotiated;
     /** Server's proposed algorithms - each string comma-delimited in order of preference */
     private String[] serverProposal;
-    
-    /**
-     * {@link HostKeyVerifier#verify(InetAddress, PublicKey)} is invoked by
-     * {@link #verifyHost(PublicKey)} when we are ready to verify the the server's host key.
-     */
-    private final Queue<HostKeyVerifier> hostVerifiers = new LinkedList<HostKeyVerifier>();
     
     /** Client's proposed algorithms - each string comma-delimited in order of preference */
     private String[] clientProposal;
@@ -96,6 +97,7 @@ public final class KeyExchanger implements PacketHandler, ErrorNotifiable
     private static final int PROP_LANG_S2C = 9;
     
     private static final int PROP_MAX = 10;
+    
     /** Instance of negotiated key exchange algorithm */
     private KeyExchange kex;
     /** Payload of our SSH_MSG_KEXINIT; is passed on to the KeyExchange alg */
@@ -109,7 +111,6 @@ public final class KeyExchanger implements PacketHandler, ErrorNotifiable
     
     private final ReentrantLock lock = new ReentrantLock();
     private final Event<TransportException> done = newEvent("kex done");
-    
     private final Event<TransportException> kexInitSent = newEvent("kexinit sent");
     
     KeyExchanger(TransportProtocol trans)
@@ -121,8 +122,8 @@ public final class KeyExchanger implements PacketHandler, ErrorNotifiable
      * Add a callback for host key verification.
      * <p>
      * Any of the {@link HostKeyVerifier} implementations added this way can deem a host key to be
-     * acceptable, allowing the connection to proceed. Otherwise, a {@link TransportException} will
-     * result during session initialization.
+     * acceptable, allowing key exchange to successfuly complete. Otherwise, a
+     * {@link TransportException} will result during key exchange.
      * 
      * @param hkv
      *            object whose {@link HostKeyVerifier#verify} method will be invoked
@@ -144,6 +145,9 @@ public final class KeyExchanger implements PacketHandler, ErrorNotifiable
         return sessionID;
     }
     
+    /**
+     * Internal API; do not use!
+     */
     public void handle(Message msg, Buffer buf) throws TransportException
     {
         switch (expected)
@@ -152,8 +156,15 @@ public final class KeyExchanger implements PacketHandler, ErrorNotifiable
         case KEXINIT:
             ensureReceivedMatchesExpected(msg, Message.KEXINIT);
             log.info("Received SSH_MSG_KEXINIT");
-            startKex(false);
+            startKex(false); // will start key exchange if not already on
+            
+            /*
+             * We block on this event to prevent a race condition where we may have received a
+             * SSH_MSG_KEXINIT before having sent the packet ourselves (would cause gotKexInit() to
+             * fail)
+             */
             kexInitSent.await(transport.getTimeout());
+            
             gotKexInit(buf);
             expected = Expected.FOLLOWUP;
             break;
@@ -184,22 +195,43 @@ public final class KeyExchanger implements PacketHandler, ErrorNotifiable
         }
     }
     
+    /**
+     * Returns whether key exchange has been completed
+     */
     public boolean isKexDone()
     {
         return done.isSet();
     }
     
+    /**
+     * Returns whether key exchange is currently ongoing
+     */
     public boolean isKexOngoing()
     {
         return kexOngoing.get();
     }
     
+    /**
+     * Internal API, do not use!
+     */
     public void notifyError(SSHException error)
     {
         log.debug("Got notified of {}", error.toString());
         ErrorNotifiable.Util.alertAll(error, kexInitSent, done);
     }
     
+    /**
+     * Starts key exchange by sending a {@code SSH_MSG_KEXINIT} packet. Key exchange needs to be
+     * done once mandatorily after initializing the {@link Transport} for it to be usable and may be
+     * initiated at any later point e.g. if {@link Transport#getConfig() algorithms} have changed
+     * and should be renegotiated.
+     * 
+     * @param waitForDone
+     *            whether should block till key exchange completed
+     * @throws TransportException
+     *             if there is an error during key exchange
+     * @see {@link Transport#setTimeout} for setting timeout for kex
+     */
     public void startKex(boolean waitForDone) throws TransportException
     {
         if (!kexOngoing.getAndSet(true)) {
@@ -270,6 +302,8 @@ public final class KeyExchanger implements PacketHandler, ErrorNotifiable
     /**
      * Put new keys into use. This method will intialize the ciphers, digests, MACs and compression
      * according to the negotiated server and client proposals.
+     * <p>
+     * TODO: refactor; too huge
      */
     private void gotNewKeys()
     {
@@ -414,6 +448,11 @@ public final class KeyExchanger implements PacketHandler, ErrorNotifiable
         return E;
     }
     
+    /**
+     * Sends SSH_MSG_KEXINIT and sets the {@link kexInitSent} event.
+     * 
+     * @throws TransportException
+     */
     private void sendKexInit() throws TransportException
     {
         Buffer buf = new Buffer(Message.KEXINIT);
@@ -460,6 +499,7 @@ public final class KeyExchanger implements PacketHandler, ErrorNotifiable
      */
     private synchronized void verifyHost(PublicKey key) throws TransportException
     {
+        
         for (HostKeyVerifier hkv : hostVerifiers) {
             log.debug("Trying to verify host key with {}", hkv);
             if (hkv.verify(transport.getRemoteHost(), key))
@@ -468,6 +508,7 @@ public final class KeyExchanger implements PacketHandler, ErrorNotifiable
         
         throw new TransportException(DisconnectReason.HOST_KEY_NOT_VERIFIABLE, "Could not verify ["
                 + KeyType.fromKey(key) + "] host key with fingerprint [" + SecurityUtils.getFingerprint(key) + "]");
+        
     }
     
 }

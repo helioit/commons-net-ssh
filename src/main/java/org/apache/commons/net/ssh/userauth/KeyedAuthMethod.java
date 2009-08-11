@@ -10,6 +10,9 @@ import org.apache.commons.net.ssh.signature.Signature;
 import org.apache.commons.net.ssh.util.Buffer;
 import org.apache.commons.net.ssh.util.Constants.KeyType;
 
+/**
+ * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
+ */
 public abstract class KeyedAuthMethod extends AbstractAuthMethod
 {
     protected KeyProvider kProv;

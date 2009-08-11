@@ -23,6 +23,11 @@ import org.apache.commons.net.ssh.cipher.NoneCipher;
 import org.apache.commons.net.ssh.compression.Compression;
 import org.apache.commons.net.ssh.mac.MAC;
 
+/**
+ * Base class for {@link Encoder} and {@link Decoder}.
+ * 
+ * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
+ */
 class Converter
 {
     
@@ -30,7 +35,7 @@ class Converter
     protected MAC mac = null;
     protected Compression compression = null;
     
-    protected int cipherSize = cipher.getBlockSize();
+    protected int cipherSize = 8;
     protected long seq = -1;
     protected boolean authed;
     
