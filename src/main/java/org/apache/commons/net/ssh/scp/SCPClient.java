@@ -35,13 +35,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Base class for {@link SCPDownloadClient} and {@link SCPUploadClient}.
- * 
  * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
  * 
  * @see <a href="http://blogs.sun.com/janp/entry/how_the_scp_protocol_works">SCP Protocol</a>
  */
-public abstract class SCPClient
+abstract class SCPClient
 {
     
     public static class SCPException extends SSHException
@@ -128,13 +126,13 @@ public abstract class SCPClient
         return !warnings.isEmpty();
     }
     
-    protected void addWarning(String warning)
+    void addWarning(String warning)
     {
         log.warn(warning);
         warnings.add(warning);
     }
     
-    protected void check(String what) throws IOException
+    void check(String what) throws IOException
     {
         int code = scp.getInputStream().read();
         switch (code)
@@ -157,13 +155,13 @@ public abstract class SCPClient
         }
     }
     
-    protected void cleanSlate()
+    void cleanSlate()
     {
         exitStatus = -1;
         warnings.clear();
     }
     
-    protected synchronized void execSCPWith(List<String> args) throws ConnectionException, TransportException
+    synchronized void execSCPWith(List<String> args) throws ConnectionException, TransportException
     {
         String cmd = SCP_COMMAND;
         for (String arg : args)
@@ -171,7 +169,7 @@ public abstract class SCPClient
         scp = host.startSession().exec(cmd);
     }
     
-    protected void exit()
+    void exit()
     {
         if (scp != null) {
             
@@ -191,12 +189,12 @@ public abstract class SCPClient
         scp = null;
     }
     
-    protected String readMessage() throws IOException
+    String readMessage() throws IOException
     {
         return readMessage(true);
     }
     
-    protected String readMessage(boolean errOnEOF) throws IOException
+    String readMessage(boolean errOnEOF) throws IOException
     {
         StringBuilder sb = new StringBuilder();
         int x;
@@ -212,7 +210,7 @@ public abstract class SCPClient
         return sb.toString();
     }
     
-    protected void sendMessage(String msg) throws IOException
+    void sendMessage(String msg) throws IOException
     {
         log.debug("Sending message: {}", msg);
         scp.getOutputStream().write((msg + LF).getBytes());
@@ -220,29 +218,33 @@ public abstract class SCPClient
         check("Message ACK received");
     }
     
-    protected void signal(String what) throws IOException
+    void signal(String what) throws IOException
     {
         log.debug("Signalling: {}", what);
         scp.getOutputStream().write(0);
         scp.getOutputStream().flush();
     }
     
-    protected abstract void startCopy(String sourcePath, String targetPath) throws IOException;
+    abstract void startCopy(String sourcePath, String targetPath) throws IOException;
     
-    protected void transfer(InputStream in, OutputStream out, int bufSize, long len) throws IOException
+    void transfer(InputStream in, OutputStream out, int bufSize, long len) throws IOException
     {
-        byte[] buf = new byte[bufSize];
+        final byte[] buf = new byte[bufSize];
         long count = 0;
         int read;
+        
         long startTime = System.currentTimeMillis();
+        
         while ((read = in.read(buf, 0, (int) Math.min(bufSize, len - count))) != -1 && count < len) {
             out.write(buf, 0, read);
             count += read;
         }
         out.flush();
-        long sizeKiB = count / 1024;
-        double timeSeconds = (System.currentTimeMillis() - startTime) / 1000.0;
+        
+        final long sizeKiB = count / 1024;
+        final double timeSeconds = (System.currentTimeMillis() - startTime) / 1000.0;
         log.info(sizeKiB / 1024.0 + " MiB transferred  in {} seconds ({} KiB/s)", timeSeconds, (sizeKiB / timeSeconds));
+        
         if (read == -1 && !(count == len))
             throw new IOException("Had EOF before transfer completed");
     }

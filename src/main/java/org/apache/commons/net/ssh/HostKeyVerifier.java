@@ -18,7 +18,6 @@
  */
 package org.apache.commons.net.ssh;
 
-import java.net.InetAddress;
 import java.security.PublicKey;
 
 import org.apache.commons.net.ssh.util.SecurityUtils;
@@ -37,7 +36,7 @@ public interface HostKeyVerifier
         {
             return new HostKeyVerifier()
                 {
-                    public boolean verify(InetAddress address, PublicKey key)
+                    public boolean verify(String hostname, PublicKey key)
                     {
                         return SecurityUtils.getFingerprint(key).equals(fp);
                     }
@@ -52,12 +51,12 @@ public interface HostKeyVerifier
      * <strong>Note</strong>: host key verification is the basis for security in SSH, therefore
      * exercise due caution in implementing!
      * 
-     * @param address
-     *            remote address we are connected to
+     * @param hostname
+     *            hostname to verify
      * @param key
      *            host key of server
      * @return {@code true} if key is acceptable, {@code false} otherwise
      */
-    boolean verify(InetAddress address, PublicKey key);
+    boolean verify(String hostname, PublicKey key);
     
 }

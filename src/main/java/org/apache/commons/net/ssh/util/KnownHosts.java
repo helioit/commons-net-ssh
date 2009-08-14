@@ -19,17 +19,13 @@
 package org.apache.commons.net.ssh.util;
 
 import java.io.BufferedReader;
-import java.io.FileInputStream;
+import java.io.File;
+import java.io.FileReader;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.net.InetAddress;
 import java.security.PublicKey;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Set;
 
 import org.apache.commons.net.ssh.HostKeyVerifier;
 import org.apache.commons.net.ssh.SSHException;
@@ -57,7 +53,7 @@ public class KnownHosts implements HostKeyVerifier
      * 
      * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
      */
-    protected static class Entry
+    class Entry
     {
         
         private final String[] hosts;
@@ -77,7 +73,7 @@ public class KnownHosts implements HostKeyVerifier
         {
             String[] parts = line.split(" ");
             if (parts.length != 3)
-                throw new SSHException("Line parts not 3");
+                throw new SSHException("Line parts not 3: " + line);
             hosts = parts[0].split(",");
             type = KeyType.fromString(parts[1]);
             if (type == KeyType.UNKNOWN)
@@ -93,12 +89,12 @@ public class KnownHosts implements HostKeyVerifier
          * @return the possibility which was successfuly matched, or {@code null} if there was no
          *         match
          */
-        public String appliesTo(Set<String> possibilities)
+        public boolean appliesTo(String hostname)
         {
             if (hosts[0].startsWith("|1|")) { // hashed hostname
                 String[] splitted = hosts[0].split("\\|");
                 if (splitted.length != 4)
-                    return null;
+                    return false;
                 byte[] salt, host;
                 try {
                     salt = Base64.decode(splitted[2]);
@@ -107,18 +103,17 @@ public class KnownHosts implements HostKeyVerifier
                     throw new SSHRuntimeException(e);
                 }
                 if (salt.length != 20)
-                    return null;
+                    return false;
                 MAC sha1 = new HMACSHA1();
                 sha1.init(salt);
-                for (String possi : possibilities)
-                    if (BufferUtils.equals(host, sha1.doFinal(possi.getBytes())))
-                        return possi;
+                if (BufferUtils.equals(host, sha1.doFinal(hostname.getBytes())))
+                    return true;
             } else
-                // unhashed; possibly comma-delim'ed
+                // unhashed; possibly comma-delim'ed                
                 for (String host : hosts)
-                    if (possibilities.contains(host))
-                        return host;
-            return null;
+                    if (host.equals(hostname))
+                        return true;
+            return false;
         }
         
         /**
@@ -162,9 +157,17 @@ public class KnownHosts implements HostKeyVerifier
     private final Logger log = LoggerFactory.getLogger(getClass());
     private final List<Entry> entries = new LinkedList<Entry>();
     
-    public KnownHosts(InputStream stream) throws IOException
+    /**
+     * Constructs a {@code KnownHosts} object from a file location
+     * 
+     * @param loc
+     *            the file location
+     * @throws IOException
+     *             if there is an error reading the file
+     */
+    public KnownHosts(File location) throws IOException
     {
-        BufferedReader br = new BufferedReader(new InputStreamReader(stream));
+        BufferedReader br = new BufferedReader(new FileReader(location));
         String line;
         try {
             // read in the file, storing each line as an entry
@@ -180,19 +183,6 @@ public class KnownHosts implements HostKeyVerifier
         }
     }
     
-    /**
-     * Constructs a {@code KnownHosts} object from a file location
-     * 
-     * @param loc
-     *            the file location
-     * @throws IOException
-     *             if there is an error reading the file
-     */
-    public KnownHosts(String loc) throws IOException
-    {
-        this(new FileInputStream(loc));
-    }
-    
     public List<Entry> getEntries()
     {
         return Collections.unmodifiableList(entries);
@@ -203,34 +193,21 @@ public class KnownHosts implements HostKeyVerifier
      * 
      * @return {@code true} on successful verfication or {@code false} on failure
      */
-    public boolean verify(InetAddress host, PublicKey key)
+    public boolean verify(String hostname, PublicKey key)
     {
         KeyType type = KeyType.fromKey(key);
         if (type == KeyType.UNKNOWN)
             return false;
         
-        Set<String> possibilities = new HashSet<String>();
-        possibilities.add(host.getHostName());
-        
-        /*
-         * Commented out because not sure of security implications
-         */
-        //possibilities.add(host.getCanonicalHostName());
-        //possibilities.add(host.getHostAddress());
-        
-        log.debug("Checking for any of {}", possibilities);
-        
-        for (Entry e : entries) {
-            String match;
-            if (e.getType() == type && (match = e.appliesTo(possibilities)) != null)
-                if (key.equals(e.getKey())) {
-                    log.info("Matched against `{}`", match);
+        for (Entry e : entries)
+            if (e.getType() == type && e.appliesTo(hostname))
+                if (key.equals(e.getKey()))
                     return true;
-                } else {
-                    log.warn("Host key for `{}` has changed!", match);
+                else {
+                    log.warn("Host key for `{}` has changed!", hostname);
                     return false;
                 }
-        }
+        
         return false;
     }
     

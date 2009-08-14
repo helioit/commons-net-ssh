@@ -37,28 +37,22 @@ import org.apache.commons.net.ssh.util.IOUtils;
 public class SCPDownloadClient extends SCPClient
 {
     
-    protected final ModeSetter modeSetter;
+    private final ModeSetter modeSetter;
     
-    protected boolean recursive = true;
+    private boolean recursive = true;
     
     public SCPDownloadClient(SSHClient host)
     {
         this(host, null);
     }
     
-    public SCPDownloadClient(SSHClient host, ModeSetter modeSetter)
+    SCPDownloadClient(SSHClient host, ModeSetter modeSetter)
     {
         super(host);
         this.modeSetter = modeSetter == null ? new DefaultModeSetter() : modeSetter;
     }
     
-    public SCPDownloadClient recursive(boolean recursive)
-    {
-        this.recursive = recursive;
-        return this;
-    }
-    
-    protected File getTargetDirectory(File f, String dirname) throws SCPException
+    File getTargetDirectory(File f, String dirname) throws SCPException
     {
         if (f.exists())
             if (f.isDirectory())
@@ -75,7 +69,7 @@ public class SCPDownloadClient extends SCPClient
         return f;
     }
     
-    protected File getTargetFile(File f, String filename) throws IOException
+    File getTargetFile(File f, String filename) throws IOException
     {
         if (f.exists()) {
             if (f.isDirectory())
@@ -85,7 +79,7 @@ public class SCPDownloadClient extends SCPClient
         return f;
     }
     
-    protected void init(String source) throws ConnectionException, TransportException
+    void init(String source) throws ConnectionException, TransportException
     {
         List<String> args = new LinkedList<String>();
         addArg(args, Arg.SOURCE);
@@ -98,7 +92,7 @@ public class SCPDownloadClient extends SCPClient
         execSCPWith(args);
     }
     
-    protected long parseLong(String longString, String valType) throws SCPException
+    long parseLong(String longString, String valType) throws SCPException
     {
         long val = 0;
         try {
@@ -110,14 +104,14 @@ public class SCPDownloadClient extends SCPClient
     }
     
     /* e.g. "C0644" -> "644"; "D0755" -> "755" */
-    protected String parsePermissions(String cmd) throws SCPException
+    String parsePermissions(String cmd) throws SCPException
     {
         if (cmd.length() != 5)
             throw new SCPException("Could not parse permissions from `" + cmd + "`");
         return cmd.substring(2);
     }
     
-    protected void prepare(File f, String perms, String tMsg) throws IOException
+    void prepare(File f, String perms, String tMsg) throws IOException
     {
         modeSetter.setPermissions(f, perms);
         
@@ -128,7 +122,7 @@ public class SCPDownloadClient extends SCPClient
         }
     }
     
-    protected boolean process(String bufferedTMsg, String msg, File f) throws IOException
+    boolean process(String bufferedTMsg, String msg, File f) throws IOException
     {
         if (msg.length() < 1)
             throw new SCPException("Could not parse message `" + msg + "`");
@@ -168,7 +162,7 @@ public class SCPDownloadClient extends SCPClient
         return false;
     }
     
-    protected void processDirectory(String dMsg, String tMsg, File f) throws IOException
+    void processDirectory(String dMsg, String tMsg, File f) throws IOException
     {
         String[] dMsgParts = tokenize(dMsg, 3); // e.g. D0755 0 <dirname> 
         
@@ -187,7 +181,7 @@ public class SCPDownloadClient extends SCPClient
         signal("ACK: E");
     }
     
-    protected void processFile(String cMsg, String tMsg, File f) throws IOException
+    void processFile(String cMsg, String tMsg, File f) throws IOException
     {
         String[] cMsgParts = tokenize(cMsg, 3);
         
@@ -204,8 +198,14 @@ public class SCPDownloadClient extends SCPClient
         IOUtils.closeQuietly(fos);
     }
     
+    SCPDownloadClient recursive(boolean recursive)
+    {
+        this.recursive = recursive;
+        return this;
+    }
+    
     @Override
-    protected void startCopy(String sourcePath, String targetPath) throws IOException
+    void startCopy(String sourcePath, String targetPath) throws IOException
     {
         init(sourcePath);
         
@@ -217,7 +217,7 @@ public class SCPDownloadClient extends SCPClient
         while ((msg = readMessage(false)) != null);
     }
     
-    protected String[] tokenize(String msg, int numPartsExpected) throws IOException
+    String[] tokenize(String msg, int numPartsExpected) throws IOException
     {
         String[] parts = msg.split(" ");
         if (parts.length != numPartsExpected)

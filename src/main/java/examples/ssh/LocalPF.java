@@ -3,7 +3,6 @@ package examples.ssh;
 import java.net.InetSocketAddress;
 
 import org.apache.commons.net.ssh.SSHClient;
-import org.apache.commons.net.ssh.connection.LocalPortForwarder;
 import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.ConsoleAppender;
 import org.apache.log4j.PatternLayout;
@@ -27,12 +26,10 @@ public class LocalPF
             client.authPublickey(System.getProperty("user.name"));
             
             /*
-             * _We_ listen on port localhost:8080 and forward all connections on to server, which
-             * then forwards it to google.com:80
+             * _We_ listen on localhost:8080 and forward all connections on to server, which then
+             * forwards it to google.com:80
              */
-            LocalPortForwarder lpf =
-                    client.newLocalPortForwarder(new InetSocketAddress("localhost", 8080), "google.com", 80);
-            lpf.startListening();
+            client.newLocalPortForwarder(new InetSocketAddress("localhost", 8080), "google.com", 80).startListening();
             
             // Something to hang on to
             client.getTransport().join();

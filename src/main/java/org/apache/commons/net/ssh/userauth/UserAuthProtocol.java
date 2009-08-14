@@ -81,7 +81,7 @@ public class UserAuthProtocol extends AbstractService implements UserAuth, AuthP
         for (;;) {
             
             if (!allowed.contains(currentMethod.getName())) {
-                save(currentMethod.getName() + " auth not allowed by server");
+                saveException(currentMethod.getName() + " auth not allowed by server");
                 break;
             } else
                 log.info("Trying `{}` auth...", currentMethod.getName());
@@ -90,7 +90,7 @@ public class UserAuthProtocol extends AbstractService implements UserAuth, AuthP
             try {
                 success = tryWith(currentMethod);
             } catch (UserAuthException e) { // Give other methods a shot
-                save(e);
+                saveException(e);
             }
             
             if (success) {
@@ -151,17 +151,22 @@ public class UserAuthProtocol extends AbstractService implements UserAuth, AuthP
         
         switch (msg)
         {
+        
         case USERAUTH_BANNER:
             gotBanner(buf);
             break;
+        
         case USERAUTH_SUCCESS:
             gotSuccess();
             break;
+        
         case USERAUTH_FAILURE:
             gotFailure(buf);
             break;
+        
         default:
             gotUnknown(msg, buf);
+            
         }
     }
     
@@ -185,7 +190,8 @@ public class UserAuthProtocol extends AbstractService implements UserAuth, AuthP
         if (allowed.contains(currentMethod.getName()) && currentMethod.shouldRetry())
             currentMethod.request();
         else {
-            save(currentMethod.getName() + " auth failed");
+            if (!"none".equals(currentMethod.getName()))
+                saveException(currentMethod.getName() + " auth failed");
             result.set(false);
         }
     }
@@ -210,12 +216,12 @@ public class UserAuthProtocol extends AbstractService implements UserAuth, AuthP
         }
     }
     
-    protected void save(String msg)
+    protected void saveException(String msg)
     {
-        save(new UserAuthException(msg));
+        saveException(new UserAuthException(msg));
     }
     
-    protected void save(UserAuthException e)
+    protected void saveException(UserAuthException e)
     {
         log.error("Saving for later - {}", e.toString());
         savedEx.push(e);

@@ -66,7 +66,8 @@ import org.apache.commons.net.ssh.mac.HMACSHA196;
 import org.apache.commons.net.ssh.random.BouncyCastleRandom;
 import org.apache.commons.net.ssh.random.JCERandom;
 import org.apache.commons.net.ssh.random.SingletonRandomFactory;
-import org.apache.commons.net.ssh.scp.SCPClient;
+import org.apache.commons.net.ssh.scp.SCPDownloadClient;
+import org.apache.commons.net.ssh.scp.SCPUploadClient;
 import org.apache.commons.net.ssh.signature.SignatureDSA;
 import org.apache.commons.net.ssh.signature.SignatureRSA;
 import org.apache.commons.net.ssh.transport.Transport;
@@ -96,11 +97,11 @@ import org.slf4j.LoggerFactory;
  * User authentication can be performed by any of the {@code auth*()} methods.
  * <p>
  * {@link #startSession()} caters to the most typical use case of starting a {@code session} channel
- * and executing remote commands, starting a subsystem, etc.
- * {@link #newLocalPortForwarder(SocketAddress, String, int)} and {@link #getRemotePortForwarder()}
- * allow to start local and remote port forwarding, respectively.
+ * and executing remote commands, starting a subsystem, etc. {@link #newLocalPortForwarder} and
+ * {@link #getRemotePortForwarder()} allow to start local and remote port forwarding, respectively.
  * <p>
- * For SCP, see the {@link SCPClient} API which requires a connected {@link SSHClient}.
+ * For SCP, see the {@link SCPDownloadClient} and {@link SCPUploadClient} which require a connected
+ * {@link SSHClient}.
  * 
  * <em>Example:</em>
  * <p>
@@ -111,7 +112,7 @@ import org.slf4j.LoggerFactory;
  * client.connect(&quot;hostname&quot;);
  * try {
  *     client.authPassword(&quot;username&quot;, &quot;password&quot;);
- *     client.startSession().exec(true);
+ *     client.startSession().exec(&quot;true&quot;);
  *     client.getConnection().join();
  * } finally {
  *     client.disconnect();
@@ -515,7 +516,7 @@ public class SSHClient extends SocketClient
      */
     public void initKnownHosts(String location) throws IOException
     {
-        addHostKeyVerifier(new KnownHosts(location));
+        addHostKeyVerifier(new KnownHosts(new File(location)));
     }
     
     /**
@@ -636,12 +637,13 @@ public class SSHClient extends SocketClient
      */
     public KeyProvider loadKeys(String location, PasswordFinder passwordFinder) throws IOException
     {
-        FileKeyProvider.Format format = SecurityUtils.detectKeyFileFormat(location);
+        File loc = new File(location);
+        FileKeyProvider.Format format = SecurityUtils.detectKeyFileFormat(loc);
         FileKeyProvider fkp =
                 Factory.Named.Util.create(trans.getConfig().getFileKeyProviderFactories(), format.toString());
         if (fkp == null)
             throw new SSHException("No provider available for " + format + " key file");
-        fkp.init(location, passwordFinder);
+        fkp.init(loc, passwordFinder);
         return fkp;
     }
     

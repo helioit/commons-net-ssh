@@ -91,6 +91,7 @@ public final class TransportProtocol implements Transport
         };
     
     private final Logger log = LoggerFactory.getLogger(getClass());
+    
     private final Config config;
     private final Service nullService = new NullService(this);
     
@@ -124,8 +125,7 @@ public final class TransportProtocol implements Transport
     private final Event<TransportException> serviceAccept = newEvent("service accept");
     private final Event<TransportException> close = newEvent("transport close");
     
-    private int timeout = 30;
-    
+    private volatile int timeout = 30;
     private volatile boolean authed;
     
     public TransportProtocol(Config config)
@@ -210,17 +210,19 @@ public final class TransportProtocol implements Transport
      * This is where all incoming packets are handled. If they pertain to the transport layer, they
      * are handled here; otherwise they are delegated to the active service instance if any via
      * {@link Service#handle}.
-     * <p
+     * <p>
      * Even among the transport layer specific packets, key exchange packets are delegated to
-     * {@link DefaultKeyExchanger#handle}.
+     * {@link KeyExchanger#handle}.
      * <p>
      * This method is called in the context of the {@link #dispatcher} thread via
-     * {@link BaseConverter#munch} when a full packet has been decoded.
+     * {@link Decoder#received} when a full packet has been decoded.
      * 
+     * @param msg
+     *            the message identifer
      * @param buf
-     *            buffer containg the packet
+     *            buffer containg rest of the packet
      * @throws SSHException
-     *             if an error occurs during handling
+     *             if an error occurs during handling (unrecoverable)
      */
     public void handle(Message msg, Buffer buf) throws SSHException
     {

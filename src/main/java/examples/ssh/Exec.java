@@ -2,14 +2,16 @@ package examples.ssh;
 
 import org.apache.commons.net.ssh.SSHClient;
 import org.apache.commons.net.ssh.connection.Session.Command;
-import org.apache.commons.net.ssh.util.Pipe;
+import org.apache.log4j.BasicConfigurator;
+import org.apache.log4j.ConsoleAppender;
+import org.apache.log4j.PatternLayout;
 
 public class Exec
 {
     
-    //    static {
-    //        BasicConfigurator.configure(new ConsoleAppender(new PatternLayout("%d [%-15.15t] %-5p %-30.30c{1} - %m%n")));
-    //    }
+    static {
+        BasicConfigurator.configure(new ConsoleAppender(new PatternLayout("%d [%-15.15t] %-5p %-30.30c{1} - %m%n")));
+    }
     
     public static void main(String... args) throws Exception
     {
@@ -21,10 +23,10 @@ public class Exec
             
             client.authPublickey(System.getProperty("user.name"));
             
-            Command cmd = client.startSession().exec("uptime");
+            Command cmd = client.startSession().exec("man sshd_config");
             
-            Pipe.pipe(cmd.getInputStream(), System.out, cmd.getLocalMaxPacketSize(), false);
-            //System.out.print(cmd.getOutputAsString());
+            //Pipe.pipe(cmd.getInputStream(), System.out, cmd.getLocalMaxPacketSize(), false);
+            System.out.print(cmd.getOutputAsString());
             System.out.println("\n** exit status: " + cmd.getExitStatus());
             
         } finally {

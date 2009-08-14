@@ -58,7 +58,7 @@ public class OpenSSHKeyFile extends PKCS8KeyFile
     }
     
     @Override
-    public void init(String location)
+    public void init(File location)
     {
         File f = new File(location + ".pub");
         if (f.exists())

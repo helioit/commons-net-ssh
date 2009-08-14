@@ -17,28 +17,29 @@ public class X11
     
     public static void main(String... args) throws Exception
     {
-        SSHClient client = new SSHClient();
-        client.useZlibCompression();
-        client.initUserKnownHosts();
+        SSHClient ssh = new SSHClient();
         
-        client.connect("localhost");
+        ssh.initUserKnownHosts();
+        
+        /*
+         * NOTE: Forwarding incoming X connections to localhost:6000 only works if X is started
+         * without the "-nolisten tcp" option (this is usually not the default for good reason)
+         */
+        ssh.registerX11Forwarder(new SocketForwardingConnectListener(new InetSocketAddress("localhost", 6000)));
+        
+        ssh.connect("localhost");
         try {
             
-            client.authPublickey(System.getProperty("user.name"));
+            ssh.authPublickey(System.getProperty("user.name"));
             
-            Session sess = client.startSession();
+            Session sess = ssh.startSession();
             
             /*
-             * - The hex value is auth cookie from `xauth list`
-             * 
-             * - Forwarding incoming X connections to localhost:6000 only works if X is started
-             * without the "-nolisten tcp" option (this is usually not the default for good reason)
-             * 
-             * There are some security concerns arising from both of the above points, but then this
-             * snippet is intended to serve as a simple example...
+             * It is recommendable to send a fake cookie, and in your ConnectListener when a
+             * connection comes in replace it with the real one. But here simply one from `xauth
+             * list` is being used.
              */
-            sess.startX11Forwarding(false, "MIT-MAGIC-COOKIE-1", "d45d3d875226efad4520f18ff07f1c5a", 0,
-                                    new SocketForwardingConnectListener(new InetSocketAddress("localhost", 6000)));
+            sess.reqX11Forwarding("MIT-MAGIC-COOKIE-1", "499964c789ea9bc82e117c1e696cbf88", 0);
             
             Command cmd = sess.exec("firefox");
             
@@ -46,11 +47,10 @@ public class X11
             new Pipe("stderr", cmd.getErrorStream(), System.err).start();
             
             // Wait for session & X11 channel to get closed
-            client.getConnection().join();
+            ssh.getConnection().join();
             
         } finally {
-            client.disconnect();
+            ssh.disconnect();
         }
     }
-    
 }

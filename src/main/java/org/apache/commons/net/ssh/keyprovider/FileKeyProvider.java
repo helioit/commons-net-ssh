@@ -18,9 +18,12 @@
  */
 package org.apache.commons.net.ssh.keyprovider;
 
+import java.io.File;
+
 import org.apache.commons.net.ssh.util.PasswordFinder;
 
 /**
+ * A file key provider is initialized with a location of
  * 
  * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
  */
@@ -31,9 +34,9 @@ public interface FileKeyProvider extends KeyProvider
     {
         PKCS8, OpenSSH, Unknown
     }
-
-    void init(String location);
     
-    void init(String location, PasswordFinder pwdf);
+    void init(File location);
+    
+    void init(File location, PasswordFinder pwdf);
     
 }

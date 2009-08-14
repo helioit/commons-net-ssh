@@ -513,7 +513,8 @@ public final class KeyExchanger implements PacketHandler, ErrorNotifiable
         
         for (HostKeyVerifier hkv : hostVerifiers) {
             log.debug("Trying to verify host key with {}", hkv);
-            if (hkv.verify(transport.getRemoteHost(), key))
+            if (hkv.verify(transport.getRemoteHost().getHostName(), key)
+                    || hkv.verify(transport.getRemoteHost().getHostAddress(), key))
                 return;
         }
         

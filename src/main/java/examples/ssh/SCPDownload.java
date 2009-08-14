@@ -23,7 +23,7 @@ public class SCPDownload
             
             // Compression = significant speedup for large file transfers on fast links
             // present here to demo renegotiation - could have just put this before connect() 
-            ssh.useZlibCompression();
+            ssh.useCompression();
             
             new SCPDownloadClient(ssh).copy("ten", "/tmp");
         } finally {

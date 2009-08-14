@@ -18,6 +18,7 @@
  */
 package org.apache.commons.net.ssh.keyprovider;
 
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -55,7 +56,7 @@ public class PKCS8KeyFile implements FileKeyProvider
     
     protected final Logger log = LoggerFactory.getLogger(getClass());
     protected PasswordFinder pwdf;
-    protected String location;
+    protected File location;
     protected Resource resource;
     protected KeyPair kp;
     
@@ -76,14 +77,14 @@ public class PKCS8KeyFile implements FileKeyProvider
         return type != null ? type : (type = KeyType.fromKey(getPublic()));
     }
     
-    public void init(String location)
+    public void init(File location)
     {
         assert location != null;
         this.location = location;
-        resource = new Resource(Resource.Type.KEYFILE, location);
+        resource = new Resource(Resource.Type.KEYFILE, location.getAbsolutePath());
     }
     
-    public void init(String location, PasswordFinder pwdf)
+    public void init(File location, PasswordFinder pwdf)
     {
         init(location);
         this.pwdf = pwdf;
@@ -126,10 +127,13 @@ public class PKCS8KeyFile implements FileKeyProvider
             }
             break;
         }
+        if (o == null)
+            throw new IOException("Could not read key pair from: " + location);
         if (o instanceof KeyPair)
             kp = (KeyPair) o;
         else
-            log.debug("Expected KeyPair, got {}", o.getClass().toString());
+            log.debug("Expected KeyPair, got {}", o);
         return kp;
     }
+    
 }

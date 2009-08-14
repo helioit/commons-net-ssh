@@ -39,8 +39,8 @@ import org.apache.commons.net.ssh.util.IOUtils;
 public class SCPUploadClient extends SCPClient
 {
     
-    protected final ModeGetter modeGetter;
-    protected FileFilter fileFilter;
+    private final ModeGetter modeGetter;
+    private FileFilter fileFilter;
     
     public SCPUploadClient(SSHClient host)
     {
@@ -59,7 +59,7 @@ public class SCPUploadClient extends SCPClient
         return this;
     }
     
-    protected File[] getChildren(File f) throws IOException
+    File[] getChildren(File f) throws IOException
     {
         File[] files = fileFilter == null ? f.listFiles() : f.listFiles(fileFilter);
         if (files == null)
@@ -67,7 +67,7 @@ public class SCPUploadClient extends SCPClient
         return files;
     }
     
-    protected void init(String target) throws ConnectionException, TransportException
+    void init(String target) throws ConnectionException, TransportException
     {
         List<String> args = new LinkedList<String>();
         addArg(args, Arg.SINK);
@@ -78,7 +78,7 @@ public class SCPUploadClient extends SCPClient
         execSCPWith(args);
     }
     
-    protected void process(File f) throws IOException
+    void process(File f) throws IOException
     {
         if (modeGetter.shouldPreserveTimes())
             sendMessage("T" + modeGetter.getLastModifiedTime(f) + " 0 " + modeGetter.getLastAccessTime(f) + " 0");
@@ -91,7 +91,7 @@ public class SCPUploadClient extends SCPClient
             throw new IOException(f + " is not a regular file or directory.");
     }
     
-    protected void sendDirectory(File f) throws IOException
+    void sendDirectory(File f) throws IOException
     {
         log.info("Entering directory `{}`", f.getName());
         sendMessage("D0" + modeGetter.getPermissions(f) + " 0 " + f.getName());
@@ -103,7 +103,7 @@ public class SCPUploadClient extends SCPClient
         log.info("Exiting directory `{}`", f.getName());
     }
     
-    protected void sendFile(File f) throws IOException
+    void sendFile(File f) throws IOException
     {
         log.info("Sending `{}`...", f.getName());
         InputStream src = new FileInputStream(f);
@@ -115,7 +115,7 @@ public class SCPUploadClient extends SCPClient
     }
     
     @Override
-    protected synchronized void startCopy(String sourcePath, String targetPath) throws IOException
+    synchronized void startCopy(String sourcePath, String targetPath) throws IOException
     {
         init(targetPath);
         check("Start status OK");
