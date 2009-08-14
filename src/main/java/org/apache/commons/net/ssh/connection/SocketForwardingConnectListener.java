@@ -28,6 +28,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
+ * A {@link ConnectListener} that forwards what is received over the channel to a socket and
+ * vice-versa.
+ * 
  * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
  */
 public class SocketForwardingConnectListener implements ConnectListener
@@ -36,11 +39,17 @@ public class SocketForwardingConnectListener implements ConnectListener
     protected final SocketAddress addr;
     protected final Logger log = LoggerFactory.getLogger(getClass());
     
+    /**
+     * Create with a {@link SocketAddress} this listener will forward to.
+     */
     public SocketForwardingConnectListener(SocketAddress addr)
     {
         this.addr = addr;
     }
     
+    /**
+     * On connect, confirm the channel and start forwarding.
+     */
     public void gotConnect(Channel.Forwarded chan) throws IOException
     {
         log.info("New connection from " + chan.getOriginatorIP() + ":" + chan.getOriginatorPort());

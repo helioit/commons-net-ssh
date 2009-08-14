@@ -22,11 +22,16 @@ import org.apache.commons.net.ssh.transport.TransportException;
 import org.apache.commons.net.ssh.util.Buffer;
 
 /**
+ * A {@link ForwardedChannelOpener} for {@code x11} channels.
+ * 
  * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
  */
 public class X11Forwarder extends AbstractForwardedChannelOpener
 {
     
+    /**
+     * An {@code x11} forwarded channel.
+     */
     public static class X11Channel extends AbstractForwardedChannel
     {
         
@@ -42,6 +47,14 @@ public class X11Forwarder extends AbstractForwardedChannelOpener
     
     protected final ConnectListener listener;
     
+    /**
+     * Creates and registers itself with {@code conn}.
+     * 
+     * @param conn
+     *            connection layer
+     * @param listener
+     *            listener which will be delegated {@link X11Channel}'s to handle
+     */
     public X11Forwarder(Connection conn, ConnectListener listener)
     {
         super(X11Channel.TYPE, conn);
@@ -58,6 +71,9 @@ public class X11Forwarder extends AbstractForwardedChannelOpener
                                               buf.getInt()));
     }
     
+    /**
+     * Stop handling {@code x11} channel open requests. De-registers itself with connection layer.
+     */
     public void stop()
     {
         conn.forget(this);

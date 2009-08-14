@@ -22,6 +22,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
+ * Base class for a window that controls data flow restrictions between local and remote end.
+ * 
+ * @see LocalWindow
+ * @see RemoteWindow
+ * 
  * @author <a href="mailto:dev@mina.apache.org">Apache MINA SSHD Project</a>
  * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
  */

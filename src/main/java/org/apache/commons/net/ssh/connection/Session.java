@@ -31,8 +31,8 @@ import org.apache.commons.net.ssh.util.Buffer;
  * environment variables, window dimensions etc. can be made.
  * <p>
  * It is not legal to reuse a {@code session} channel for more than one of command, shell, or
- * subsystem. Once one of these has been started, the {@link Session} instance API should not be
- * used but that of these specific targets that are returned by the API.
+ * subsystem. Once one of these has been started, this instance's API is invalid and that of the
+ * {@link Command specific} {@link Shell targets} {@link Subsystem returned} should be used.
  * 
  * @see Command
  * @see Shell
@@ -54,7 +54,7 @@ public interface Session extends Channel
          * 
          * @return the stderr output as a string
          * @throws IOException
-         *             in case there is an error reading
+         *             if error reading from the stream
          */
         String getErrorAsString() throws IOException;
         
@@ -80,13 +80,25 @@ public interface Session extends Channel
          * 
          * @return the command's output as a string
          * @throws IOException
+         *             if error reading from the stream
          */
         String getOutputAsString() throws IOException;
         
+        /**
+         * Send a signal to the remote command.
+         * 
+         * @param sig
+         *            {@link Signal} identifier
+         * @throws TransportException
+         *             if error sending the signal
+         */
         void signal(Signal sig) throws TransportException;
         
     }
     
+    /**
+     * Shell.
+     */
     interface Shell extends Channel
     {
         
@@ -100,6 +112,9 @@ public interface Session extends Channel
         
     }
     
+    /**
+     * The different signals that may be sent or received.
+     */
     public enum Signal
     {
         
@@ -142,9 +157,7 @@ public interface Session extends Channel
     }
     
     interface Subsystem extends Channel
-    {
-        // should this be here?
-        Integer getExitStatus();
+    { // there isn't really any subsystem-specific API, or is there...
     }
     
     void allocateDefaultPTY() throws ConnectionException, TransportException;
@@ -152,26 +165,70 @@ public interface Session extends Channel
     void allocatePTY(String term, int cols, int rows, int width, int height, Map<PTYMode, Buffer> modes)
             throws ConnectionException, TransportException;
     
-    void close() throws ConnectionException, TransportException;
-    
+    /**
+     * Execute a remote command.
+     * 
+     * @param command
+     * @return {@link Command} instance which should now be used
+     * @throws ConnectionException
+     *             if the request to execute the command failed
+     * @throws TransportException
+     *             if there is an error sending the request
+     */
     Command exec(String command) throws ConnectionException, TransportException;
     
-    boolean isOpen();
-    
+    /**
+     * Request X11 forwarding.
+     * 
+     * @param authProto
+     *            X11 authentication protocol name
+     * @param authCookie
+     *            X11 authentication cookie
+     * @param screen
+     *            X11 screen number
+     * @throws ConnectionException
+     *             if the request fails
+     * @throws TransportException
+     *             if there is an error sending the request
+     */
     void reqX11Forwarding(String authProto, String authCookie, int screen) throws ConnectionException,
             TransportException;
     
-    /* With OpenSSH default is to reject env vars: "AcceptEnv" config var shd be set */
+    /**
+     * Set an enviornment variable.
+     * 
+     * @param name
+     *            name of the variable
+     * @param value
+     *            value to set
+     * @throws ConnectionException
+     *             if the request fails
+     * @throws TransportException
+     *             error writing the request
+     */
     void setEnvVar(String name, String value) throws ConnectionException, TransportException;
     
     /**
+     * Request a shell.
      * 
-     * @return
+     * @return {@link Shell} instance which should now be used
      * @throws ConnectionException
+     *             if the request fails
      * @throws TransportException
+     *             if there is an error sending the request
      */
     Shell startShell() throws ConnectionException, TransportException;
     
+    /**
+     * Request a subsystem.
+     * 
+     * @param name
+     * @return {@link Subsystem} instance which should now be used
+     * @throws ConnectionException
+     *             if the request fails
+     * @throws TransportException
+     *             if there is an error sending the request
+     */
     Subsystem startSubsysytem(String name) throws ConnectionException, TransportException;
     
 }

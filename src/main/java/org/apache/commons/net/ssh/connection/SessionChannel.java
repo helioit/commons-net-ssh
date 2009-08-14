@@ -28,19 +28,21 @@ import org.apache.commons.net.ssh.util.Buffer;
 import org.apache.commons.net.ssh.util.IOUtils;
 
 /**
+ * {@link Session} implementation.
+ * 
  * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
  */
 public class SessionChannel extends AbstractDirectChannel implements Session, Session.Command, Session.Shell,
         Session.Subsystem
 {
     
-    private Integer exitStatus;
+    protected Integer exitStatus;
     
-    private Signal exitSignal;
+    protected Signal exitSignal;
     
-    private Boolean flowControl;
+    protected Boolean flowControl;
     
-    private final ChannelInputStream err = new ChannelInputStream(this, lwin);
+    protected final ChannelInputStream err = new ChannelInputStream(this, lwin);
     
     public SessionChannel(Connection conn)
     {
@@ -196,7 +198,7 @@ public class SessionChannel extends AbstractDirectChannel implements Session, Se
     @Override
     protected void gotEOF() throws TransportException
     {
-        err.eof();
+        err.eof(); // also close the stderr stream
         super.gotEOF();
     }
     

@@ -31,9 +31,6 @@ import org.apache.commons.net.ssh.util.Buffer;
 public class RemotePortForwarder extends AbstractForwardedChannelOpener
 {
     
-    /**
-     * 
-     */
     public static final class Forward
     {
         
