@@ -1,48 +1,106 @@
 package org.apache.commons.net.ssh.util;
 
-import java.io.ByteArrayInputStream;
+import static org.junit.Assert.*;
+
+import java.io.File;
 import java.io.IOException;
+import java.math.BigInteger;
+import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.security.GeneralSecurityException;
+import java.security.PublicKey;
+import java.security.spec.RSAPublicKeySpec;
+import java.util.HashSet;
 
-import junit.framework.Assert;
-
+import org.apache.commons.net.ssh.util.KnownHosts.Entry;
 import org.junit.Before;
 import org.junit.Test;
 
 public class KnownHostsTest
 {
     
-    private static final String schmizzDotNetEntry =
-            "schmizz.net,69.163.155.180 ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEA6P9Hlwdahh250jGZYKg2snRq2j2lFJVdKSHyxqbJiVy9VX9gTkN3K2MD48qyrYLYOyGs3vTttyUk+cK++JMzURWsrP4piby7LpeOT+3Iq8CQNj4gXZdcH9w15Vuk2qS11at6IsQPVHpKD9HGg9//EFUccI/4w06k4XXLm/IxOGUwj6I2AeWmEOL3aDi+fe07TTosSdLUD6INtR0cyKsg0zC7Da24ixoShT8Oy3x2MpR7CY3PQ1pUVmvPkr79VeA+4qV9F1JM09WdboAMZgWQZ+XrbtuBlGsyhpUHSCQOya+kOJ+bYryS+U7A+6nmTW3C9FX4FgFqTF89UHOC7V0zZQ==";
+    //    static {
+    //        BasicConfigurator.configure(new ConsoleAppender(new PatternLayout("%d [%-15.15t] %-5p %-30.30c{1} - %m%n")));
+    //    }
     
-    private static final String localhostEntry =
-            "|1|SoWkWwK64ZF3OgKhe08AuPsnk2w=|cv5LDx+Ak5ffh8P9MXYl7RW+Zh4= ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEAu64GJcCkdtckPGt8uKTyhG1ShT1Np1kh10eE49imQ4Nh9Y/IrSPzDtYUAazQ88ABc2NffuOKkdn2qtUwZ1ulfcdNfN3oTim3BiVHqa041pKG0L+onQe8Bo+CaG5KBLy/C24eNGM9EcfQvDQOnq1eD3lnR/l8fFckldzjfxZgar0yT9Bb3pwp50oN+1wSEINJEHOgMIW8kZBQmyNr/B+b7yX+Y1s1vuYIP/i4WimCVmkdi9G87Ga8w7GxKalRD2QOG6Xms2YWRQDN6M/MOn4tda3EKolbWkctEWcQf/PcVJffTH4Wv5f0RjVyrQv4ha4FZcNAv6RkRd9WkiCsiTKioQ==";
+    //private final String schmizzLine = "";
     
-    private static final String content = schmizzDotNetEntry + "\n" + localhostEntry + "\n";
+    private final String schmizzModulus =
+            "e8ff4797075a861db9d2319960a836b2746ada3da514955d2921f2c6a6c9895cbd557f604e43772b6303e3cab2ad82d83b21acdef4edb72524f9c2bef893335115acacfe2989bcbb2e978e4fedc8abc090363e205d975c1fdc35e55ba4daa4b5d5ab7a22c40f547a4a0fd1c683dfff10551c708ff8c34ea4e175cb9bf2313865308fa23601e5a610e2f76838be7ded3b4d3a2c49d2d40fa20db51d1cc8ab20d330bb0dadb88b1a12853f0ecb7c7632947b098dcf435a54566bcf92befd55e03ee2a57d17524cd3d59d6e800c66059067e5eb6edb81946b3286950748240ec9afa4389f9b62bc92f94ec0fba9e64d6dc2f455f816016a4c5f3d507382ed5d3365";
+    private final String schmizzExponent = "23";
+    //private final String localhostLine = "";
+    
+    // private final String garbageLine = "";
+    
+    //private final String fileContents = schmizzLine + "\n" + localhostLine + "\n" + garbageLine + "\n";
     
     private KnownHosts kh;
     
     @Before
-    public void setUp() throws IOException
+    public void setUp() throws IOException, GeneralSecurityException
     {
-        kh = new KnownHosts(new ByteArrayInputStream(content.getBytes()));
-    }
-    
-    public void testNotOK()
-    {
+        kh = new KnownHosts(new File("src/test/resources/known_hosts"));
     }
     
     @Test
-    public void testOK() throws UnknownHostException
+    public void testApplies() throws UnknownHostException
     {
+        assertEquals(getEntry(0).appliesTo(new HashSet<String>()
+            {
+                {
+                    add("n/a");
+                    add("schmizz.net");
+                    add("n/a");
+                }
+            }), "schmizz.net");
         
+        assertEquals(getEntry(0).appliesTo(new HashSet<String>()
+            {
+                {
+                    add("n/a");
+                    add("69.163.155.180");
+                    add("n/a");
+                }
+            }), "69.163.155.180");
+        
+        assertEquals(getEntry(1).appliesTo(new HashSet<String>()
+            {
+                {
+                    add("n/a");
+                    add("localhost");
+                    add("n/a");
+                }
+            }), "localhost");
     }
     
     @Test
-    public void testToString()
+    public void testKey() throws GeneralSecurityException
     {
-        Assert.assertEquals(kh.getEntries()[0].toString(), schmizzDotNetEntry);
-        Assert.assertEquals(kh.getEntries()[1].toString(), localhostEntry);
+        assertEquals(getEntry(0).getKey(), getRSAPublicKey(schmizzModulus, schmizzExponent));
+    }
+    
+    @Test
+    public void testLoaded()
+    {
+        assertEquals(kh.getEntries().size(), 2);
+    }
+    
+    @Test
+    public void testVerifies() throws UnknownHostException, GeneralSecurityException
+    {
+        assertTrue(kh.verify(InetAddress.getByName("schmizz.net"), getRSAPublicKey(schmizzModulus, schmizzExponent)));
+    }
+    
+    Entry getEntry(int idx)
+    {
+        return kh.getEntries().get(idx);
+    }
+    
+    PublicKey getRSAPublicKey(String hexModulus, String hexExponent) throws GeneralSecurityException
+    {
+        return SecurityUtils.getKeyFactory("RSA").generatePublic(new RSAPublicKeySpec //
+                                                                 (new BigInteger(hexModulus, 16),
+                                                                  new BigInteger(hexExponent, 16)));
     }
     
 }
