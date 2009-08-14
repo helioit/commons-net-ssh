@@ -28,6 +28,7 @@ import org.apache.commons.net.ssh.util.Constants.Message;
 
 /**
  * @author <a href="mailto:dev@mina.apache.org">Apache MINA SSHD Project</a>
+ * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
  */
 public class ChannelOutputStream extends OutputStream implements ErrorNotifiable
 {
@@ -54,7 +55,7 @@ public class ChannelOutputStream extends OutputStream implements ErrorNotifiable
                 flush();
                 chan.sendEOF();
             } finally {
-                closed = true;
+                setClosed();
             }
     }
     
@@ -88,6 +89,11 @@ public class ChannelOutputStream extends OutputStream implements ErrorNotifiable
     public synchronized void notifyError(SSHException error)
     {
         this.error = error;
+    }
+    
+    public synchronized void setClosed()
+    {
+        closed = true;
     }
     
     @Override

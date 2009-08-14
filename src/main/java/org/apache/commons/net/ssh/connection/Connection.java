@@ -24,6 +24,11 @@ import org.apache.commons.net.ssh.transport.TransportException;
 import org.apache.commons.net.ssh.util.Buffer;
 import org.apache.commons.net.ssh.util.Future;
 
+/**
+ * Connection layer of the SSH protocol.
+ * 
+ * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
+ */
 public interface Connection
 {
     

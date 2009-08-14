@@ -21,9 +21,19 @@ package org.apache.commons.net.ssh;
 import org.apache.commons.net.ssh.util.Buffer;
 import org.apache.commons.net.ssh.util.Constants.Message;
 
+/**
+ * Internal API for classes to which packet handling may be delegated.
+ * 
+ * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
+ */
 public interface PacketHandler
 {
-    
+    /**
+     * @param msg
+     *            the SSH {@link Message message identifier}
+     * @param buf
+     *            {@link Buffer} containing rest of the request
+     * @throws SSHException
+     */
     void handle(Message msg, Buffer buf) throws SSHException;
-    
 }

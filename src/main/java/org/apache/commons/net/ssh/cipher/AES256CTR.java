@@ -19,7 +19,9 @@
 package org.apache.commons.net.ssh.cipher;
 
 /**
- * @author shikhar
+ * {@code aes256-ctr} cipher
+ * 
+ * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
  */
 public class AES256CTR extends BaseCipher
 {

@@ -30,21 +30,34 @@ import org.apache.commons.net.ssh.util.Pipe.ErrorCallback;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
+ */
 public class LocalPortForwarder
 {
     
-    private class DirectTCPIPChannel extends AbstractDirectChannel
+    protected class DirectTCPIPChannel extends AbstractDirectChannel
     {
         
-        private final Socket sock;
+        protected final Socket sock;
         
-        private DirectTCPIPChannel(Connection conn, Socket sock)
+        protected DirectTCPIPChannel(Connection conn, Socket sock)
         {
             super("direct-tcpip", conn);
             this.sock = sock;
         }
         
-        private void start() throws IOException
+        @Override
+        protected Buffer buildOpenReq()
+        {
+            return super.buildOpenReq() //
+                        .putString(host) //
+                        .putInt(port) //
+                        .putString(ss.getInetAddress().getHostAddress()) //
+                        .putInt(ss.getLocalPort());
+        }
+        
+        protected void start() throws IOException
         {
             sock.setSendBufferSize(getRemoteMaxPacketSize());
             
@@ -66,27 +79,18 @@ public class LocalPortForwarder
             
         }
         
-        @Override
-        protected Buffer buildOpenReq()
-        {
-            return super.buildOpenReq() //
-                        .putString(host) //
-                        .putInt(port) //
-                        .putString(ss.getInetAddress().getHostAddress()) //
-                        .putInt(ss.getLocalPort());
-        }
-        
     }
     
-    private final Connection conn;
-    private final Event<ConnectionException> close =
-            new Event<ConnectionException>("pfd close", ConnectionException.chainer);
-    private final ServerSocket ss;
-    private final String host;
-    private final int port;
-    private final Logger log = LoggerFactory.getLogger(getClass());
+    protected final Logger log = LoggerFactory.getLogger(getClass());
     
-    private final Thread listener = new Thread()
+    protected final Connection conn;
+    protected final Event<ConnectionException> close =
+            new Event<ConnectionException>("pfd close", ConnectionException.chainer);
+    protected final ServerSocket ss;
+    protected final String host;
+    protected final int port;
+    
+    protected final Thread listener = new Thread()
         {
             {
                 setName("pfd"); // "port forwarding daemon"
@@ -120,15 +124,31 @@ public class LocalPortForwarder
             }
         };
     
-    public LocalPortForwarder(Connection conn, SocketAddress listeningAddr, String toHost, int toPort)
-            throws IOException
+    /**
+     * @param conn
+     *            {@link Connection} implementation
+     * @param listeningAddr
+     *            {@link SocketAddress} this forwarder will listen on, if {@code null} then an
+     *            ephemeral port and valid local address will be picked to bind the server socket
+     * @param host
+     *            what host the SSH server will further forward to
+     * @param port
+     *            port on {@code toHost}
+     * @throws IOException
+     */
+    public LocalPortForwarder(Connection conn, SocketAddress listeningAddr, String host, int port) throws IOException
     {
         this.conn = conn;
-        this.host = toHost;
-        this.port = toPort;
+        this.host = host;
+        this.port = port;
         this.ss = new ServerSocket();
         ss.setReceiveBufferSize(conn.getMaxPacketSize());
         ss.bind(listeningAddr);
+    }
+    
+    public SocketAddress getListeningAddress()
+    {
+        return ss.getLocalSocketAddress();
     }
     
     public void startListening()
@@ -139,11 +159,6 @@ public class LocalPortForwarder
     public void stopListening()
     {
         listener.interrupt();
-        close();
-    }
-    
-    protected void close()
-    {
         try {
             ss.close(); // in case it is blocked on accept (as it will be...)
         } catch (IOException ignore) {

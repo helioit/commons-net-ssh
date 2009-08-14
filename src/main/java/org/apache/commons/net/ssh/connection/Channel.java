@@ -28,16 +28,25 @@ import org.apache.commons.net.ssh.connection.OpenFailException.Reason;
 import org.apache.commons.net.ssh.transport.Transport;
 import org.apache.commons.net.ssh.transport.TransportException;
 
+/**
+ * A channel is the basic medium for application-layer data on top of an SSH transport.
+ */
 public interface Channel extends Closeable, PacketHandler, ErrorNotifiable
 {
     
+    /**
+     * Direct channels are those that are initiated by us.
+     */
     interface Direct extends Channel
     {
         
-        void open() throws ConnectionException, TransportException;
+        void open() throws OpenFailException, ConnectionException, TransportException;
         
     }
     
+    /**
+     * Forwarded channels are those that are initiated by the server.
+     */
     interface Forwarded extends Channel
     {
         
@@ -51,30 +60,87 @@ public interface Channel extends Closeable, PacketHandler, ErrorNotifiable
         
     }
     
+    /**
+     * Close this channel.
+     */
     void close() throws TransportException, ConnectionException;
     
+    /**
+     * Returns whether auto-expansion of local window is set.
+     * 
+     * @see #setAutoExpand(boolean)
+     */
+    boolean getAutoExpand();
+    
+    /**
+     * Returns the channel ID
+     */
     int getID();
     
+    /**
+     * Returns the {@code InputStream} for this channel.
+     */
     InputStream getInputStream();
     
+    /**
+     * Returns the maximum packet size that we have specified.
+     */
     int getLocalMaxPacketSize();
     
+    /**
+     * Returns the current local window size.
+     */
     int getLocalWinSize();
     
+    /**
+     * Returns an {@code OutputStream} for this channel.
+     */
     OutputStream getOutputStream();
     
+    /**
+     * Returns the channel ID at the remote end.
+     */
     int getRecipient();
     
+    /**
+     * Returns the maximum packet size as specified by the remote end.
+     */
     int getRemoteMaxPacketSize();
     
+    /**
+     * Returns the current remote window size.
+     */
     int getRemoteWinSize();
     
+    /**
+     * Returns the associated {@link Transport}.
+     */
     Transport getTransport();
     
+    /**
+     * Returns the channel type identifier.
+     */
     String getType();
     
+    /**
+     * Returns whether the channel is open.
+     */
     boolean isOpen();
     
+    /**
+     * Sends an EOF message to the server for this channel; indicating that no more data will be
+     * sent by us. The {@code OutputStream} for this channel will be closed and no longer usable.
+     */
     void sendEOF() throws TransportException;
+    
+    /**
+     * Set whether local window should automatically expand when data is received, irrespective of
+     * whether data has been read from that stream. This is useful e.g. when a remote command
+     * produces a lot of output that would fill the local window but you are not interested in
+     * reading from its {@code InputStream}.
+     * 
+     * @param autoExpand
+     */
+    void setAutoExpand(boolean autoExpand);
     
 }

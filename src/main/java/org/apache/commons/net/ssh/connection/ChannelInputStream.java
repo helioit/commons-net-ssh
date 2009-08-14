@@ -11,7 +11,7 @@ import org.apache.commons.net.ssh.util.Buffer;
 
 /**
  * @author <a href="mailto:dev@mina.apache.org">Apache MINA SSHD Project</a>
- * @author shikhar
+ * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
  */
 public class ChannelInputStream extends InputStream implements ErrorNotifiable
 {
@@ -64,17 +64,20 @@ public class ChannelInputStream extends InputStream implements ErrorNotifiable
     {
         int growMax;
         synchronized (buf) {
-            while (buf.available() == 0 && !eof)
+            for (;;) {
+                if (buf.available() > 0)
+                    break;
+                if (eof)
+                    if (error != null)
+                        throw error;
+                    else
+                        return -1;
                 try {
                     buf.wait();
                 } catch (InterruptedException e) {
                     throw (IOException) new InterruptedIOException().initCause(e);
                 }
-            if (eof)
-                if (error != null)
-                    throw error;
-                else
-                    return -1;
+            }
             if (len > buf.available())
                 len = buf.available();
             buf.getRawBytes(b, off, len);
@@ -94,7 +97,11 @@ public class ChannelInputStream extends InputStream implements ErrorNotifiable
             buf.putRawBytes(data, offset, len);
             buf.notifyAll();
         }
-        win.consume(len);
+        synchronized (win) {
+            win.consume(len);
+            if (chan.getAutoExpand())
+                win.check(len);
+        }
     }
     
     @Override

@@ -27,7 +27,10 @@ import org.apache.commons.net.ssh.SSHException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class Future<V, Ex extends Throwable> implements ErrorNotifiable
+/**
+ * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
+ */
+public class Future<V, T extends Throwable> implements ErrorNotifiable
 {
     
     public static class FutureException extends Exception
@@ -39,14 +42,15 @@ public class Future<V, Ex extends Throwable> implements ErrorNotifiable
     }
     
     protected final Logger log;
-    protected final FriendlyChainer<Ex> chainer;
+    
+    protected final FriendlyChainer<T> chainer;
     protected final ReentrantLock lock;
     protected final Condition cond;
     
     protected V val;
-    protected Ex pendingEx;
+    protected T pendingEx;
     
-    public Future(String name, FriendlyChainer<Ex> chainer, ReentrantLock lock)
+    public Future(String name, FriendlyChainer<T> chainer, ReentrantLock lock)
     {
         this.log = LoggerFactory.getLogger("<< " + name + " >>");
         this.chainer = chainer;
@@ -56,13 +60,7 @@ public class Future<V, Ex extends Throwable> implements ErrorNotifiable
     
     public void clear()
     {
-        lock.lock();
-        try {
-            this.val = null;
-            cond.signalAll();
-        } finally {
-            lock.unlock();
-        }
+        set(null);
     }
     
     public void error(String message)
@@ -81,12 +79,12 @@ public class Future<V, Ex extends Throwable> implements ErrorNotifiable
         }
     }
     
-    public V get() throws Ex
+    public V get() throws T
     {
         return get(0);
     }
     
-    public V get(int timeout) throws Ex
+    public V get(int timeout) throws T
     {
         lock.lock();
         try {
@@ -151,7 +149,7 @@ public class Future<V, Ex extends Throwable> implements ErrorNotifiable
     {
         lock.lock();
         try {
-            log.debug("Setting");
+            log.debug("Setting to `{}`", val);
             this.val = val;
             cond.signalAll();
         } finally {

@@ -33,34 +33,30 @@ public interface HostKeyVerifier
     
     class Util
     {
-        
         public static HostKeyVerifier createFromFingerprint(final String fp)
         {
             return new HostKeyVerifier()
                 {
-                    
                     public boolean verify(InetAddress address, PublicKey key)
                     {
                         return SecurityUtils.getFingerprint(key).equals(fp);
                     }
-                    
                 };
         }
-        
     }
     
     /**
      * This callback is invoked when the server's host key needs to be verified. The return value
      * indicates to the caller whether the SSH connection should proceed.
      * <p>
-     * <b>Note</b>: host key verification is the basis for security in SSH, therefore exercise due
-     * caution in implementing!
+     * <strong>Note</strong>: host key verification is the basis for security in SSH, therefore
+     * exercise due caution in implementing!
      * 
      * @param address
      *            remote address we are connected to
      * @param key
      *            host key of server
-     * @return <code>true</code> if key is acceptable, <code>false</code> otherwise
+     * @return {@code true} if key is acceptable, {@code false} otherwise
      */
     boolean verify(InetAddress address, PublicKey key);
     

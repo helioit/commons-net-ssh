@@ -20,6 +20,9 @@ package org.apache.commons.net.ssh.connection;
 
 import java.io.IOException;
 
+/**
+ * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
+ */
 public interface ConnectListener
 {
     

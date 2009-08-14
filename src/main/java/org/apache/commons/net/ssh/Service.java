@@ -27,9 +27,10 @@ import org.apache.commons.net.ssh.util.Constants.Message;
 /**
  * Represents a service running on top of the SSH protocol transport layer.
  * 
- * @author shikhar
  * @see UserAuth
  * @see Connection
+ * 
+ * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
  */
 public interface Service extends PacketHandler, ErrorNotifiable
 {

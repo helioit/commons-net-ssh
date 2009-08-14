@@ -148,24 +148,14 @@ public final class TransportProtocol implements Transport
         disconnect(reason, "");
     }
     
-    public void disconnect(DisconnectReason reason, String msg)
+    public void disconnect(DisconnectReason reason, String message)
     {
         lock.lock();
         try {
-            if (!close.isSet())
-                try {
-                    if (msg == null)
-                        msg = "";
-                    log.debug("Sending SSH_MSG_DISCONNECT: reason=[{}], msg=[{}]", reason, msg);
-                    IOUtils.writeQuietly(this, new Buffer(Message.DISCONNECT) //
-                                                                             .putInt(reason.toInt()) //
-                                                                             .putString(msg) //                                                                             
-                                                                             .putString("")); // lang tag
-                } finally {
-                    shutdownInput();
-                    shutdownOutput();
-                    close.set();
-                }
+            if (!close.isSet()) {
+                sendDisconnect(reason, message);
+                finishOff();
+            }
         } finally {
             lock.unlock();
         }
@@ -393,21 +383,25 @@ public final class TransportProtocol implements Transport
                 service.notifyError(causeOfDeath);
                 service = nullService;
                 
-                shutdownInput();
-                
                 { // Perhaps can send disconnect packet to server
                     final boolean didNotReceiveDisconnect = msg != Message.DISCONNECT;
                     final boolean gotRequiredInfo = causeOfDeath.getDisconnectReason() != DisconnectReason.UNKNOWN;
                     if (didNotReceiveDisconnect && gotRequiredInfo)
-                        disconnect(causeOfDeath.getDisconnectReason(), causeOfDeath.getMessage());
+                        sendDisconnect(causeOfDeath.getDisconnectReason(), causeOfDeath.getMessage());
                 }
                 
-                shutdownOutput();
-                close.set();
+                finishOff();
             }
         } finally {
             lock.unlock();
         }
+    }
+    
+    private void finishOff()
+    {
+        shutdownInput();
+        shutdownOutput();
+        close.set();
     }
     
     private void gotDebug(Buffer buf)
@@ -509,6 +503,17 @@ public final class TransportProtocol implements Transport
                                          "Server does not support SSHv2, identified as: " + ident);
         
         return ident;
+    }
+    
+    private void sendDisconnect(DisconnectReason reason, String message)
+    {
+        if (message == null)
+            message = "";
+        log.debug("Sending SSH_MSG_DISCONNECT: reason=[{}], msg=[{}]", reason, message);
+        IOUtils.writeQuietly(this, new Buffer(Message.DISCONNECT) //
+                                                                 .putInt(reason.toInt()) //
+                                                                 .putString(message) //                                                                             
+                                                                 .putString("")); // lang tag   
     }
     
     /**

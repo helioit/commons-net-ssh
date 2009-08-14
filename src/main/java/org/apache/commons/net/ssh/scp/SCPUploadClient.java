@@ -31,6 +31,11 @@ import org.apache.commons.net.ssh.connection.ConnectionException;
 import org.apache.commons.net.ssh.transport.TransportException;
 import org.apache.commons.net.ssh.util.IOUtils;
 
+/**
+ * Support for uploading files over a connected {@link SSHClient} link using SCP.
+ * 
+ * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
+ */
 public class SCPUploadClient extends SCPClient
 {
     

@@ -52,6 +52,8 @@ public abstract class AbstractChannel implements Channel
     protected final LocalWindow lwin = new LocalWindow(this);
     protected final RemoteWindow rwin = new RemoteWindow(this);
     
+    protected volatile boolean autoExpand = false;
+    
     protected final ChannelInputStream in = new ChannelInputStream(this, lwin);
     protected final ChannelOutputStream out = new ChannelOutputStream(this, rwin);
     
@@ -97,6 +99,11 @@ public abstract class AbstractChannel implements Channel
             lock.unlock();
             finishOff();
         }
+    }
+    
+    public boolean getAutoExpand()
+    {
+        return autoExpand;
     }
     
     public int getID()
@@ -229,7 +236,13 @@ public abstract class AbstractChannel implements Channel
             }
         } finally {
             eofSent = true;
+            out.setClosed();
         }
+    }
+    
+    public void setAutoExpand(boolean autoExpand)
+    {
+        this.autoExpand = autoExpand;
     }
     
     @Override
@@ -237,23 +250,6 @@ public abstract class AbstractChannel implements Channel
     {
         return "< " + type + " channel: id=" + id + ", recipient=" + recipient + ", localWin=" + lwin + ", remoteWin="
                 + rwin + " >";
-    }
-    
-    private void gotClose() throws TransportException
-    {
-        log.info("Got close");
-        try {
-            closeStreams();
-            sendClose();
-        } finally {
-            finishOff();
-        }
-    }
-    
-    private void gotWindowAdjustment(int howmuch)
-    {
-        log.info("Received window adjustment for {} bytes", howmuch);
-        rwin.expand(howmuch);
     }
     
     protected void closeStreams()
@@ -283,6 +279,17 @@ public abstract class AbstractChannel implements Channel
         buf.getBoolean(); // We don't care about the 'want-reply' value
         log.info("Got request for `{}`", reqType);
         handleRequest(reqType, buf);
+    }
+    
+    protected void gotClose() throws TransportException
+    {
+        log.info("Got close");
+        try {
+            closeStreams();
+            sendClose();
+        } finally {
+            finishOff();
+        }
     }
     
     protected synchronized void gotEOF() throws TransportException
@@ -316,6 +323,12 @@ public abstract class AbstractChannel implements Channel
     protected void gotUnknown(Message msg, Buffer buf) throws ConnectionException, TransportException
     {
         trans.sendUnimplemented();
+    }
+    
+    protected void gotWindowAdjustment(int howmuch)
+    {
+        log.info("Received window adjustment for {} bytes", howmuch);
+        rwin.expand(howmuch);
     }
     
     /**

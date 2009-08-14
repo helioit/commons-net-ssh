@@ -18,7 +18,6 @@
  */
 package org.apache.commons.net.ssh.digest;
 
-
 /**
  * MD5 Digest.
  * 

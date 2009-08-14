@@ -23,6 +23,10 @@ import java.util.concurrent.locks.ReentrantLock;
 /*
  * Syntactic sugar around Future
  */
+
+/**
+ * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
+ */
 public class Event<Ex extends Throwable> extends Future<Boolean, Ex>
 {
     

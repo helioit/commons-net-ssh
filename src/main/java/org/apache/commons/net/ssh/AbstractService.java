@@ -29,7 +29,7 @@ import org.slf4j.LoggerFactory;
 /**
  * An abstract class for {@link Service} that implements common or default functionality.
  * 
- * @author shikhar
+ * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
  */
 public abstract class AbstractService implements Service
 {

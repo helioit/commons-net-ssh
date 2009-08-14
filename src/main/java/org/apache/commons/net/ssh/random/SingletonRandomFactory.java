@@ -25,6 +25,7 @@ import org.apache.commons.net.ssh.Factory;
  * to be thread safe.
  * 
  * @author <a href="mailto:dev@mina.apache.org">Apache MINA SSHD Project</a>
+ * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
  */
 public class SingletonRandomFactory implements Random, Factory<Random>
 {

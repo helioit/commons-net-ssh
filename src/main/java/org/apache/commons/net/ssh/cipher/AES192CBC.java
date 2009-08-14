@@ -18,9 +18,8 @@
  */
 package org.apache.commons.net.ssh.cipher;
 
-
 /**
- * AES192CBC Cipher
+ * {@code aes192-cbc} cipher
  * 
  * @author <a href="mailto:dev@mina.apache.org">Apache MINA SSHD Project</a>
  */

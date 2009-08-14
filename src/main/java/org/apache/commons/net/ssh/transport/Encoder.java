@@ -44,7 +44,7 @@ import org.slf4j.LoggerFactory;
  * @author <a href="mailto:dev@mina.apache.org">Apache MINA SSHD Project</a>
  * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
  */
-class Encoder extends Converter
+final class Encoder extends Converter
 {
     
     private final Logger log = LoggerFactory.getLogger(getClass());
@@ -56,6 +56,37 @@ class Encoder extends Converter
         this.prng = prng;
     }
     
+    private Buffer checkHeaderSpace(Buffer buffer)
+    {
+        if (buffer.rpos() < 5) {
+            log.warn("Performance cost: when sending a packet, ensure that "
+                    + "5 bytes are available in front of the buffer");
+            Buffer nb = new Buffer(buffer.available() + 5);
+            nb.rpos(5);
+            nb.wpos(5);
+            nb.putBuffer(buffer);
+            buffer = nb;
+        }
+        return buffer;
+    }
+    
+    private void compress(Buffer buffer) throws TransportException
+    {
+        // Compress the packet if needed
+        if (compression != null && (authed || !compression.isDelayed()))
+            compression.compress(buffer);
+    }
+    
+    private void putMAC(Buffer buffer, int startOfPacket, int endOfPadding)
+    {
+        if (mac != null) {
+            buffer.wpos(endOfPadding + mac.getBlockSize());
+            mac.update(seq);
+            mac.update(buffer.array(), startOfPacket, endOfPadding);
+            mac.doFinal(buffer.array(), endOfPadding);
+        }
+    }
+    
     /**
      * Encode a buffer into the SSH binary protocol per the current algorithms.
      * 
@@ -64,7 +95,7 @@ class Encoder extends Converter
      * @return the sequence no. of encoded packet
      * @throws TransportException
      */
-    public long encode(Buffer buffer) throws TransportException
+    long encode(Buffer buffer) throws TransportException
     {
         buffer = checkHeaderSpace(buffer);
         
@@ -105,42 +136,11 @@ class Encoder extends Converter
     }
     
     @Override
-    public synchronized void setAlgorithms(Cipher cipher, MAC mac, Compression compression)
+    synchronized void setAlgorithms(Cipher cipher, MAC mac, Compression compression)
     {
         super.setAlgorithms(cipher, mac, compression);
         if (compression != null)
             compression.init(Compression.Type.Deflater, -1);
-    }
-    
-    private Buffer checkHeaderSpace(Buffer buffer)
-    {
-        if (buffer.rpos() < 5) {
-            log.warn("Performance cost: when sending a packet, ensure that "
-                    + "5 bytes are available in front of the buffer");
-            Buffer nb = new Buffer(buffer.available() + 5);
-            nb.rpos(5);
-            nb.wpos(5);
-            nb.putBuffer(buffer);
-            buffer = nb;
-        }
-        return buffer;
-    }
-    
-    private void compress(Buffer buffer) throws TransportException
-    {
-        // Compress the packet if needed
-        if (compression != null && (authed || !compression.isDelayed()))
-            compression.compress(buffer);
-    }
-    
-    private void putMAC(Buffer buffer, int startOfPacket, int endOfPadding)
-    {
-        if (mac != null) {
-            buffer.wpos(endOfPadding + mac.getBlockSize());
-            mac.update(seq);
-            mac.update(buffer.array(), startOfPacket, endOfPadding);
-            mac.doFinal(buffer.array(), endOfPadding);
-        }
     }
     
 }

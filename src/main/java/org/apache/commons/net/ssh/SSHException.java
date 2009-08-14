@@ -25,6 +25,7 @@ import org.apache.commons.net.ssh.util.Constants.DisconnectReason;
 
 /**
  * @author <a href="mailto:dev@mina.apache.org">Apache MINA SSHD Project</a>
+ * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
  */
 public class SSHException extends IOException
 {

@@ -25,20 +25,62 @@ import java.util.Map;
 import org.apache.commons.net.ssh.transport.TransportException;
 import org.apache.commons.net.ssh.util.Buffer;
 
+/**
+ * A {@code session} channel provides execution of a remote {@link Command command}, {@link Shell
+ * shell} or {@link Subsystem subsystem}. Before this requests like starting X11 forwarding, setting
+ * environment variables, window dimensions etc. can be made.
+ * <p>
+ * It is not legal to reuse a {@code session} channel for more than one of command, shell, or
+ * subsystem. Once one of these has been started, the {@link Session} instance API should not be
+ * used but that of these specific targets that are returned by the API.
+ * 
+ * @see Command
+ * @see Shell
+ * @see Subsystem
+ * 
+ * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
+ */
 public interface Session extends Channel
 {
     
+    /**
+     * Remote command.
+     */
     interface Command extends Channel
     {
         
+        /**
+         * Read from the command's stderr stream into a string (blocking).
+         * 
+         * @return the stderr output as a string
+         * @throws IOException
+         *             in case there is an error reading
+         */
         String getErrorAsString() throws IOException;
         
-        InputStream getErrorStream() throws IOException;
+        /**
+         * Returns the command's stderr stream.
+         */
+        InputStream getErrorStream();
         
+        /**
+         * Returns the {@link Signal signal} the command exit with, or {@code null} if this
+         * information was not received.
+         */
         Signal getExitSignal();
         
+        /**
+         * Returns the exit status of the command if it was received, or {@code null} if this
+         * information was not received.
+         */
         Integer getExitStatus();
         
+        /**
+         * Read from the command's stdout stream into a string (blocking).
+         * 
+         * @return the command's output as a string
+         * @throws IOException
+         */
         String getOutputAsString() throws IOException;
         
         void signal(Signal sig) throws TransportException;
@@ -58,7 +100,7 @@ public interface Session extends Channel
         
     }
     
-    enum Signal
+    public enum Signal
     {
         
         ABRT("ABRT"),
@@ -116,14 +158,20 @@ public interface Session extends Channel
     
     boolean isOpen();
     
-    /* With OpenSSH default is to reject env vars: "AcceptEnv" config var shd be set * */
+    void reqX11Forwarding(String authProto, String authCookie, int screen) throws ConnectionException,
+            TransportException;
+    
+    /* With OpenSSH default is to reject env vars: "AcceptEnv" config var shd be set */
     void setEnvVar(String name, String value) throws ConnectionException, TransportException;
     
+    /**
+     * 
+     * @return
+     * @throws ConnectionException
+     * @throws TransportException
+     */
     Shell startShell() throws ConnectionException, TransportException;
     
     Subsystem startSubsysytem(String name) throws ConnectionException, TransportException;
-    
-    void startX11Forwarding(boolean singleConnection, String authProto, String authCookie, int screen,
-            ConnectListener listener) throws ConnectionException, TransportException;
     
 }

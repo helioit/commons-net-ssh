@@ -35,7 +35,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * @author shikhar
+ * Base class for {@link SCPDownloadClient} and {@link SCPUploadClient}.
+ * 
+ * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
+ * 
  * @see <a href="http://blogs.sun.com/janp/entry/how_the_scp_protocol_works">SCP Protocol</a>
  */
 public abstract class SCPClient
@@ -46,6 +49,11 @@ public abstract class SCPClient
         public SCPException(String message)
         {
             super(message);
+        }
+        
+        public SCPException(String message, Throwable cause)
+        {
+            super(message, cause);
         }
     }
     
@@ -85,7 +93,7 @@ public abstract class SCPClient
     protected final SSHClient host;
     
     protected final Queue<String> warnings = new LinkedList<String>();
-    protected int exitStatus = -1;
+    protected int exitStatus;
     
     protected Command scp;
     

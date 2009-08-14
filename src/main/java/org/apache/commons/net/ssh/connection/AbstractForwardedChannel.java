@@ -22,7 +22,9 @@ import org.apache.commons.net.ssh.connection.OpenFailException.Reason;
 import org.apache.commons.net.ssh.transport.TransportException;
 import org.apache.commons.net.ssh.util.Constants.Message;
 
-//TODO: move to ConnProto
+/**
+ * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
+ */
 public abstract class AbstractForwardedChannel extends AbstractChannel implements Channel.Forwarded
 {
     
@@ -41,12 +43,16 @@ public abstract class AbstractForwardedChannel extends AbstractChannel implement
     public void confirm() throws TransportException
     {
         log.info("Confirming `{}` channel #{}", type, id);
+        /*
+         * Must ensure channel is attached before confirming, data could start coming in
+         * immediately!
+         */
+        conn.attach(this);
         trans.writePacket(newBuffer(Message.CHANNEL_OPEN_CONFIRMATION) //
                                                                       .putInt(id) //
                                                                       .putInt(lwin.getSize()) //
                                                                       .putInt(lwin.getMaxPacketSize()));
         open.set();
-        conn.attach(this);
     }
     
     public String getOriginatorIP()

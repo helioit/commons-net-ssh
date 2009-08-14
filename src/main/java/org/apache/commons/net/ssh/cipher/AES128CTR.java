@@ -18,9 +18,10 @@
  */
 package org.apache.commons.net.ssh.cipher;
 
-
 /**
- * @author shikhar
+ * {@code aes128-ctr} cipher
+ * 
+ * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
  */
 public class AES128CTR extends BaseCipher
 {

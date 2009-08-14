@@ -47,7 +47,7 @@ import org.slf4j.LoggerFactory;
  * @author <a href="mailto:dev@mina.apache.org">Apache MINA SSHD Project</a>
  * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
  */
-class Decoder extends Converter
+final class Decoder extends Converter
 {
     
     private static final int MAX_PACKET_LEN = 256 * 1024;
@@ -80,15 +80,6 @@ class Decoder extends Converter
     public int getMaxPacketLength()
     {
         return MAX_PACKET_LEN;
-    }
-    
-    @Override
-    public void setAlgorithms(Cipher cipher, MAC mac, Compression compression)
-    {
-        super.setAlgorithms(cipher, mac, compression);
-        macResult = new byte[mac.getBlockSize()];
-        if (compression != null)
-            compression.init(Compression.Type.Inflater, -1);
     }
     
     private void checkMAC(final byte[] data) throws TransportException
@@ -144,6 +135,7 @@ class Decoder extends Converter
                     inputBuffer.wpos(packetLength + 4 - inputBuffer.getByte()); // Exclude the padding & MAC
                     
                     Buffer plain = decompressed();
+                    
                     if (log.isTraceEnabled())
                         log.trace("Received packet #{}: {}", seq, plain.printHex());
                     
@@ -151,6 +143,7 @@ class Decoder extends Converter
                     
                     inputBuffer.clear();
                     packetLength = -1;
+                    need = cipherSize;
                     
                 } else
                     // Need more data                    
@@ -206,6 +199,15 @@ class Decoder extends Converter
         else
             needed -= len;
         return needed;
+    }
+    
+    @Override
+    void setAlgorithms(Cipher cipher, MAC mac, Compression compression)
+    {
+        super.setAlgorithms(cipher, mac, compression);
+        macResult = new byte[mac.getBlockSize()];
+        if (compression != null)
+            compression.init(Compression.Type.Inflater, -1);
     }
     
 }

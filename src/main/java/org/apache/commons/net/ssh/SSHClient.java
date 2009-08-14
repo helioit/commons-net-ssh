@@ -41,6 +41,7 @@ import org.apache.commons.net.ssh.cipher.TripleDESCBC;
 import org.apache.commons.net.ssh.compression.DelayedZlibCompression;
 import org.apache.commons.net.ssh.compression.NoneCompression;
 import org.apache.commons.net.ssh.compression.ZlibCompression;
+import org.apache.commons.net.ssh.connection.ConnectListener;
 import org.apache.commons.net.ssh.connection.Connection;
 import org.apache.commons.net.ssh.connection.ConnectionException;
 import org.apache.commons.net.ssh.connection.ConnectionProtocol;
@@ -48,6 +49,9 @@ import org.apache.commons.net.ssh.connection.LocalPortForwarder;
 import org.apache.commons.net.ssh.connection.RemotePortForwarder;
 import org.apache.commons.net.ssh.connection.Session;
 import org.apache.commons.net.ssh.connection.SessionChannel;
+import org.apache.commons.net.ssh.connection.X11Forwarder;
+import org.apache.commons.net.ssh.connection.RemotePortForwarder.ForwardedTCPIPChannel;
+import org.apache.commons.net.ssh.connection.X11Forwarder.X11Channel;
 import org.apache.commons.net.ssh.kex.DHG1;
 import org.apache.commons.net.ssh.kex.DHG14;
 import org.apache.commons.net.ssh.keyprovider.FileKeyProvider;
@@ -226,17 +230,16 @@ public class SSHClient extends SocketClient
     }
     
     /**
-     * Constructor that allows specifying a {@link Config} that the associated {@link Transport}
-     * will be initialized with.
+     * Constructor that allows specifying a {@link Config} to be used.
      * 
      * @param config
      */
     public SSHClient(Config config)
     {
         setDefaultPort(DEFAULT_PORT);
-        trans = new TransportProtocol(config);
-        auth = new UserAuthProtocol(trans);
-        conn = new ConnectionProtocol(trans);
+        this.trans = new TransportProtocol(config);
+        this.auth = new UserAuthProtocol(trans);
+        this.conn = new ConnectionProtocol(trans);
     }
     
     /**
@@ -385,7 +388,7 @@ public class SSHClient extends SocketClient
     /**
      * Authenticate {@code username} using the {@code "publickey"} authentication method.
      * <p>
-     * {@link KeyProvider} instances can be created using any of the {@code loadKeys()} methods
+     * {@link KeyProvider} instances can be created using any of the {@code loadKeys(*)} methods
      * provided in this class.
      * <p>
      * In case multiple {@code keyProviders} are specified; authentication is attempted in order as
@@ -435,11 +438,11 @@ public class SSHClient extends SocketClient
     }
     
     /**
-     * Disconnects from the connected SSH server. {@link SSHClient} objects are not reusable
-     * therefore it is incorrect to attempt connection after this method has been called.
+     * Disconnects from the connected SSH server. {@code SSHClient} objects are not
+     * reusable therefore it is incorrect to attempt connection after this method has been called.
      * <p>
      * This method should be called from a {@code finally} construct after connection is
-     * established; so that proper cleanup is done and the thread spawned by {@link Transport} for
+     * established; so that proper cleanup is done and the thread spawned by the transport layer for
      * dealing with incoming packets is stopped.
      */
     @Override
@@ -450,6 +453,14 @@ public class SSHClient extends SocketClient
         assert !trans.isRunning();
         super.disconnect();
         assert !isConnected();
+    }
+    
+    /**
+     * Returns the {@link Config} for this client.
+     */
+    public Config getConfig()
+    {
+        return trans.getConfig();
     }
     
     /**
@@ -466,7 +477,12 @@ public class SSHClient extends SocketClient
      */
     public RemotePortForwarder getRemotePortForwarder()
     {
-        return RemotePortForwarder.getInstance(conn);
+        synchronized (conn) {
+            RemotePortForwarder rpf = (RemotePortForwarder) conn.get(ForwardedTCPIPChannel.TYPE);
+            if (rpf == null)
+                conn.attach(rpf = new RemotePortForwarder(conn));
+            return rpf;
+        }
     }
     
     /**
@@ -505,6 +521,8 @@ public class SSHClient extends SocketClient
     /**
      * Attempts loading the user's {@code known_hosts} file from the default location, i.e. {@code
      * ~/.ssh/known_hosts} and {@code ~/.ssh/known_hosts2} on most platforms.
+     * <p>
+     * For finer control over which file is used, see {@link #initKnownHosts(String)}.
      * 
      * @throws IOException
      *             if there is an error loading from <em>both</em> locations
@@ -531,7 +549,7 @@ public class SSHClient extends SocketClient
     }
     
     /**
-     * Whether authenticated
+     * Whether authenticated.
      */
     public boolean isAuthenticated()
     {
@@ -539,7 +557,7 @@ public class SSHClient extends SocketClient
     }
     
     /**
-     * Whether connected
+     * Whether connected.
      */
     @Override
     public boolean isConnected()
@@ -552,7 +570,7 @@ public class SSHClient extends SocketClient
      * 
      * @param kp
      *            the {@link KeyPair}
-     * @return
+     * @return the key provider for use in authentication
      */
     public KeyProvider loadKeys(KeyPair kp)
     {
@@ -561,15 +579,16 @@ public class SSHClient extends SocketClient
     
     /**
      * Returns a {@link FileKeyProvider} instance created from a location on the file system where
-     * an <em>unencrypted</em> private key file can be found. Calls
-     * {@link #loadKeys(String, PasswordFinder)} with the {@link PasswordFinder} argument as {@code
-     * null}.
+     * an <em>unencrypted</em> private key file (does not require a passphrase) can be found. Simply
+     * calls {@link #loadKeys(String, PasswordFinder)} with the {@link PasswordFinder} argument as
+     * {@code null}.
      * 
      * @param location
      *            the location for the key file
-     * @return {@link KeyProvider}
+     * @return the key provider for use in authentication
      * @throws IOException
      *             if the key file format is not known, if the file could not be read, etc.
+     * @depends BouncyCastle
      */
     public KeyProvider loadKeys(String location) throws IOException
     {
@@ -577,15 +596,16 @@ public class SSHClient extends SocketClient
     }
     
     /**
-     * Creates a {@link FileKeyProvider} instance from given location on the file system. Creates a
-     * one-off {@link PasswordFinder} using {@link PasswordFinder.Util#createOneOff(char[])}, and
-     * calls {@link #loadKeys(String,PasswordFinder)}.
+     * Utility function for createing a {@link FileKeyProvider} instance from given location on the
+     * file system. Creates a one-off {@link PasswordFinder} using
+     * {@link PasswordFinder.Util#createOneOff(char[])}, and calls
+     * {@link #loadKeys(String,PasswordFinder)}.
      * 
      * @param location
      *            location of the key file
      * @param passphrase
      *            passphrase as a char-array
-     * @return {@link KeyProvider} initialized with given location
+     * @return the key provider for use in authentication
      * @throws IOException
      *             if the key file format is not known, if the file could not be read etc.
      * @depends BouncyCastle
@@ -609,7 +629,7 @@ public class SSHClient extends SocketClient
      * @param passwordFinder
      *            the {@link PasswordFinder} that can supply the passphrase for decryption (may be
      *            {@code null} in case keyfile is not encrypted)
-     * @return the {@link FileKeyProvider} initialized with given location
+     * @return the key provider for use in authentication
      * @throws IOException
      *             if the key file format is not known, if the file could not be read, etc.
      * @depends BouncyCastle
@@ -625,18 +645,18 @@ public class SSHClient extends SocketClient
     }
     
     /**
-     * Convenience method for creating a {@link FileKeyProvider} instance from a location where an
-     * <i>encrypted</i> key file is located.
-     * <p>
-     * Currently PKCS8 format private key files are supported (OpenSSH uses this format).
+     * Convenience method for creating a {@link FileKeyProvider} instance from a {@code location}
+     * where an <i>encrypted</i> key file is located. Calls {@link #loadKeys(String, char[])} with a
+     * character array created from the supplied {@code passphrase} string.
      * 
      * @param location
      *            location of the key file
      * @param passphrase
      *            passphrase as a string
-     * @return {@link FileKeyProvider} initialized with given location
+     * @return the key provider for use in authentication
      * @throws IOException
      *             if the key file format is not known, if the file could not be read etc.
+     * @depends BouncyCastle
      */
     public KeyProvider loadKeys(String location, String passphrase) throws IOException
     {
@@ -645,7 +665,8 @@ public class SSHClient extends SocketClient
     
     /**
      * Create a {@link LocalPortForwarder} that will listen on {@code address} and forward incoming
-     * connections to the connected host; which will further redirect them to {@code host:port}.
+     * connections to the connected host; which will further redirect them to {@code host:port} (the
+     * server should be capable of reaching this address).
      * <p>
      * The returned {@link LocalPortForwarder}'s {@link LocalPortForwarder#startListening()} method
      * should be called to actually start listening.
@@ -662,6 +683,26 @@ public class SSHClient extends SocketClient
     public LocalPortForwarder newLocalPortForwarder(SocketAddress address, String host, int port) throws IOException
     {
         return new LocalPortForwarder(conn, address, host, port);
+    }
+    
+    /**
+     * A {@code listener} for handling forwarded X11 channels must be registered with this client if
+     * they are to be used.
+     * <p>
+     * It should be clarified that multiple listeners for X11 forwarding over a single SSH
+     * connection are not supported (and don't make much sense). So a successive call to this method
+     * is only going to replace the registered {@code listener}.
+     * 
+     * @param listener
+     *            the {@link ConnectListener} that should be delegated the responsibility of
+     *            handling forwarded {@link X11Channel} 's
+     * @return an {@link X11Forwarder} that allows to stop acting on X11 requests from server
+     */
+    public X11Forwarder registerX11Forwarder(ConnectListener listener)
+    {
+        X11Forwarder x11f = new X11Forwarder(conn, listener);
+        conn.attach(x11f);
+        return x11f;
     }
     
     /**
@@ -709,7 +750,7 @@ public class SSHClient extends SocketClient
      * @depends JZlib
      */
     @SuppressWarnings("unchecked")
-    public void useZlibCompression() throws TransportException
+    public void useCompression() throws TransportException
     {
         trans.getConfig().setCompressionFactories(new DelayedZlibCompression.Factory(), //
                                                   new ZlibCompression.Factory(), //
@@ -719,8 +760,8 @@ public class SSHClient extends SocketClient
     }
     
     /**
-     * On connection establishment, also initialize the SSH transport via
-     * {@link Transport#init(java.net.Socket)} and {@link #doKex()}.
+     * On connection establishment, also initialize the SSH transport via {@link Transport#init} and
+     * {@link #doKex()}.
      */
     @Override
     protected void _connectAction_() throws IOException
@@ -731,6 +772,8 @@ public class SSHClient extends SocketClient
     }
     
     /**
+     * Do key exchange.
+     * 
      * @throws TransportException
      *             if error during kex
      */

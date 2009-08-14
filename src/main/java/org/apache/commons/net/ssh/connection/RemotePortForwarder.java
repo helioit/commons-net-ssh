@@ -18,19 +18,22 @@
  */
 package org.apache.commons.net.ssh.connection;
 
-import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
 import org.apache.commons.net.ssh.transport.TransportException;
 import org.apache.commons.net.ssh.util.Buffer;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
-public class RemotePortForwarder implements ForwardedChannelOpener
+/**
+ * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
+ */
+public class RemotePortForwarder extends AbstractForwardedChannelOpener
 {
     
+    /**
+     * 
+     */
     public static final class Forward
     {
         
@@ -107,30 +110,25 @@ public class RemotePortForwarder implements ForwardedChannelOpener
         
     }
     
-    public static final String PF_REQ = "tcpip-forward";
-    public static final String PF_CANCEL = "cancel-tcpip-forward";
-    
-    public static RemotePortForwarder getInstance(Connection conn)
-    {
-        synchronized (conn) {
-            RemotePortForwarder rpf = (RemotePortForwarder) conn.get(ForwardedTCPIPChannel.TYPE);
-            if (rpf == null)
-                conn.attach(rpf = new RemotePortForwarder(conn));
-            return rpf;
-        }
-    }
-    
-    protected final Logger log = LoggerFactory.getLogger(getClass());
-    
-    protected final Connection conn;
+    protected static final String PF_REQ = "tcpip-forward";
+    protected static final String PF_CANCEL = "cancel-tcpip-forward";
     
     protected final Map<Forward, ConnectListener> listeners = new HashMap<Forward, ConnectListener>();
     
-    private RemotePortForwarder(Connection conn)
+    public RemotePortForwarder(Connection conn)
     {
-        this.conn = conn;
+        super(ForwardedTCPIPChannel.TYPE, conn);
     }
     
+    /**
+     * Request forwarding from the remote host on specified
+     * 
+     * @param forward
+     * @param listener
+     * @return
+     * @throws ConnectionException
+     * @throws TransportException
+     */
     public Forward bind(Forward forward, ConnectListener listener) throws ConnectionException, TransportException
     {
         Buffer reply = conn.sendGlobalRequest(PF_REQ, true, new Buffer() //
@@ -141,14 +139,26 @@ public class RemotePortForwarder implements ForwardedChannelOpener
             forward.port = reply.getInt();
         log.info("Remote end listening on {}", forward);
         listeners.put(forward, listener);
+        
+        /*
+         * Connection should forward us "forwarded-tcpip" channels
+         */
         if (listeners.isEmpty())
             if (conn.get(getChannelType()) != null && conn.get(getChannelType()) != this)
-                throw new AssertionError("Singleton soft-constraint violated");
+                throw new AssertionError("Singleton constraint violated");
             else
                 conn.attach(this);
+        
         return forward;
     }
     
+    /**
+     * Cancel the forwarding for some {@link Forward}
+     * 
+     * @param fwd
+     * @throws TransportException
+     * @throws ConnectionException
+     */
     public void cancel(Forward fwd) throws TransportException, ConnectionException
     {
         try {
@@ -168,26 +178,13 @@ public class RemotePortForwarder implements ForwardedChannelOpener
         return listeners.keySet();
     }
     
-    public String getChannelType()
-    {
-        return ForwardedTCPIPChannel.TYPE;
-    }
-    
     public void handleOpen(Buffer buf) throws ConnectionException, TransportException
     {
         ForwardedTCPIPChannel chan = new ForwardedTCPIPChannel(conn, buf.getInt(), buf.getInt(), buf.getInt(), //
                                                                new Forward(buf.getString(), buf.getInt()), //
                                                                buf.getString(), buf.getInt());
         if (listeners.containsKey(chan.getParentForward()))
-            try {
-                listeners.get(chan.getParentForward()).gotConnect(chan);
-            } catch (IOException logged) {
-                log.warn("Error in ConnectListener callback: {}", logged.toString());
-                if (chan.isOpen())
-                    chan.sendClose();
-                else
-                    chan.reject(OpenFailException.Reason.CONNECT_FAILED, "");
-            }
+            callListener(listeners.get(chan.getParentForward()), chan);
         else
             chan.reject(OpenFailException.Reason.ADMINISTRATIVELY_PROHIBITED, "Forwarding was not requested on ["
                     + chan.getParentForward() + "]");

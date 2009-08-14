@@ -18,6 +18,9 @@
  */
 package org.apache.commons.net.ssh;
 
+/**
+ * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
+ */
 public interface ErrorNotifiable
 {
     

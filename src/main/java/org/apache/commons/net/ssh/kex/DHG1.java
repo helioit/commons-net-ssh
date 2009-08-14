@@ -18,7 +18,6 @@
  */
 package org.apache.commons.net.ssh.kex;
 
-
 /**
  * Diffie-Hellman key exchange with SHA-1 and Oakley Group 2 [RFC2409] (1024-bit MODP Group).
  * 

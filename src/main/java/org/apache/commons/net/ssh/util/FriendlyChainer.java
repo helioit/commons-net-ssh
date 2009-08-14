@@ -36,6 +36,8 @@ package org.apache.commons.net.ssh.util;
  * 
  * @param <Z>
  *            Throwable type
+ * 
+ * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
  */
 public interface FriendlyChainer<Z extends Throwable>
 {

@@ -27,6 +27,9 @@ import org.apache.commons.net.ssh.transport.TransportException;
 import org.apache.commons.net.ssh.util.Buffer;
 import org.apache.commons.net.ssh.util.IOUtils;
 
+/**
+ * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
+ */
 public class SessionChannel extends AbstractDirectChannel implements Session, Session.Command, Session.Shell,
         Session.Subsystem
 {
@@ -46,6 +49,11 @@ public class SessionChannel extends AbstractDirectChannel implements Session, Se
     
     public void allocateDefaultPTY() throws ConnectionException, TransportException
     {
+        /*
+         * FIXME (maybe?): These modes were originally copied from what SSHD was doing; and then the
+         * echo modes were set to false to better serve the PTY example. Not sure what default PTY
+         * modes should be.
+         */
         Map<PTYMode, Buffer> modes = new HashMap<PTYMode, Buffer>();
         modes.put(PTYMode.ISIG, new Buffer().putInt(1));
         modes.put(PTYMode.ICANON, new Buffer().putInt(1));
@@ -125,7 +133,6 @@ public class SessionChannel extends AbstractDirectChannel implements Session, Se
         while ((r = stream.read()) != -1)
             sb.append((char) r);
         return sb.toString();
-        
     }
     
     @Override
@@ -139,6 +146,16 @@ public class SessionChannel extends AbstractDirectChannel implements Session, Se
             exitSignal = Signal.fromString(buf.getString());
         else
             super.handleRequest(req, buf);
+    }
+    
+    public void reqX11Forwarding(String authProto, String authCookie, int screen) throws ConnectionException,
+            TransportException
+    {
+        sendChannelRequest("x11-req", true, //
+                           new Buffer() //
+                                       .putBoolean(false).putString(authProto) //
+                                       .putString(authCookie) //
+                                       .putInt(screen)).await(conn.getTimeout());
     }
     
     public void setEnvVar(String name, String value) throws ConnectionException, TransportException
@@ -162,18 +179,6 @@ public class SessionChannel extends AbstractDirectChannel implements Session, Se
         log.info("Will request `{}` subsystem", name);
         sendChannelRequest("subsystem", true, new Buffer().putString(name)).await(conn.getTimeout());
         return this;
-    }
-    
-    public void startX11Forwarding(boolean singleConnection, String authProto, String authCookie, int screen,
-            ConnectListener listener) throws ConnectionException, TransportException
-    {
-        sendChannelRequest("x11-req", true, //
-                           new Buffer() //
-                                       .putBoolean(singleConnection) //
-                                       .putString(authProto) //
-                                       .putString(authCookie) //
-                                       .putInt(screen)).await(conn.getTimeout());
-        new X11Forwarder(conn, listener);
     }
     
     public void waitForClose() throws ConnectionException

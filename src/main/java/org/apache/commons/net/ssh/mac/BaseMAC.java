@@ -27,7 +27,7 @@ import org.apache.commons.net.ssh.SSHRuntimeException;
 import org.apache.commons.net.ssh.util.SecurityUtils;
 
 /**
- * Base class for <code>Mac</code> implementations based on the JCE provider.
+ * Base class for <code>MAC</code> implementations based on the JCE provider.
  * 
  * @author <a href="mailto:dev@mina.apache.org">Apache MINA SSHD Project</a>
  */

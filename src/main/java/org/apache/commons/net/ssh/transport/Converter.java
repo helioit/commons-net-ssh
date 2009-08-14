@@ -39,12 +39,12 @@ class Converter
     protected long seq = -1;
     protected boolean authed;
     
-    public long getSequenceNumber()
+    long getSequenceNumber()
     {
         return seq;
     }
     
-    public synchronized void setAlgorithms(Cipher cipher, MAC mac, Compression compression)
+    synchronized void setAlgorithms(Cipher cipher, MAC mac, Compression compression)
     {
         this.cipher = cipher;
         this.mac = mac;
@@ -52,7 +52,7 @@ class Converter
         this.cipherSize = cipher.getIVSize();
     }
     
-    public synchronized void setAuthenticated()
+    synchronized void setAuthenticated()
     {
         this.authed = true;
     }

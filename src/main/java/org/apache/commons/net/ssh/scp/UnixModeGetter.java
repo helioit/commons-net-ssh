@@ -26,6 +26,12 @@ import java.io.IOException;
  * TODO
  * Use Runtime.exec() to run unix commands for getting these values 
  */
+
+/**
+ * STUB
+ * 
+ * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
+ */
 public class UnixModeGetter implements ModeGetter
 {
     

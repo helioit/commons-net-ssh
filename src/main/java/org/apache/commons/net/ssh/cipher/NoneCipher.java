@@ -19,9 +19,7 @@
 package org.apache.commons.net.ssh.cipher;
 
 /**
- * Represents a no-op cipher. This cipher can not really be used during authentication and should
- * only be used after, so that authentication remains secured, but not the remaining of the
- * exchanges.
+ * Represents a no-op cipher.
  * 
  * @author <a href="mailto:dev@mina.apache.org">Apache MINA SSHD Project</a>
  */

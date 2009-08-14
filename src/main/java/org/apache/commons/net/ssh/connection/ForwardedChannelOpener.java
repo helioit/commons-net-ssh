@@ -21,11 +21,26 @@ package org.apache.commons.net.ssh.connection;
 import org.apache.commons.net.ssh.transport.TransportException;
 import org.apache.commons.net.ssh.util.Buffer;
 
+/**
+ * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
+ */
 public interface ForwardedChannelOpener
 {
     
+    /**
+     * The name of the channel type this opener can handle.
+     * 
+     * @return channel type
+     */
     String getChannelType();
     
+    /**
+     * 
+     * @param buf
+     *            {@link Buffer} containg the request except for the message identifier field
+     * @throws ConnectionException
+     * @throws TransportException
+     */
     void handleOpen(Buffer buf) throws ConnectionException, TransportException;
     
 }

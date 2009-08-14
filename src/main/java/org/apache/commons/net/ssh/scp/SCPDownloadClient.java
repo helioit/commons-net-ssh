@@ -29,6 +29,11 @@ import org.apache.commons.net.ssh.connection.ConnectionException;
 import org.apache.commons.net.ssh.transport.TransportException;
 import org.apache.commons.net.ssh.util.IOUtils;
 
+/**
+ * Support for uploading files over a connected {@link SSHClient} link using SCP.
+ * 
+ * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
+ */
 public class SCPDownloadClient extends SCPClient
 {
     
@@ -53,19 +58,19 @@ public class SCPDownloadClient extends SCPClient
         return this;
     }
     
-    protected File getTargetDirectory(File f, String dirname) throws IOException
+    protected File getTargetDirectory(File f, String dirname) throws SCPException
     {
         if (f.exists())
             if (f.isDirectory())
                 f = new File(f, dirname); //  <-- A
             else
-                throw new IOException(f + " already exists as a file; remote end is sending directory");
+                throw new SCPException(f + " already exists as a file; remote end is sending directory");
         
         // else <-- B
         
-        if (!f.exists())
+        if (!f.exists()) // could be from A or B
             if (!f.mkdir())
-                throw new IOException("Failed to create directory " + f);
+                throw new SCPException("Failed to create directory " + f);
         
         return f;
     }
@@ -93,22 +98,22 @@ public class SCPDownloadClient extends SCPClient
         execSCPWith(args);
     }
     
-    protected long parseLong(String longString, String valType) throws IOException
+    protected long parseLong(String longString, String valType) throws SCPException
     {
         long val = 0;
         try {
             val = Long.parseLong(longString);
         } catch (NumberFormatException nfe) {
-            throw new IOException("Could not parse " + valType + " from `" + longString + "`", nfe);
+            throw new SCPException("Could not parse " + valType + " from `" + longString + "`", nfe);
         }
         return val;
     }
     
-    protected String parsePermissions(String cmd) throws IOException
+    /* e.g. "C0644" -> "644"; "D0755" -> "755" */
+    protected String parsePermissions(String cmd) throws SCPException
     {
-        // e.g. "C0644" -> "644"; "D0755" -> "755"
         if (cmd.length() != 5)
-            throw new IOException("Could not parse permissions from `" + cmd + "`");
+            throw new SCPException("Could not parse permissions from `" + cmd + "`");
         return cmd.substring(2);
     }
     
@@ -126,31 +131,38 @@ public class SCPDownloadClient extends SCPClient
     protected boolean process(String bufferedTMsg, String msg, File f) throws IOException
     {
         if (msg.length() < 1)
-            throw new IOException("Could not parse message `" + msg + "`");
+            throw new SCPException("Could not parse message `" + msg + "`");
         
         switch (msg.charAt(0))
         {
+        
         case 'T':
             signal("ACK: T");
             process(msg, readMessage(true), f);
             break;
+        
         case 'C':
             processFile(msg, bufferedTMsg, f);
             break;
+        
         case 'D':
             processDirectory(msg, bufferedTMsg, f);
             break;
+        
         case 'E':
             return true;
+            
         case (char) 1:
             addWarning(msg.substring(1));
             break;
+        
         case (char) 2:
-            throw new IOException("Remote SCP command returned error: " + msg.substring(1));
+            throw new SCPException("Remote SCP command returned error: " + msg.substring(1));
+            
         default:
             String err = "Unrecognized message: `" + msg + "`";
             sendMessage((char) 2 + err);
-            throw new IOException(err);
+            throw new SCPException(err);
         }
         
         return false;
@@ -185,7 +197,6 @@ public class SCPDownloadClient extends SCPClient
         prepare(f, parsePermissions(cMsgParts[0]), tMsg);
         
         FileOutputStream fos = new FileOutputStream(f);
-        //scp.ensureLocalWinAtLeast((int) Math.min(length, Integer.MAX_VALUE));
         signal("Remote can start transfer");
         transfer(scp.getInputStream(), fos, scp.getLocalMaxPacketSize(), length);
         check("Remote agrees transfer done");

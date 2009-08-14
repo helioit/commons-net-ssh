@@ -21,6 +21,9 @@ package org.apache.commons.net.ssh.scp;
 import java.io.File;
 import java.io.IOException;
 
+/**
+ * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
+ */
 public interface ModeGetter
 {
     

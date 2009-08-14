@@ -22,7 +22,9 @@ import org.apache.commons.net.ssh.transport.TransportException;
 import org.apache.commons.net.ssh.util.Buffer;
 import org.apache.commons.net.ssh.util.Constants.Message;
 
-// TODO: move channel opening to ConnProto
+/**
+ * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
+ */
 public abstract class AbstractDirectChannel extends AbstractChannel implements Channel.Direct
 {
     

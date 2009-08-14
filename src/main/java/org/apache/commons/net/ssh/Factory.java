@@ -20,6 +20,10 @@ package org.apache.commons.net.ssh;
 
 import java.util.List;
 
+/**
+ * @author <a href="mailto:dev@mina.apache.org">Apache MINA SSHD Project</a>
+ * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
+ */
 public interface Factory<T>
 {
     

@@ -44,6 +44,13 @@ import org.apache.commons.net.ssh.util.Constants.Message;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/*
+ * TODO:
+ * 
+ * Allow client2server & server2client algorithms to be different; right now they can only be symmetric.
+ * This entails API support in Config (setting) and changes in KeyExchanger to use that API (getting).
+ */
+
 /**
  * Algorithm negotiation and key exchange.
  * 

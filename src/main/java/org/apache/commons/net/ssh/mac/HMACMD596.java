@@ -19,7 +19,7 @@
 package org.apache.commons.net.ssh.mac;
 
 /**
- * HMAC-MD5-96 <code>Mac</code>
+ * HMAC-MD5-96 <code>MAC</code>
  * 
  * @author <a href="mailto:dev@mina.apache.org">Apache MINA SSHD Project</a>
  */

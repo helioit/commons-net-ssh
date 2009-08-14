@@ -31,7 +31,6 @@ import org.apache.commons.net.ssh.connection.OpenFailException.Reason;
 import org.apache.commons.net.ssh.transport.Transport;
 import org.apache.commons.net.ssh.transport.TransportException;
 import org.apache.commons.net.ssh.util.Buffer;
-import org.apache.commons.net.ssh.util.Constants;
 import org.apache.commons.net.ssh.util.Future;
 import org.apache.commons.net.ssh.util.Constants.DisconnectReason;
 import org.apache.commons.net.ssh.util.Constants.Message;
@@ -124,11 +123,11 @@ public class ConnectionProtocol extends AbstractService implements Connection
                 gotChannelOpen(buf);
                 break;
             default:
-                trans.sendUnimplemented();
+                super.handle(msg, buf);
             }
         
         else
-            throw new TransportException(DisconnectReason.PROTOCOL_ERROR, "Not a connection layer packet");
+            super.handle(msg, buf);
     }
     
     public synchronized void join() throws InterruptedException
@@ -199,9 +198,8 @@ public class ConnectionProtocol extends AbstractService implements Connection
         Channel channel = get(recipient);
         if (channel == null) {
             buffer.rpos(buffer.rpos() - 5);
-            Constants.Message msg = buffer.getMessageID();
-            throw new ConnectionException(DisconnectReason.PROTOCOL_ERROR, "Received " + msg + " on unknown channel #"
-                    + recipient);
+            throw new ConnectionException(DisconnectReason.PROTOCOL_ERROR, "Received " + buffer.getMessageID()
+                    + " on unknown channel #" + recipient);
         }
         return channel;
     }

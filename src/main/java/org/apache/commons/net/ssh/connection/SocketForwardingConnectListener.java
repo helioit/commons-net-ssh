@@ -27,6 +27,9 @@ import org.apache.commons.net.ssh.util.Pipe.ErrorCallback;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
+ */
 public class SocketForwardingConnectListener implements ConnectListener
 {
     

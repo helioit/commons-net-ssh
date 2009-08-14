@@ -23,6 +23,9 @@ import java.util.Map.Entry;
 
 import org.apache.commons.net.ssh.util.Buffer;
 
+/**
+ * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
+ */
 public enum PTYMode
 {
     

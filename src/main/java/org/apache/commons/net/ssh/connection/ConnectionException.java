@@ -22,6 +22,9 @@ import org.apache.commons.net.ssh.SSHException;
 import org.apache.commons.net.ssh.util.FriendlyChainer;
 import org.apache.commons.net.ssh.util.Constants.DisconnectReason;
 
+/**
+ * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
+ */
 public class ConnectionException extends SSHException
 {
     
