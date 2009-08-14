@@ -203,7 +203,6 @@ public abstract class AbstractChannel implements Channel
     {
         this.recipient = recipient;
         rwin.init(remoteWinSize, remoteMaxPacketSize);
-        out.init();
         log.info("Initialized - {}", this);
     }
     

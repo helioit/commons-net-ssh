@@ -31,15 +31,19 @@ public abstract class AbstractForwardedChannel extends AbstractChannel implement
     protected final String origIP;
     protected final int origPort;
     
-    protected AbstractForwardedChannel(String name, Connection conn, int recipient, int remoteWinSize,
+    /*
+     * First 2 args are standard; the others can be parsed from a CHANNEL_OPEN packet.
+     */
+    protected AbstractForwardedChannel(String type, Connection conn, int recipient, int remoteWinSize,
             int remoteMaxPacketSize, String origIP, int origPort)
     {
-        super(name, conn);
+        super(type, conn);
         this.origIP = origIP;
         this.origPort = origPort;
         init(recipient, remoteWinSize, remoteMaxPacketSize);
     }
     
+    // Javadoc in interface
     public void confirm() throws TransportException
     {
         log.info("Confirming `{}` channel #{}", type, id);
@@ -55,16 +59,19 @@ public abstract class AbstractForwardedChannel extends AbstractChannel implement
         open.set();
     }
     
+    // Javadoc in interface
     public String getOriginatorIP()
     {
         return origIP;
     }
     
+    // Javadoc in interface
     public int getOriginatorPort()
     {
         return origPort;
     }
     
+    // Javadoc in interface
     public void reject(Reason reason, String message) throws TransportException
     {
         log.info("Rejecting `{}` channel: {}", type, message);

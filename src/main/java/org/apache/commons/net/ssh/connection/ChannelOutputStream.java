@@ -27,6 +27,9 @@ import org.apache.commons.net.ssh.util.Buffer;
 import org.apache.commons.net.ssh.util.Constants.Message;
 
 /**
+ * {@link OutputStream} for channels. Buffers data upto the remote window's maximum packet size.
+ * Data can also be flushed via {@link #flush()} and is also flushed on {@link #close()}.
+ * 
  * @author <a href="mailto:dev@mina.apache.org">Apache MINA SSHD Project</a>
  * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
  */
@@ -41,10 +44,11 @@ public class ChannelOutputStream extends OutputStream implements ErrorNotifiable
     protected boolean closed;
     protected SSHException error;
     
-    public ChannelOutputStream(Channel chan, RemoteWindow win)
+    protected ChannelOutputStream(Channel chan, RemoteWindow win)
     {
         this.chan = chan;
         this.win = win;
+        prepBuffer();
     }
     
     @Override
@@ -67,23 +71,14 @@ public class ChannelOutputStream extends OutputStream implements ErrorNotifiable
         if (bufferLength <= 0) // No data to send
             return;
         
-        int pos = buffer.wpos();
-        buffer.wpos(10);
-        buffer.putInt(bufferLength);
-        buffer.wpos(pos);
-        
         try {
             win.waitAndConsume(bufferLength);
+            putRecipientAndLength();
             chan.getTransport().writePacket(buffer);
         } finally {
             prepBuffer();
         }
         
-    }
-    
-    public void init()
-    {
-        prepBuffer();
     }
     
     public synchronized void notifyError(SSHException error)
@@ -141,8 +136,18 @@ public class ChannelOutputStream extends OutputStream implements ErrorNotifiable
         buffer.rpos(5);
         buffer.wpos(5);
         buffer.putMessageID(Message.CHANNEL_DATA);
+        buffer.putInt(0); // meant to be recipient
+        buffer.putInt(0); // meant to be data length        
+    }
+    
+    protected void putRecipientAndLength()
+    {
+        int pos = buffer.wpos();
+        buffer.wpos(6);
         buffer.putInt(chan.getRecipient());
-        buffer.putInt(0); // Dummy value; meant to be the data length that is filled in during flush()        
+        buffer.wpos(10);
+        buffer.putInt(bufferLength);
+        buffer.wpos(pos);
     }
     
 }

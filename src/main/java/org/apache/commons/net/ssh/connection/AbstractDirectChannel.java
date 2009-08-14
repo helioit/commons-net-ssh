@@ -31,27 +31,12 @@ public abstract class AbstractDirectChannel extends AbstractChannel implements C
     protected AbstractDirectChannel(String name, Connection conn)
     {
         super(name, conn);
+        
+        /*
+         * We expect to receive channel open confirmation/rejection and want to be able to handle
+         * this packet.
+         */
         conn.attach(this);
-    }
-    
-    @Override
-    public void gotUnknown(Message cmd, Buffer buf) throws ConnectionException, TransportException
-    {
-        switch (cmd)
-        {
-        
-        case CHANNEL_OPEN_CONFIRMATION:
-            init(buf.getInt(), buf.getInt(), buf.getInt());
-            open.set();
-            break;
-        
-        case CHANNEL_OPEN_FAILURE:
-            open.error(new OpenFailException(type, buf.getInt(), buf.getString()));
-            conn.forget(this);
-            
-        default:
-            super.gotUnknown(cmd, buf);
-        }
     }
     
     public void open() throws ConnectionException, TransportException
@@ -72,6 +57,37 @@ public abstract class AbstractDirectChannel extends AbstractChannel implements C
                                                .putInt(id) //
                                                .putInt(lwin.getSize()) //
                                                .putInt(lwin.getMaxPacketSize());
+    }
+    
+    protected void gotOpenConfirmation(Buffer buf)
+    {
+        init(buf.getInt(), buf.getInt(), buf.getInt());
+        open.set();
+    }
+    
+    protected void gotOpenFailure(Buffer buf)
+    {
+        open.error(new OpenFailException(type, buf.getInt(), buf.getString()));
+        conn.forget(this);
+    }
+    
+    @Override
+    protected void gotUnknown(Message cmd, Buffer buf) throws ConnectionException, TransportException
+    {
+        switch (cmd)
+        {
+        
+        case CHANNEL_OPEN_CONFIRMATION:
+            gotOpenConfirmation(buf);
+            break;
+        
+        case CHANNEL_OPEN_FAILURE:
+            gotOpenFailure(buf);
+            break;
+        
+        default:
+            super.gotUnknown(cmd, buf);
+        }
     }
     
 }

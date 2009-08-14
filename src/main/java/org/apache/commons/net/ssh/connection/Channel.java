@@ -24,7 +24,6 @@ import java.io.OutputStream;
 
 import org.apache.commons.net.ssh.ErrorNotifiable;
 import org.apache.commons.net.ssh.PacketHandler;
-import org.apache.commons.net.ssh.connection.OpenFailException.Reason;
 import org.apache.commons.net.ssh.transport.Transport;
 import org.apache.commons.net.ssh.transport.TransportException;
 
@@ -39,7 +38,16 @@ public interface Channel extends Closeable, PacketHandler, ErrorNotifiable
      */
     interface Direct extends Channel
     {
-        
+        /**
+         * Request opening this channel from remote end.
+         * 
+         * @throws OpenFailException
+         *             in case the channel open request was rejected
+         * @throws ConnectionException
+         *             other connection-layer error
+         * @throws TransportException
+         *             error writing packets etc.
+         */
         void open() throws OpenFailException, ConnectionException, TransportException;
         
     }
@@ -50,13 +58,35 @@ public interface Channel extends Closeable, PacketHandler, ErrorNotifiable
     interface Forwarded extends Channel
     {
         
+        /**
+         * Confirm {@code CHANNEL_OPEN} request.
+         * 
+         * @throws TransportException
+         *             error sending confirmation packet
+         */
         void confirm() throws TransportException;
         
+        /**
+         * Returns the IP of where the forwarded connection originates.
+         */
         String getOriginatorIP();
         
+        /**
+         * Returns port from which the forwarded connection originates.
+         */
         int getOriginatorPort();
         
-        void reject(Reason reason, String message) throws TransportException;
+        /**
+         * Indicate rejection to remote end.
+         * 
+         * @param reason
+         *            indicate {@link OpenFailException.Reason reason} for rejection of the request
+         * @param message
+         *            indicate a message for why the request is rejected
+         * @throws TransportException
+         *             error sending rejection packet
+         */
+        void reject(OpenFailException.Reason reason, String message) throws TransportException;
         
     }
     

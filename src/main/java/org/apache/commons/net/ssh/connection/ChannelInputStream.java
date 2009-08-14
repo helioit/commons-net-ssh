@@ -10,6 +10,9 @@ import org.apache.commons.net.ssh.transport.TransportException;
 import org.apache.commons.net.ssh.util.Buffer;
 
 /**
+ * {@link InputStream} for channels. Can {@link #receive(byte[], int, int) receive} data into its
+ * buffer for serving to readers.
+ * 
  * @author <a href="mailto:dev@mina.apache.org">Apache MINA SSHD Project</a>
  * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
  */
@@ -23,7 +26,7 @@ public class ChannelInputStream extends InputStream implements ErrorNotifiable
     protected boolean eof;
     protected SSHException error;
     
-    public ChannelInputStream(Channel chan, LocalWindow win)
+    protected ChannelInputStream(Channel chan, LocalWindow win)
     {
         this.chan = chan;
         this.win = win;

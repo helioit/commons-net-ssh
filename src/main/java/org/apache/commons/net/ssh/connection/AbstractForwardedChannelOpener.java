@@ -13,10 +13,9 @@ import org.slf4j.LoggerFactory;
 public abstract class AbstractForwardedChannelOpener implements ForwardedChannelOpener
 {
     
-    protected Logger log = LoggerFactory.getLogger(getClass());
+    protected final Logger log = LoggerFactory.getLogger(getClass());
     
     protected final String chanType;
-    
     protected final Connection conn;
     
     protected AbstractForwardedChannelOpener(String chanType, Connection conn)
@@ -25,11 +24,15 @@ public abstract class AbstractForwardedChannelOpener implements ForwardedChannel
         this.conn = conn;
     }
     
+    // Javadoc in interface
     public String getChannelType()
     {
         return chanType;
     }
     
+    /*
+     * Calls the listener with the new channel in a separate thread.
+     */
     protected void callListener(final ConnectListener listener, final Channel.Forwarded chan)
     {
         new Thread()
