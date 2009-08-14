@@ -26,27 +26,71 @@ import org.apache.commons.net.ssh.transport.TransportException;
 import org.apache.commons.net.ssh.util.Buffer;
 
 /**
+ * Handles remote port forwarding.
+ * 
  * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
  */
 public class RemotePortForwarder extends AbstractForwardedChannelOpener
 {
     
+    /**
+     * Represents a particular forwarding. From RFC 4254, s. 7.1
+     * 
+     * <pre>
+     *    The 'address to bind' and 'port number to bind' specify the IP
+     *    address (or domain name) and port on which connections for forwarding
+     *    are to be accepted.  Some strings used for 'address to bind' have
+     *    special-case semantics.
+     * 
+     *    o  &quot;&quot; means that connections are to be accepted on all protocol
+     *       families supported by the SSH implementation.
+     * 
+     *    o  &quot;0.0.0.0&quot; means to listen on all IPv4 addresses.
+     * 
+     *    o  &quot;::&quot; means to listen on all IPv6 addresses.
+     * 
+     *    o  &quot;localhost&quot; means to listen on all protocol families supported by
+     *       the SSH implementation on loopback addresses only ([RFC3330] and
+     *       [RFC3513]).
+     * 
+     *    o  &quot;127.0.0.1&quot; and &quot;::1&quot; indicate listening on the loopback
+     *       interfaces for IPv4 and IPv6, respectively.
+     * </pre>
+     */
     public static final class Forward
     {
         
         private final String address;
         private int port;
         
+        /**
+         * Creates this forward with address as {@code ""} and specified {@code port}.
+         * 
+         * @param port
+         */
         public Forward(int port)
         {
             this("", port);
         }
         
+        /**
+         * Creates this forward with specified {@code address} and port as {@code 0}.
+         * 
+         * @param address
+         */
         public Forward(String address)
         {
             this(address, 0);
         }
         
+        /**
+         * Creates this forward with specified {@code address} and {@code port} number.
+         * 
+         * @param address
+         *            address to bind
+         * @param port
+         *            port number
+         */
         public Forward(String address, int port)
         {
             this.address = address;
@@ -62,11 +106,17 @@ public class RemotePortForwarder extends AbstractForwardedChannelOpener
             return address.equals(other.address) && port == other.port;
         }
         
+        /**
+         * Returns the address represented by this forward.
+         */
         public String getAddress()
         {
             return address;
         }
         
+        /**
+         * Returns the port represented by this forward.
+         */
         public int getPort()
         {
             return port;
@@ -86,6 +136,9 @@ public class RemotePortForwarder extends AbstractForwardedChannelOpener
         
     }
     
+    /**
+     * A {@code forwarded-tcpip} channel.
+     */
     public static class ForwardedTCPIPChannel extends AbstractForwardedChannel
     {
         
@@ -100,6 +153,9 @@ public class RemotePortForwarder extends AbstractForwardedChannelOpener
             this.fwd = fwd;
         }
         
+        /**
+         * Returns the forwarding from which this channel originates.
+         */
         public Forward getParentForward()
         {
             return fwd;
@@ -118,13 +174,19 @@ public class RemotePortForwarder extends AbstractForwardedChannelOpener
     }
     
     /**
-     * Request forwarding from the remote host on specified
+     * Request forwarding from the remote host on the specified {@link Forward}. Forwarded
+     * connections will be handled by supplied {@code listener}.
+     * <p>
+     * If {@code forward} specifies as 0, the returned forward will have the correct port number as
+     * informed by remote host.
      * 
      * @param forward
+     *            the {@link Forward} to put in place on remote host
      * @param listener
-     * @return
+     *            the listener which will handle forwarded connection
+     * @return the {@link Forward} which was put into place on the remote host
      * @throws ConnectionException
-     * @throws TransportException
+     *             if there is an error requesting the forwarding
      */
     public Forward bind(Forward forward, ConnectListener listener) throws ConnectionException, TransportException
     {
@@ -138,10 +200,11 @@ public class RemotePortForwarder extends AbstractForwardedChannelOpener
         listeners.put(forward, listener);
         
         /*
-         * Connection should forward us "forwarded-tcpip" channels
+         * Make sure we actually get the CHANNEL_OPEN packets of 'forwarded-tcpip' type
          */
         if (listeners.isEmpty())
             if (conn.get(getChannelType()) != null && conn.get(getChannelType()) != this)
+                // Some other opener was already attached for 'forwarded-tcpip'
                 throw new AssertionError("Singleton constraint violated");
             else
                 conn.attach(this);
@@ -150,31 +213,39 @@ public class RemotePortForwarder extends AbstractForwardedChannelOpener
     }
     
     /**
-     * Cancel the forwarding for some {@link Forward}
+     * Request cancellation of some forwarding.
      * 
-     * @param fwd
-     * @throws TransportException
+     * @param forward
+     *            the forward which is being cancelled
      * @throws ConnectionException
+     *             if there is an error with the cancellation request
      */
-    public void cancel(Forward fwd) throws TransportException, ConnectionException
+    public void cancel(Forward forward) throws ConnectionException, TransportException
     {
         try {
             conn.sendGlobalRequest(PF_CANCEL, true, new Buffer() //
-                                                                .putString(fwd.address) //
-                                                                .putInt(fwd.port)) //
+                                                                .putString(forward.address) //
+                                                                .putInt(forward.port)) //
                 .get(conn.getTimeout());
         } finally {
-            listeners.remove(fwd);
+            listeners.remove(forward);
             if (listeners.isEmpty())
                 conn.forget(this);
         }
     }
     
+    /**
+     * Returns the active forwards.
+     */
     public Set<Forward> getActiveForwards()
     {
         return listeners.keySet();
     }
     
+    /**
+     * Internal API. Creates a {@link ForwardedTCPIPChannel} from the {@code CHANNEL_OPEN} request
+     * and calls associated {@code ConnectListener} for that forward in a separate thread.
+     */
     public void handleOpen(Buffer buf) throws ConnectionException, TransportException
     {
         ForwardedTCPIPChannel chan = new ForwardedTCPIPChannel(conn, buf.getInt(), buf.getInt(), buf.getInt(), //
@@ -183,8 +254,8 @@ public class RemotePortForwarder extends AbstractForwardedChannelOpener
         if (listeners.containsKey(chan.getParentForward()))
             callListener(listeners.get(chan.getParentForward()), chan);
         else
-            chan.reject(OpenFailException.Reason.ADMINISTRATIVELY_PROHIBITED, "Forwarding was not requested on ["
-                    + chan.getParentForward() + "]");
+            chan.reject(OpenFailException.Reason.ADMINISTRATIVELY_PROHIBITED, "Forwarding was not requested on `"
+                    + chan.getParentForward() + "`");
     }
     
 }

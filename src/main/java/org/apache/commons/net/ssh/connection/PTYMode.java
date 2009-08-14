@@ -24,6 +24,8 @@ import java.util.Map.Entry;
 import org.apache.commons.net.ssh.util.Buffer;
 
 /**
+ * Various modes for a psuedo-terminal.
+ * 
  * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
  */
 public enum PTYMode

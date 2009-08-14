@@ -22,7 +22,8 @@ import org.apache.commons.net.ssh.transport.TransportException;
 import org.apache.commons.net.ssh.util.Buffer;
 
 /**
- * A {@link ForwardedChannelOpener} for {@code x11} channels.
+ * Handles forwarded {@code x11} channels. The actual request to forward X11 should be made from the
+ * specific {@link Session}.
  * 
  * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
  */
