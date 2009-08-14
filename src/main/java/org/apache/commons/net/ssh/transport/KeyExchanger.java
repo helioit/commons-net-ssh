@@ -257,14 +257,14 @@ public final class KeyExchanger implements PacketHandler, ErrorNotifiable
     private String[] createProposal()
     {
         return new String[] { //
-        Factory.Util.getNames(transport.getConfig().getKeyExchangeFactories()), // PROP_KEX_ALG 
-                Factory.Util.getNames(transport.getConfig().getSignatureFactories()), // PROP_SRVR_HOST_KEY_ALG
-                Factory.Util.getNames(transport.getConfig().getCipherFactories()), // PROP_ENC_ALG_C2S
-                Factory.Util.getNames(transport.getConfig().getCipherFactories()), // PROP_ENC_ALG_S2C
-                Factory.Util.getNames(transport.getConfig().getMACFactories()), // PROP_MAC_ALG_C2S
-                Factory.Util.getNames(transport.getConfig().getMACFactories()), // PROP_MAC_ALG_S2C
-                Factory.Util.getNames(transport.getConfig().getCompressionFactories()), // PROP_MAC_ALG_C2S
-                Factory.Util.getNames(transport.getConfig().getCompressionFactories()), // PROP_COMP_ALG_S2C
+        Factory.Named.Util.getNames(transport.getConfig().getKeyExchangeFactories()), // PROP_KEX_ALG 
+                Factory.Named.Util.getNames(transport.getConfig().getSignatureFactories()), // PROP_SRVR_HOST_KEY_ALG
+                Factory.Named.Util.getNames(transport.getConfig().getCipherFactories()), // PROP_ENC_ALG_C2S
+                Factory.Named.Util.getNames(transport.getConfig().getCipherFactories()), // PROP_ENC_ALG_S2C
+                Factory.Named.Util.getNames(transport.getConfig().getMACFactories()), // PROP_MAC_ALG_C2S
+                Factory.Named.Util.getNames(transport.getConfig().getMACFactories()), // PROP_MAC_ALG_S2C
+                Factory.Named.Util.getNames(transport.getConfig().getCompressionFactories()), // PROP_MAC_ALG_C2S
+                Factory.Named.Util.getNames(transport.getConfig().getCompressionFactories()), // PROP_COMP_ALG_S2C
                 "", // PROP_LANG_C2S (optional, thus empty string) 
                 "" // PROP_LANG_S2C (optional, thus empty string) 
         };
@@ -302,7 +302,7 @@ public final class KeyExchanger implements PacketHandler, ErrorNotifiable
     {
         extractProposal(buf);
         negotiate();
-        kex = Factory.Util.create(transport.getConfig().getKeyExchangeFactories(), negotiated[PROP_KEX_ALG]);
+        kex = Factory.Named.Util.create(transport.getConfig().getKeyExchangeFactories(), negotiated[PROP_KEX_ALG]);
         kex.init(transport, transport.getServerID().getBytes(), transport.getClientID().getBytes(), I_S, I_C);
     }
     
@@ -366,22 +366,26 @@ public final class KeyExchanger implements PacketHandler, ErrorNotifiable
         hash.update(buf, 0, pos);
         MACs2c = hash.digest();
         
-        s2ccipher = Factory.Util.create(transport.getConfig().getCipherFactories(), negotiated[PROP_ENC_ALG_S2C]);
+        s2ccipher = Factory.Named.Util.create(transport.getConfig().getCipherFactories(), negotiated[PROP_ENC_ALG_S2C]);
         Es2c = resizeKey(Es2c, s2ccipher.getBlockSize(), hash, K, H);
         s2ccipher.init(Cipher.Mode.Decrypt, Es2c, IVs2c);
         
-        s2cmac = Factory.Util.create(transport.getConfig().getMACFactories(), negotiated[PROP_MAC_ALG_S2C]);
+        s2cmac = Factory.Named.Util.create(transport.getConfig().getMACFactories(), negotiated[PROP_MAC_ALG_S2C]);
         s2cmac.init(MACs2c);
         
-        c2scipher = Factory.Util.create(transport.getConfig().getCipherFactories(), negotiated[PROP_ENC_ALG_C2S]);
+        c2scipher = Factory.Named.Util.create(transport.getConfig().getCipherFactories(), negotiated[PROP_ENC_ALG_C2S]);
         Ec2s = resizeKey(Ec2s, c2scipher.getBlockSize(), hash, K, H);
         c2scipher.init(Cipher.Mode.Encrypt, Ec2s, IVc2s);
         
-        c2smac = Factory.Util.create(transport.getConfig().getMACFactories(), negotiated[PROP_MAC_ALG_C2S]);
+        c2smac = Factory.Named.Util.create(transport.getConfig().getMACFactories(), negotiated[PROP_MAC_ALG_C2S]);
         c2smac.init(MACc2s);
         
-        s2ccomp = Factory.Util.create(transport.getConfig().getCompressionFactories(), negotiated[PROP_COMP_ALG_S2C]);
-        c2scomp = Factory.Util.create(transport.getConfig().getCompressionFactories(), negotiated[PROP_COMP_ALG_C2S]);
+        s2ccomp =
+                Factory.Named.Util.create(transport.getConfig().getCompressionFactories(),
+                                          negotiated[PROP_COMP_ALG_S2C]);
+        c2scomp =
+                Factory.Named.Util.create(transport.getConfig().getCompressionFactories(),
+                                          negotiated[PROP_COMP_ALG_C2S]);
         
         transport.setClientToServerAlgorithms(c2scipher, c2smac, c2scomp);
         transport.setServerToClientAlgorithms(s2ccipher, s2cmac, s2ccomp);

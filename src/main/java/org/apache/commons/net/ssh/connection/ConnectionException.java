@@ -23,6 +23,8 @@ import org.apache.commons.net.ssh.util.FriendlyChainer;
 import org.apache.commons.net.ssh.util.Constants.DisconnectReason;
 
 /**
+ * Connection-layer exception.
+ * 
  * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
  */
 public class ConnectionException extends SSHException

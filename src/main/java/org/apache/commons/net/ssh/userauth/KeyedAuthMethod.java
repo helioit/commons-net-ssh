@@ -49,7 +49,7 @@ public abstract class KeyedAuthMethod extends AbstractAuthMethod
         }
         
         String kt = KeyType.fromKey(key).toString();
-        Signature sigger = Factory.Util.create(params.getTransport().getConfig().getSignatureFactories(), kt);
+        Signature sigger = Factory.Named.Util.create(params.getTransport().getConfig().getSignatureFactories(), kt);
         if (sigger == null)
             throw new UserAuthException("Could not create signature instance for " + kt + " key");
         

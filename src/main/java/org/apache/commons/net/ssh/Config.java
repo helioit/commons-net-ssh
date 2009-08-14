@@ -21,7 +21,6 @@ package org.apache.commons.net.ssh;
 import java.util.Arrays;
 import java.util.List;
 
-import org.apache.commons.net.ssh.Factory.Named;
 import org.apache.commons.net.ssh.cipher.Cipher;
 import org.apache.commons.net.ssh.compression.Compression;
 import org.apache.commons.net.ssh.kex.KeyExchange;
@@ -33,10 +32,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Holds configuration information, implementations of core classes, and factories.
+ * Holds configuration information and factories.
  * <p>
- * This is a container for {@link Named} implementations of {@link KeyExchange}, {@link Cipher},
- * {@link Compression}, {@link MAC}, {@link Signature}, {@link Random}, and {@link FileKeyProvider}.
+ * This is a container for {@link Factory.Named named factory} implementations of
+ * {@link KeyExchange}, {@link Cipher}, {@link Compression}, {@link MAC}, {@link Signature},
+ * {@link Random}, and {@link FileKeyProvider}.
  * 
  * @author <a href="mailto:dev@mina.apache.org">Apache MINA SSHD Project</a>
  * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>

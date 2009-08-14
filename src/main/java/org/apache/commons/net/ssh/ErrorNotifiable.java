@@ -19,17 +19,26 @@
 package org.apache.commons.net.ssh;
 
 /**
+ * Internal API for classes that are capable of being notified on an error so they can cleanup.
+ * 
  * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
  */
 public interface ErrorNotifiable
 {
     
+    /**
+     * Utility functions for ease-of-dealing with {@link ErrorNotifiable}'s.
+     */
     class Util
     {
+        /**
+         * Notify all of {@link ErrorNotifiable notifiables} of given {@code error}.
+         */
         public static void alertAll(SSHException error, Object... notifiables)
-        {
+        { // Object... because the Java type system is unnecessarily complicated.
             for (Object notifiable : notifiables)
-                ((ErrorNotifiable) notifiable).notifyError(error);
+                if (notifiable instanceof ErrorNotifiable)
+                    ((ErrorNotifiable) notifiable).notifyError(error);
         }
     }
     

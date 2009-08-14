@@ -21,6 +21,11 @@ package org.apache.commons.net.ssh;
 import java.util.List;
 
 /**
+ * A basic factory interface.
+ * 
+ * @param <T>
+ *            the type of instances created by this factory
+ * 
  * @author <a href="mailto:dev@mina.apache.org">Apache MINA SSHD Project</a>
  * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
  */
@@ -32,104 +37,104 @@ public interface Factory<T>
      * algorithm negotiation at the beginning of the SSH connection.
      * 
      * @param <T>
-     * 
-     * @author <a href="mailto:dev@mina.apache.org">Apache MINA SSHD Project</a>
+     *            type of object created by this factory
      */
     interface Named<T> extends Factory<T>
     {
         
         /**
+         * Utility functions for ease-of-dealing with named factories..
+         */
+        public static class Util
+        {
+            
+            /**
+             * Create an instance of the specified name by looking up the needed factory in the
+             * list.
+             * 
+             * @param factories
+             *            list of available factories
+             * @param name
+             *            the factory name to use
+             * @param <T>
+             *            type of object to create
+             * @return a newly created object or <code>null</code> if the factory is not in the list
+             */
+            public static <T> T create(List<Named<T>> factories, String name)
+            {
+                if (factories != null)
+                    for (Named<T> f : factories)
+                        if (f.getName().equals(name))
+                            return f.create();
+                return null;
+            }
+            
+            /**
+             * Retrieve the factory identified by its name from the list.
+             * 
+             * @param factories
+             *            list of available factories
+             * @param name
+             *            the name of the factory to retrieve
+             * @param <T>
+             *            type of object created by the factories
+             * @return a factory or <code>null</code> if not found in the list
+             */
+            public static <T> Named<T> get(List<Named<T>> factories, String name)
+            {
+                for (Named<T> f : factories)
+                    if (f.getName().equals(name))
+                        return f;
+                return null;
+            }
+            
+            /**
+             * Get a comma separated list of the factory names from the given list.
+             * 
+             * @param factories
+             *            list of available factories
+             * @param <T>
+             *            type of object to create
+             * @return a comma separated list of factory names
+             */
+            public static <T> String getNames(List<Named<T>> factories)
+            {
+                StringBuffer sb = new StringBuffer();
+                for (Named<T> f : factories) {
+                    if (sb.length() > 0)
+                        sb.append(",");
+                    sb.append(f.getName());
+                }
+                return sb.toString();
+            }
+            
+            /**
+             * Remove the factory identified by the name from the list.
+             * 
+             * @param factories
+             *            list of factories
+             * @param name
+             *            the name of the factory to remove
+             * @param <T>
+             *            type of object to create
+             * @return the factory removed from the list or <code>null</code> if not in the list
+             */
+            public static <T> Named<T> remove(List<Named<T>> factories, String name)
+            {
+                for (Named<T> f : factories)
+                    if (f.getName().equals(name)) {
+                        factories.remove(f);
+                        return f;
+                    }
+                return null;
+            }
+            
+        }
+        
+        /**
          * Name of this factory
          */
         String getName();
-        
-    }
-    
-    /**
-     * Utility class to help using NamedFactories
-     */
-    public static class Util
-    {
-        
-        /**
-         * Create an instance of the specified name by looking up the needed factory in the list.
-         * 
-         * @param factories
-         *            list of available factories
-         * @param name
-         *            the factory name to use
-         * @param <T>
-         *            type of object to create
-         * @return a newly created object or <code>null</code> if the factory is not in the list
-         */
-        public static <T> T create(List<Named<T>> factories, String name)
-        {
-            if (factories != null)
-                for (Named<T> f : factories)
-                    if (f.getName().equals(name))
-                        return f.create();
-            return null;
-        }
-        
-        /**
-         * Retrieve the factory identified by its name from the list.
-         * 
-         * @param factories
-         *            list of available factories
-         * @param name
-         *            the name of the factory to retrieve
-         * @param <T>
-         *            type of object create by the factories
-         * @return a factory or <code>null</code> if not found in the list
-         */
-        public static <T> Named<T> get(List<Named<T>> factories, String name)
-        {
-            for (Named<T> f : factories)
-                if (f.getName().equals(name))
-                    return f;
-            return null;
-        }
-        
-        /**
-         * Get a comma separated list of the factory names from the given list.
-         * 
-         * @param factories
-         *            list of available factories
-         * @param <T>
-         *            type of object to create
-         * @return a comma separated list of factory names
-         */
-        public static <T> String getNames(List<Named<T>> factories)
-        {
-            StringBuffer sb = new StringBuffer();
-            for (Named<T> f : factories) {
-                if (sb.length() > 0)
-                    sb.append(",");
-                sb.append(f.getName());
-            }
-            return sb.toString();
-        }
-        
-        /**
-         * Remove the factory identified by the name from the list.
-         * 
-         * @param factories
-         *            list of factories
-         * @param name
-         *            the name of the factory to remove
-         * @param <T>
-         *            type of object to create
-         * @return the factory removed from the list or <code>null</code> if not in the list
-         */
-        public static <T> Named<T> remove(List<Named<T>> factories, String name)
-        {
-            for (Named<T> f : factories)
-                if (f.getName().equals(name)) {
-                    factories.remove(f);
-                    return f;
-                }
-            return null;
-        }
         
     }
     

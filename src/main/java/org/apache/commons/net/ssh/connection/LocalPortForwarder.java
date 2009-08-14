@@ -125,6 +125,9 @@ public class LocalPortForwarder
         };
     
     /**
+     * Create a local port forwarder with specified binding ({@code listeningAddr}. It does not,
+     * however, start listening unless {@link #startListening() explicitly told to}.
+     * 
      * @param conn
      *            {@link Connection} implementation
      * @param listeningAddr
@@ -135,6 +138,7 @@ public class LocalPortForwarder
      * @param port
      *            port on {@code toHost}
      * @throws IOException
+     *             if there is an error binding on specified {@code listeningAddr}
      */
     public LocalPortForwarder(Connection conn, SocketAddress listeningAddr, String host, int port) throws IOException
     {
@@ -144,6 +148,7 @@ public class LocalPortForwarder
         this.ss = new ServerSocket();
         ss.setReceiveBufferSize(conn.getMaxPacketSize());
         ss.bind(listeningAddr);
+        startListening();
     }
     
     public SocketAddress getListeningAddress()
@@ -151,11 +156,18 @@ public class LocalPortForwarder
         return ss.getLocalSocketAddress();
     }
     
+    /**
+     * Spawns a daemon thread for listening for incoming connections and forwarding to remote host
+     * as a channel.
+     */
     public void startListening()
     {
         listener.start();
     }
     
+    /**
+     * Stop this port forwarding.
+     */
     public void stopListening()
     {
         listener.interrupt();

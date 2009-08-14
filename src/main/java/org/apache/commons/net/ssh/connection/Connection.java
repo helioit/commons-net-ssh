@@ -18,7 +18,6 @@
  */
 package org.apache.commons.net.ssh.connection;
 
-import org.apache.commons.net.ssh.connection.OpenFailException.Reason;
 import org.apache.commons.net.ssh.transport.Transport;
 import org.apache.commons.net.ssh.transport.TransportException;
 import org.apache.commons.net.ssh.util.Buffer;
@@ -118,13 +117,14 @@ public interface Connection
     int nextID();
     
     /**
+     * Send a {@code SSH_MSG_OPEN_FAILURE} for specified {@code Reason} and {@code message}.
      * 
      * @param recipient
      * @param reason
      * @param message
      * @throws TransportException
      */
-    void sendOpenFailure(int recipient, Reason reason, String message) throws TransportException;
+    void sendOpenFailure(int recipient, OpenFailException.Reason reason, String message) throws TransportException;
     
     /**
      * Set the maximum packet size for the local window this connection recommends to any

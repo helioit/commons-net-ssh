@@ -24,6 +24,10 @@ import org.apache.commons.net.ssh.util.FriendlyChainer;
 import org.apache.commons.net.ssh.util.Constants.DisconnectReason;
 
 /**
+ * Most exceptions in {@code org.apache.commons.net.ssh} are instances of this class. An
+ * {@link SSHException} is itself an {@link IOException} and can be caught like that if this level
+ * of granularity is not desired.
+ * 
  * @author <a href="mailto:dev@mina.apache.org">Apache MINA SSHD Project</a>
  * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
  */

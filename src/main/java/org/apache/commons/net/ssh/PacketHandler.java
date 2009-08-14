@@ -29,11 +29,14 @@ import org.apache.commons.net.ssh.util.Constants.Message;
 public interface PacketHandler
 {
     /**
+     * Delegate handling of some SSH packet to this instance.
+     * 
      * @param msg
      *            the SSH {@link Message message identifier}
      * @param buf
      *            {@link Buffer} containing rest of the request
      * @throws SSHException
+     *             if the handler so feels appropriate
      */
     void handle(Message msg, Buffer buf) throws SSHException;
 }

@@ -28,18 +28,17 @@ public interface ForwardedChannelOpener
 {
     
     /**
-     * The name of the channel type this opener can handle.
-     * 
-     * @return channel type
+     * Returns the name of the channel type this opener can handle.
      */
     String getChannelType();
     
     /**
+     * {@code CHANNEL_OPEN} requests for the channel type claimed by this opener are delegated to
+     * it.
      * 
      * @param buf
-     *            {@link Buffer} containg the request except for the message identifier field
-     * @throws ConnectionException
-     * @throws TransportException
+     *            {@link Buffer} containg the request except for the message identifier and channel
+     *            type field
      */
     void handleOpen(Buffer buf) throws ConnectionException, TransportException;
     

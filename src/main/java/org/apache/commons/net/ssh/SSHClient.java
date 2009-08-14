@@ -637,7 +637,8 @@ public class SSHClient extends SocketClient
     public KeyProvider loadKeys(String location, PasswordFinder passwordFinder) throws IOException
     {
         FileKeyProvider.Format format = SecurityUtils.detectKeyFileFormat(location);
-        FileKeyProvider fkp = Factory.Util.create(trans.getConfig().getFileKeyProviderFactories(), format.toString());
+        FileKeyProvider fkp =
+                Factory.Named.Util.create(trans.getConfig().getFileKeyProviderFactories(), format.toString());
         if (fkp == null)
             throw new SSHException("No provider available for " + format + " key file");
         fkp.init(location, passwordFinder);

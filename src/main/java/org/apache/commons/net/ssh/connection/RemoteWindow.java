@@ -19,6 +19,8 @@
 package org.apache.commons.net.ssh.connection;
 
 /**
+ * Controls how much data we can send before an adjustment notification from remote end is required.
+ * 
  * @author <a href="mailto:dev@mina.apache.org">Apache MINA SSHD Project</a>
  * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
  */

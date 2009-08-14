@@ -36,6 +36,8 @@ import org.apache.commons.net.ssh.util.Constants.DisconnectReason;
 import org.apache.commons.net.ssh.util.Constants.Message;
 
 /**
+ * {@link Connection} implementation.
+ * 
  * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
  */
 public class ConnectionProtocol extends AbstractService implements Connection
@@ -54,6 +56,9 @@ public class ConnectionProtocol extends AbstractService implements Connection
     protected int windowSize = 2048 * 1024;
     protected int maxPacketSize = 32 * 1024;
     
+    /**
+     * Create with an associated {@link Transport}.
+     */
     public ConnectionProtocol(Transport trans)
     {
         super("ssh-connection", trans);
@@ -149,11 +154,6 @@ public class ConnectionProtocol extends AbstractService implements Connection
         ErrorNotifiable.Util.alertAll(error, channels.values().toArray());
         globalReqs.clear();
         channels.clear();
-    }
-    
-    public void notifyUnimplemented(int seqNum) throws ConnectionException
-    {
-        throw new ConnectionException("Unexpected SSH_MSG_UNIMPLEMENTED");
     }
     
     public synchronized Future<Buffer, ConnectionException> sendGlobalRequest(String name, boolean wantReply,
