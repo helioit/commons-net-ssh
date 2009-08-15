@@ -19,21 +19,21 @@ class RudimentaryPTY
         SSHClient client = new SSHClient();
         client.initUserKnownHosts();
         client.connect("localhost");
-        Session session = null;
         try {
             
             client.authPublickey(System.getProperty("user.name"));
             
-            session = client.startSession();
+            Session session = client.startSession();
             session.allocateDefaultPTY();
+            
             Shell shell = session.startShell();
             
             new Pipe("stdout", shell.getInputStream(), System.out) //
-                                                                  .bufSize(session.getLocalMaxPacketSize()) //
+                                                                  .bufSize(shell.getLocalMaxPacketSize()) //
                                                                   .start();
             
             new Pipe("stderr", shell.getErrorStream(), System.err) //
-                                                                  .bufSize(session.getLocalMaxPacketSize()) //
+                                                                  .bufSize(shell.getLocalMaxPacketSize()) //
                                                                   .start();
             
             // Now make System.in act as stdin. To exit, hit Ctrl+D (since that results in an EOF on System.in)
@@ -41,11 +41,9 @@ class RudimentaryPTY
             // This is kinda messy because java only allows console input after you hit return
             // But this is just an example... a GUI app could implement a proper PTY
             
-            Pipe.pipe(System.in, shell.getOutputStream(), session.getRemoteMaxPacketSize(), true);
+            Pipe.pipe(System.in, shell.getOutputStream(), shell.getRemoteMaxPacketSize(), true);
             
         } finally {
-            if (session != null)
-                session.close();
             client.disconnect();
         }
     }

@@ -21,9 +21,7 @@ package org.apache.commons.net.ssh.transport;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.net.InetAddress;
 import java.net.Socket;
-import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.commons.net.ssh.AbstractService;
 import org.apache.commons.net.ssh.Config;
@@ -112,7 +110,7 @@ public final class TransportProtocol implements Transport
     /** For decoding packets */
     private final Decoder decoder;
     
-    /** Message identifier for last packet received */
+    /** Message identifier of last packet received */
     private Message msg;
     
     /** Client version identification string */
@@ -121,12 +119,17 @@ public final class TransportProtocol implements Transport
     /** Server version identification string */
     private String serverID;
     
-    private final ReentrantLock lock = new ReentrantLock();
-    private final Event<TransportException> serviceAccept = newEvent("service accept");
-    private final Event<TransportException> close = newEvent("transport close");
+    private final Event<TransportException> serviceAccept =
+            new Event<TransportException>("service accept", TransportException.chainer);
+    
+    private final Event<TransportException> close =
+            new Event<TransportException>("transport close", TransportException.chainer);
     
     private volatile int timeout = 30;
+    
     private volatile boolean authed;
+    
+    private String hostname;
     
     public TransportProtocol(Config config)
     {
@@ -150,14 +153,15 @@ public final class TransportProtocol implements Transport
     
     public void disconnect(DisconnectReason reason, String message)
     {
-        lock.lock();
+        close.lock();
         try {
             if (!close.isSet()) {
                 sendDisconnect(reason, message);
                 finishOff();
+                close.set();
             }
         } finally {
-            lock.unlock();
+            close.unlock();
         }
     }
     
@@ -176,9 +180,9 @@ public final class TransportProtocol implements Transport
         return kexer;
     }
     
-    public InetAddress getRemoteHost()
+    public String getRemoteHost()
     {
-        return socket.getInetAddress();
+        return hostname;
     }
     
     public int getRemotePort()
@@ -268,10 +272,13 @@ public final class TransportProtocol implements Transport
             }
     }
     
-    public void init(Socket socket) throws TransportException
+    public void init(String hostname, Socket socket) throws TransportException
     {
+        this.hostname = hostname == null ? socket.getInetAddress().getHostName() : hostname;
+        this.socket = socket;
+        
         try {
-            this.socket = socket;
+            
             input = socket.getInputStream();
             output = socket.getOutputStream();
             
@@ -282,6 +289,7 @@ public final class TransportProtocol implements Transport
             Buffer buf = new Buffer();
             while ((serverID = readIdentification(buf)) == null)
                 buf.putByte((byte) input.read());
+            
             log.info("Server identity string: {}", serverID);
             
         } catch (IOException e) {
@@ -308,15 +316,10 @@ public final class TransportProtocol implements Transport
     
     public synchronized void reqService(Service service) throws TransportException
     {
-        lock.lock();
-        try {
-            serviceAccept.clear();
-            sendServiceRequest(service.getName());
-            serviceAccept.await(timeout);
-            setService(service);
-        } finally {
-            lock.unlock();
-        }
+        serviceAccept.clear();
+        sendServiceRequest(service.getName());
+        serviceAccept.await(timeout);
+        setService(service);
     }
     
     public long sendUnimplemented() throws TransportException
@@ -373,7 +376,7 @@ public final class TransportProtocol implements Transport
     
     private void die(Exception ex)
     {
-        lock.lock();
+        close.lock();
         try {
             if (!close.isSet()) {
                 
@@ -393,17 +396,26 @@ public final class TransportProtocol implements Transport
                 }
                 
                 finishOff();
+                
+                close.set();
             }
         } finally {
-            lock.unlock();
+            close.unlock();
         }
     }
     
     private void finishOff()
     {
-        shutdownInput();
-        shutdownOutput();
-        close.set();
+        dispatcher.interrupt();
+        try {
+            socket.shutdownInput();
+        } catch (IOException ignore) {
+        }
+        
+        try {
+            socket.shutdownOutput();
+        } catch (IOException ignore) {
+        }
     }
     
     private void gotDebug(Buffer buf)
@@ -442,11 +454,6 @@ public final class TransportProtocol implements Transport
         if (kexer.isKexOngoing())
             throw new TransportException("Received SSH_MSG_UNIMPLEMENTED while exchanging keys");
         getService().notifyUnimplemented(seqNum);
-    }
-    
-    private Event<TransportException> newEvent(String name)
-    {
-        return new Event<TransportException>(name, TransportException.chainer, lock);
     }
     
     /**
@@ -530,23 +537,6 @@ public final class TransportProtocol implements Transport
     {
         log.debug("Sending SSH_MSG_SERVICE_REQUEST for {}", serviceName);
         writePacket(new Buffer(Message.SERVICE_REQUEST).putString(serviceName));
-    }
-    
-    private void shutdownInput()
-    {
-        dispatcher.interrupt();
-        try {
-            socket.shutdownInput();
-        } catch (IOException ignore) {
-        }
-    }
-    
-    private void shutdownOutput()
-    {
-        try {
-            socket.shutdownOutput();
-        } catch (IOException ignore) {
-        }
     }
     
     String getClientID()

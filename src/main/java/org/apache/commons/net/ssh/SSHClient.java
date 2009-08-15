@@ -20,7 +20,9 @@ package org.apache.commons.net.ssh;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.InetAddress;
 import java.net.SocketAddress;
+import java.net.SocketException;
 import java.security.KeyPair;
 import java.util.Arrays;
 import java.util.Iterator;
@@ -97,13 +99,15 @@ import org.slf4j.LoggerFactory;
  * User authentication can be performed by any of the {@code auth*()} methods.
  * <p>
  * {@link #startSession()} caters to the most typical use case of starting a {@code session} channel
- * and executing remote commands, starting a subsystem, etc. {@link #newLocalPortForwarder} and
- * {@link #getRemotePortForwarder()} allow to start local and remote port forwarding, respectively.
+ * and executing remote commands, starting a subsystem, etc. If you wish to request X11 forwarding
+ * for some session, first {@link #registerX11Forwarder(ConnectListener) register} a
+ * {@link ConnectListener} for {@code x11} channels.
  * <p>
- * For SCP, see the {@link SCPDownloadClient} and {@link SCPUploadClient} which require a connected
- * {@link SSHClient}.
- * 
- * <em>Example:</em>
+ * {@link #newLocalPortForwarder Local} and {@link #getRemotePortForwarder() remote} port forwarding
+ * is possible. For SCP, see the {@link SCPDownloadClient} and {@link SCPUploadClient} which require
+ * a connected {@link SSHClient}.
+ * <p>
+ * <em>A simple example:</em>
  * <p>
  * 
  * <pre>
@@ -123,6 +127,8 @@ import org.slf4j.LoggerFactory;
  */
 public class SSHClient extends SocketClient
 {
+    
+    protected String hostname;
     
     /**
      * Default port for SSH
@@ -219,7 +225,9 @@ public class SSHClient extends SocketClient
     }
     
     protected final Transport trans;
+    
     protected final UserAuth auth;
+    
     protected final Connection conn;
     
     /**
@@ -436,6 +444,28 @@ public class SSHClient extends SocketClient
             } catch (IOException ignore) {
             }
         authPublickey(username, keyProviders);
+    }
+    
+    @Override
+    public void connect(String hostname) throws SocketException, IOException
+    {
+        this.hostname = hostname;
+        super.connect(hostname);
+    }
+    
+    @Override
+    public void connect(String hostname, int port) throws SocketException, IOException
+    {
+        this.hostname = hostname;
+        super.connect(hostname, port);
+    }
+    
+    @Override
+    public void connect(String hostname, int port, InetAddress localAddr, int localPort) throws SocketException,
+            IOException
+    {
+        this.hostname = hostname;
+        super.connect(hostname, port, localAddr, localPort);
     }
     
     /**
@@ -770,7 +800,7 @@ public class SSHClient extends SocketClient
     protected void _connectAction_() throws IOException
     {
         super._connectAction_();
-        trans.init(_socket_);
+        trans.init(hostname, _socket_);
         doKex();
     }
     

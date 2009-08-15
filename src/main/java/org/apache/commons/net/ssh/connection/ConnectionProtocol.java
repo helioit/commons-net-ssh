@@ -167,8 +167,7 @@ public class ConnectionProtocol extends AbstractService implements Connection
         
         Future<Buffer, ConnectionException> future = null;
         if (wantReply) {
-            future =
-                    new Future<Buffer, ConnectionException>("global req for " + name, ConnectionException.chainer, null);
+            future = new Future<Buffer, ConnectionException>("global req for " + name, ConnectionException.chainer);
             globalReqs.add(future);
         }
         return future;

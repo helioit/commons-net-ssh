@@ -24,10 +24,6 @@ import java.security.PublicKey;
 
 import org.apache.commons.net.ssh.util.Constants.KeyType;
 
-/*
- * SSHAgentKeyProvider using JUDS <http://code.google.com/p/juds/> ??
- */
-
 /**
  * 
  * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>

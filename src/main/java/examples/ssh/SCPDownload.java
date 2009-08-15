@@ -19,6 +19,7 @@ public class SCPDownload
         ssh.initUserKnownHosts();
         ssh.connect("localhost");
         try {
+            
             ssh.authPublickey(System.getProperty("user.name"));
             
             // Compression = significant speedup for large file transfers on fast links
@@ -26,6 +27,7 @@ public class SCPDownload
             ssh.useCompression();
             
             new SCPDownloadClient(ssh).copy("ten", "/tmp");
+            
         } finally {
             ssh.disconnect();
         }

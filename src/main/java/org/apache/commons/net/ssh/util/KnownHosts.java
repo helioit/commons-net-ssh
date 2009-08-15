@@ -155,6 +155,7 @@ public class KnownHosts implements HostKeyVerifier
     }
     
     private final Logger log = LoggerFactory.getLogger(getClass());
+    
     private final List<Entry> entries = new LinkedList<Entry>();
     
     /**
@@ -170,7 +171,7 @@ public class KnownHosts implements HostKeyVerifier
         BufferedReader br = new BufferedReader(new FileReader(location));
         String line;
         try {
-            // read in the file, storing each line as an entry
+            // Read in the file, storing each line as an entry
             while ((line = br.readLine()) != null)
                 try {
                     entries.add(new Entry(line));
@@ -183,13 +184,9 @@ public class KnownHosts implements HostKeyVerifier
         }
     }
     
-    public List<Entry> getEntries()
-    {
-        return Collections.unmodifiableList(entries);
-    }
-    
     /**
-     * Checks whether the specified host is known per the contents of the {@code known_hosts} file.
+     * Checks whether the specified hostname is known per the contents of the {@code known_hosts}
+     * file.
      * 
      * @return {@code true} on successful verfication or {@code false} on failure
      */
@@ -209,6 +206,14 @@ public class KnownHosts implements HostKeyVerifier
                 }
         
         return false;
+    }
+    
+    /**
+     * For tests
+     */
+    List<Entry> getEntries()
+    {
+        return Collections.unmodifiableList(entries);
     }
     
 }

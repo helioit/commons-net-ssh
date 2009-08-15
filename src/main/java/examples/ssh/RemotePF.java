@@ -31,7 +31,7 @@ public class RemotePF
              * channel, and we further forward all such channels to google.com:80
              */
             client.getRemotePortForwarder()
-                  .bind(new Forward("127.0.0.1", 8080), //
+                  .bind(new Forward(8080), //
                         new SocketForwardingConnectListener(new InetSocketAddress("google.com", 80)));
             
             // Something to hang on to so forwarding stays

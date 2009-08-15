@@ -24,7 +24,6 @@ import java.util.Deque;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
-import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.commons.net.ssh.AbstractService;
 import org.apache.commons.net.ssh.SSHException;
@@ -44,35 +43,34 @@ import org.apache.commons.net.ssh.util.Constants.Message;
 public class UserAuthProtocol extends AbstractService implements UserAuth, AuthParams
 {
     
-    protected final ReentrantLock lock = new ReentrantLock();
-    protected final Event<UserAuthException> result =
-            new Event<UserAuthException>("userauth result", UserAuthException.chainer, lock);
-    protected final Deque<UserAuthException> savedEx = new ArrayDeque<UserAuthException>();
     protected final Set<String> allowed = new HashSet<String>();
     
-    protected AuthMethod currentMethod = new AuthNone(); // currently active method
-    protected String banner; // auth banner
+    protected final Deque<UserAuthException> savedEx = new ArrayDeque<UserAuthException>();
     
-    protected boolean partialSuccess;
+    protected final Event<UserAuthException> result =
+            new Event<UserAuthException>("userauth result", UserAuthException.chainer);
     
     protected String username;
+    protected AuthMethod currentMethod = new AuthNone();
     protected Service nextService;
+    
+    protected volatile String banner;
+    protected volatile boolean partialSuccess;
     
     public UserAuthProtocol(Transport trans)
     {
         super("ssh-userauth", trans);
     }
     
-    /**
-     * 
-     */
     public synchronized void authenticate(String username, Service nextService, Iterable<AuthMethod> methods)
             throws UserAuthException, TransportException
     {
+        clearState();
+        
         this.username = username;
         this.nextService = nextService;
         
-        request(); // Request "ssh-userauth" service
+        request(); // Request "ssh-userauth" service (if not already active)
         
         allowed.add(currentMethod.getName()); // "none" auth
         
@@ -175,6 +173,13 @@ public class UserAuthProtocol extends AbstractService implements UserAuth, AuthP
     {
         super.notifyError(error);
         result.error(error);
+    }
+    
+    protected void clearState()
+    {
+        allowed.clear();
+        savedEx.clear();
+        banner = null;
     }
     
     protected void gotBanner(Buffer buf)

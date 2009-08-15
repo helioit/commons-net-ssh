@@ -20,6 +20,7 @@ package org.apache.commons.net.ssh.util;
 
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.commons.net.ssh.ErrorNotifiable;
@@ -28,6 +29,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
+ * Represents future data of the parameterzed type {@code V} and allows waiting on it. An exception
+ * may also be delivered to a waiter, and will be of the parameterized type {@code T}.
+ * <p>
+ * For atomic operations on a future - e.g. checking checking if a value is set and if it is not
+ * then setting it, i.e. Compare-And-Set type operations - the associated lock for the future should
+ * be acquired while doing so.
+ * 
  * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
  */
 public class Future<V, T extends Throwable> implements ErrorNotifiable
@@ -50,6 +58,11 @@ public class Future<V, T extends Throwable> implements ErrorNotifiable
     protected V val;
     protected T pendingEx;
     
+    public Future(String name, FriendlyChainer<T> chainer)
+    {
+        this(name, chainer, null);
+    }
+    
     public Future(String name, FriendlyChainer<T> chainer, ReentrantLock lock)
     {
         this.log = LoggerFactory.getLogger("<< " + name + " >>");
@@ -70,12 +83,12 @@ public class Future<V, T extends Throwable> implements ErrorNotifiable
     
     public void error(Throwable t)
     {
-        lock.lock();
+        lock();
         try {
             pendingEx = chainer.chain(t);
             cond.signalAll();
         } finally {
-            lock.unlock();
+            unlock();
         }
     }
     
@@ -86,7 +99,7 @@ public class Future<V, T extends Throwable> implements ErrorNotifiable
     
     public V get(int timeout) throws T
     {
-        lock.lock();
+        lock();
         try {
             if (val != null)
                 return val;
@@ -105,39 +118,49 @@ public class Future<V, T extends Throwable> implements ErrorNotifiable
         } catch (InterruptedException ie) {
             throw chainer.chain(ie);
         } finally {
-            lock.unlock();
+            unlock();
         }
         return val;
     }
     
+    public Lock getLock()
+    {
+        return lock;
+    }
+    
     public boolean hasError()
     {
-        lock.lock();
+        lock();
         try {
             return pendingEx != null;
         } finally {
-            lock.unlock();
+            unlock();
         }
     }
     
     public boolean hasWaiters()
     {
-        lock.lock();
+        lock();
         try {
             return lock.hasWaiters(cond);
         } finally {
-            lock.unlock();
+            unlock();
         }
     }
     
     public boolean isSet()
     {
-        lock.lock();
+        lock();
         try {
             return val != null;
         } finally {
-            lock.unlock();
+            unlock();
         }
+    }
+    
+    public void lock()
+    {
+        lock.lock();
     }
     
     public void notifyError(SSHException error)
@@ -147,14 +170,19 @@ public class Future<V, T extends Throwable> implements ErrorNotifiable
     
     public void set(V val)
     {
-        lock.lock();
+        lock();
         try {
             log.debug("Setting to `{}`", val);
             this.val = val;
             cond.signalAll();
         } finally {
-            lock.unlock();
+            unlock();
         }
+    }
+    
+    public void unlock()
+    {
+        lock.unlock();
     }
     
 }

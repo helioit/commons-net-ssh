@@ -49,7 +49,7 @@ public class AuthHostbased extends KeyedAuthMethod
     protected Buffer buildReq() throws UserAuthException
     {
         Buffer req = putPubKey(super.buildReq());
-        req.putString(hostname == null ? params.getTransport().getRemoteHost().getHostName() : hostname) //
+        req.putString(hostname == null ? params.getTransport().getRemoteHost() : hostname) //
            .putString(hostuser);
         return putSig(req);
     }

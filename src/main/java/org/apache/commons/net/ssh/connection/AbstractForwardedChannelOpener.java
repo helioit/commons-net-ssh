@@ -37,6 +37,10 @@ public abstract class AbstractForwardedChannelOpener implements ForwardedChannel
     {
         new Thread()
             {
+                {
+                    setName("ConnectListener");
+                }
+                
                 @Override
                 public void run()
                 {

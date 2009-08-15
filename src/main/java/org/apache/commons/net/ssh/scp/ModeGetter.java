@@ -22,17 +22,46 @@ import java.io.File;
 import java.io.IOException;
 
 /**
+ * An interface for retrieving information about file permissions and times.
+ * 
  * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
  */
 public interface ModeGetter
 {
     
+    /**
+     * Returns last access time for {@code f}.
+     * 
+     * @param f
+     *            the file
+     * @return time in seconds since Unix epoch
+     * @throws IOException
+     */
     long getLastAccessTime(File f) throws IOException;
     
+    /**
+     * Returns last modified time for {@code f}.
+     * 
+     * @param f
+     *            the file
+     * @return time in seconds since Unix epoch
+     * @throws IOException
+     */
     long getLastModifiedTime(File f) throws IOException;
     
+    /**
+     * Returns the permissions for {@code f}.
+     * 
+     * @param f
+     *            the file
+     * @return permissions in octal format, e.g. "644"
+     * @throws IOException
+     */
     String getPermissions(File f) throws IOException;
     
+    /**
+     * Whether this implementation can provide mtime and atime information.
+     */
     boolean shouldPreserveTimes();
     
 }

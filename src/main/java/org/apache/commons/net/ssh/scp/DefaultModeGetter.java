@@ -22,6 +22,9 @@ import java.io.File;
 import java.io.IOException;
 
 /**
+ * Default implementation of {@link ModeGetter} that supplies file permissions as {@code "644"},
+ * directory permissions as {@code "755"}, and does not supply mtime and atime.
+ * 
  * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
  */
 public class DefaultModeGetter implements ModeGetter

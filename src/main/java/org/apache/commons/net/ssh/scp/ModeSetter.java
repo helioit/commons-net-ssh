@@ -22,17 +22,49 @@ import java.io.File;
 import java.io.IOException;
 
 /**
+ * An interface for setting file permissions and times.
+ * 
  * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
  */
 public interface ModeSetter
 {
     
+    /**
+     * Set the last access time for {@code f}.
+     * 
+     * @param f
+     *            the file
+     * @param t
+     *            time in seconds since Unix epoch
+     * @throws IOException
+     */
     void setLastAccessedTime(File f, long t) throws IOException;
     
+    /**
+     * Set the last modified time for {@code f}.
+     * 
+     * @param f
+     *            the file
+     * @param t
+     *            time in seconds since Unix epoch
+     * @throws IOException
+     */
     void setLastModifiedTime(File f, long t) throws IOException;
     
+    /**
+     * Set the permissions for {@code f}.
+     * 
+     * @param f
+     *            the file
+     * @param perms
+     *            permissions in octal format, e.g. "644"
+     * @throws IOException
+     */
     void setPermissions(File f, String perms) throws IOException;
     
+    /**
+     * Whether this implementation is interested in preserving mtime and atime.
+     */
     boolean shouldPreserveTimes();
     
 }

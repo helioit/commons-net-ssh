@@ -12,7 +12,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 /**
- * Sample unit test for testing {@link Buffer} functionality
+ * Tests {@link Buffer} functionality
  * 
  * @author rorywinston
  * @author shikhar

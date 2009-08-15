@@ -29,6 +29,11 @@ import org.apache.commons.net.ssh.util.Buffer;
 import org.apache.commons.net.ssh.util.Constants.KeyType;
 
 /**
+ * Represents an OpenSSH identity that consists of a PKCS8-encoded private key file and an
+ * unencrypted public key file of the same name with the {@code ".pub"} extension. This allows to
+ * delay requesting of the passphrase until the private key is requested.
+ * 
+ * @see PKCS8KeyFile
  * 
  * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
  */

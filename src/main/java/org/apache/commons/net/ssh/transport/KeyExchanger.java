@@ -23,7 +23,6 @@ import java.security.PublicKey;
 import java.util.LinkedList;
 import java.util.Queue;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.commons.net.ssh.ErrorNotifiable;
 import org.apache.commons.net.ssh.Factory;
@@ -48,7 +47,7 @@ import org.slf4j.LoggerFactory;
  * TODO:
  * 
  * Allow client2server & server2client algorithms to be different; right now they can only be symmetric.
- * This entails API support in Config (setting) and changes in KeyExchanger to use that API (getting).
+ * This would entail API support in Config (setting) and changes in KeyExchanger to use that API (getting).
  */
 
 /**
@@ -116,9 +115,11 @@ public final class KeyExchanger implements PacketHandler, ErrorNotifiable
     /** Computed session ID */
     private byte[] sessionID;
     
-    private final ReentrantLock lock = new ReentrantLock();
-    private final Event<TransportException> done = newEvent("kex done");
-    private final Event<TransportException> kexInitSent = newEvent("kexinit sent");
+    private final Event<TransportException> kexInitSent =
+            new Event<TransportException>("kexinit sent", TransportException.chainer);
+    
+    private final Event<TransportException> done =
+            new Event<TransportException>("kex done", TransportException.chainer);
     
     KeyExchanger(TransportProtocol trans)
     {
@@ -163,15 +164,13 @@ public final class KeyExchanger implements PacketHandler, ErrorNotifiable
         case KEXINIT:
             ensureReceivedMatchesExpected(msg, Message.KEXINIT);
             log.info("Received SSH_MSG_KEXINIT");
-            startKex(false); // will start key exchange if not already on
-            
+            startKex(false); // Will start key exchange if not already on
             /*
              * We block on this event to prevent a race condition where we may have received a
              * SSH_MSG_KEXINIT before having sent the packet ourselves (would cause gotKexInit() to
              * fail)
              */
             kexInitSent.await(transport.getTimeout());
-            
             gotKexInit(buf);
             expected = Expected.FOLLOWUP;
             break;
@@ -422,11 +421,6 @@ public final class KeyExchanger implements PacketHandler, ErrorNotifiable
                 + negotiated[PROP_COMP_ALG_S2C] + ")");
     }
     
-    private Event<TransportException> newEvent(String name)
-    {
-        return new Event<TransportException>(name, TransportException.chainer, lock);
-    }
-    
     /**
      * Private method used while putting new keys into use that will resize the key used to
      * initialize the cipher to the needed length.
@@ -513,14 +507,13 @@ public final class KeyExchanger implements PacketHandler, ErrorNotifiable
         
         for (HostKeyVerifier hkv : hostVerifiers) {
             log.debug("Trying to verify host key with {}", hkv);
-            if (hkv.verify(transport.getRemoteHost().getHostName(), key)
-                    || hkv.verify(transport.getRemoteHost().getHostAddress(), key))
+            if (hkv.verify(transport.getRemoteHost(), key))
                 return;
         }
         
-        throw new TransportException(DisconnectReason.HOST_KEY_NOT_VERIFIABLE, "Could not verify ["
-                + KeyType.fromKey(key) + "] host key with fingerprint [" + SecurityUtils.getFingerprint(key) + "]");
+        throw new TransportException(DisconnectReason.HOST_KEY_NOT_VERIFIABLE, "Could not verify `"
+                + KeyType.fromKey(key) + "` host key with fingerprint `" + SecurityUtils.getFingerprint(key)
+                + "` for `" + transport.getRemoteHost() + "`");
         
     }
-    
 }

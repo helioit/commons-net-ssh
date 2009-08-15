@@ -24,6 +24,7 @@ public class SCPUpload
             // Compression = significant speedup for large file transfers on fast links
             // present here to demo renegotiation - could have just put this before connect()             
             ssh.useCompression();
+            
             new SCPUploadClient(ssh).copy("/tmp/ten", ".");
             
         } finally {

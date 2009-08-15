@@ -53,10 +53,18 @@ public class SCPUploadClient extends SCPClient
         this.modeGetter = modeGetter == null ? new DefaultModeGetter() : modeGetter;
     }
     
-    public SCPUploadClient fileFilter(FileFilter fileFilter)
+    /**
+     * Upload a file from {@code sourcePath} locally to {@code targetPath} on the remote host.
+     */
+    @Override
+    public synchronized int copy(String sourcePath, String targetPath) throws IOException
+    {
+        return super.copy(sourcePath, targetPath);
+    }
+    
+    public void setFileFilter(FileFilter fileFilter)
     {
         this.fileFilter = fileFilter;
-        return this;
     }
     
     File[] getChildren(File f) throws IOException

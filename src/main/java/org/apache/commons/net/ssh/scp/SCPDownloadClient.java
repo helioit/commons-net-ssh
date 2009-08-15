@@ -46,10 +46,24 @@ public class SCPDownloadClient extends SCPClient
         this(host, null);
     }
     
-    SCPDownloadClient(SSHClient host, ModeSetter modeSetter)
+    public SCPDownloadClient(SSHClient host, ModeSetter modeSetter)
     {
         super(host);
         this.modeSetter = modeSetter == null ? new DefaultModeSetter() : modeSetter;
+    }
+    
+    /**
+     * Download a file from {@code sourcePath} on the connected host to {@code targetPath} locally.
+     */
+    @Override
+    public synchronized int copy(String sourcePath, String targetPath) throws IOException
+    {
+        return super.copy(sourcePath, targetPath);
+    }
+    
+    public void setRecursive(boolean recursive)
+    {
+        this.recursive = recursive;
     }
     
     File getTargetDirectory(File f, String dirname) throws SCPException
@@ -196,12 +210,6 @@ public class SCPDownloadClient extends SCPClient
         check("Remote agrees transfer done");
         signal("Transfer done");
         IOUtils.closeQuietly(fos);
-    }
-    
-    SCPDownloadClient recursive(boolean recursive)
-    {
-        this.recursive = recursive;
-        return this;
     }
     
     @Override

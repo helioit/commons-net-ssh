@@ -25,8 +25,7 @@ import java.security.PublicKey;
 import org.apache.commons.net.ssh.util.Constants.KeyType;
 
 /**
- * 
- * Just a wrapper around java.security.KeyPair
+ * A {@link KeyProvider} wrapper around {@link java.security.KeyPair}
  * 
  * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
  */

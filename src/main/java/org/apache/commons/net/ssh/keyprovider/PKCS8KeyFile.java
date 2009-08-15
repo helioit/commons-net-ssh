@@ -35,6 +35,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
+ * Represents a PKCS8-encoded key file. This is the format used by OpenSSH and OpenSSL.
  * 
  * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
  */
@@ -61,6 +62,8 @@ public class PKCS8KeyFile implements FileKeyProvider
     protected KeyPair kp;
     
     protected KeyType type;
+    
+    protected char[] passphrase; // for blanking out
     
     public PrivateKey getPrivate() throws IOException
     {
@@ -97,10 +100,9 @@ public class PKCS8KeyFile implements FileKeyProvider
         else
             return new org.bouncycastle.openssl.PasswordFinder()
                 {
-                    
                     public char[] getPassword()
                     {
-                        return pwdf.reqPassword(resource);
+                        return passphrase = pwdf.reqPassword(resource);
                     }
                 };
     }
@@ -111,22 +113,27 @@ public class PKCS8KeyFile implements FileKeyProvider
         org.bouncycastle.openssl.PasswordFinder pFinder = makeBouncyPasswordFinder();
         PEMReader r = null;
         Object o = null;
-        for (;;) {
-            // while the PasswordFinder tells us we should retry
-            try {
-                r = new PEMReader(new InputStreamReader(new FileInputStream(location)), pFinder);
-                o = r.readObject();
-            } catch (IOException e) {
-                if (e.toString().contains("javax.crypto.BadPaddingException"))
-                    // => incorrect password. screen-scraping sucks.
-                    if (pwdf.shouldRetry(resource))
-                        continue;
-                throw e;
-            } finally {
-                IOUtils.closeQuietly(r);
+        try {
+            for (;;) {
+                // while the PasswordFinder tells us we should retry
+                try {
+                    r = new PEMReader(new InputStreamReader(new FileInputStream(location)), pFinder);
+                    o = r.readObject();
+                } catch (IOException e) {
+                    if (e.toString().contains("javax.crypto.BadPaddingException"))
+                        // => incorrect password. screen-scraping sucks.
+                        if (pwdf.shouldRetry(resource))
+                            continue;
+                    throw e;
+                } finally {
+                    IOUtils.closeQuietly(r);
+                }
+                break;
             }
-            break;
+        } finally {
+            PasswordFinder.Util.blankOut(passphrase);
         }
+        
         if (o == null)
             throw new IOException("Could not read key pair from: " + location);
         if (o instanceof KeyPair)

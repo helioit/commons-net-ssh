@@ -25,9 +25,15 @@ import java.util.concurrent.locks.ReentrantLock;
  */
 
 /**
+ * A type of {@link Future} that caters to boolean values. Similar to Python's {@code
+ * threading.event}, with the key difference that a waiter may be delivered an exception of type
+ * {@code T}.
+ * 
+ * @see Future
+ * 
  * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
  */
-public class Event<Ex extends Throwable> extends Future<Boolean, Ex>
+public class Event<T extends Throwable> extends Future<Boolean, T>
 {
     
     public static class EventException extends Exception
@@ -38,22 +44,37 @@ public class Event<Ex extends Throwable> extends Future<Boolean, Ex>
         }
     }
     
-    public Event(String name, FriendlyChainer<Ex> chainer)
+    /**
+     * Creates this event with given {@code name} and exception {@code chainer}. Allocates a new
+     * {@link java.util.concurrent.locks.Lock lock} object for this event.
+     * 
+     * @param name
+     *            name of this event
+     * @param chainer
+     *            {@link FriendlyChainer} that will be used for chaining exceptions
+     */
+    public Event(String name, FriendlyChainer<T> chainer)
     {
-        super(name, chainer, null);
+        super(name, chainer);
     }
     
-    public Event(String name, FriendlyChainer<Ex> chainer, ReentrantLock lock)
+    /**
+     * 
+     * @param name
+     * @param chainer
+     * @param lock
+     */
+    public Event(String name, FriendlyChainer<T> chainer, ReentrantLock lock)
     {
         super(name, chainer, lock);
     }
     
-    public void await() throws Ex
+    public void await() throws T
     {
         super.get();
     }
     
-    public void await(int timeout) throws Ex
+    public void await(int timeout) throws T
     {
         super.get(timeout);
     }

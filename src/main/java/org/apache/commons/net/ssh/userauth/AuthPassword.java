@@ -84,8 +84,6 @@ public class AuthPassword extends AbstractAuthMethod
      */
     protected Resource getResource()
     {
-        return new Resource(Resource.Type.ACCOUNT, params.getUsername() + "@"
-                + params.getTransport().getRemoteHost().getHostName());
+        return new Resource(Resource.Type.ACCOUNT, params.getUsername() + "@" + params.getTransport().getRemoteHost());
     }
-    
 }

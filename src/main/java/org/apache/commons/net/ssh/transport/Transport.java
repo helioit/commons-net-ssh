@@ -19,7 +19,6 @@
 package org.apache.commons.net.ssh.transport;
 
 import java.io.IOException;
-import java.net.InetAddress;
 import java.net.Socket;
 
 import org.apache.commons.net.ssh.Config;
@@ -80,9 +79,9 @@ public interface Transport extends PacketHandler
     KeyExchanger getKeyExchanger();
     
     /**
-     * Returns the {@link InetAddress} to which this transport is connected.
+     * Returns the hostname to which this transport is connected.
      */
-    InetAddress getRemoteHost();
+    String getRemoteHost();
     
     /**
      * Returns the port number on the {@link #getRemoteHost() remote host} to which this transport
@@ -120,7 +119,7 @@ public interface Transport extends PacketHandler
      * @throws TransportException
      *             if there is an error during exchange of identification information
      */
-    void init(Socket socket) throws TransportException;
+    void init(String hostname, Socket socket) throws TransportException;
     
     /**
      * Returns whether the transport thinks it is authenticated.
