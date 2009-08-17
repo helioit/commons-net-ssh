@@ -20,12 +20,11 @@ package org.apache.commons.net.ssh;
 
 import org.apache.commons.net.ssh.connection.Connection;
 import org.apache.commons.net.ssh.transport.Transport;
+import org.apache.commons.net.ssh.transport.TransportException;
 import org.apache.commons.net.ssh.userauth.UserAuth;
-import org.apache.commons.net.ssh.util.Buffer;
-import org.apache.commons.net.ssh.util.Constants.Message;
 
 /**
- * Represents a service running on top of the SSH protocol transport layer.
+ * Represents a service running on top of the SSH {@link Transport transport layer}.
  * 
  * @see UserAuth
  * @see Connection
@@ -34,45 +33,32 @@ import org.apache.commons.net.ssh.util.Constants.Message;
  */
 public interface Service extends PacketHandler, ErrorNotifiable
 {
-    /**
-     * Get the assigned name for this SSH service.
-     * 
-     * @return service name
-     */
+    
+    /** Returns the assigned name for this SSH service. */
     String getName();
     
+    /** Returns the associated {@link Transport}. */
     Transport getTransport();
     
     /**
-     * Asks this service to handle a particular packet.
-     * <p>
-     * Meant to be invoked as a callback by the transport layer so it can deliver packets meant for
-     * the active service.
-     * 
-     * @param msg
-     *            the message identifier
-     * @param buffer
-     *            the buffer containing rest of the packet
-     * @throws SSHException
-     */
-    void handle(Message msg, Buffer buffer) throws SSHException;
-    
-    /**
      * Notifies this service that a {@code SSH_MSG_UNIMPLEMENTED} was received for packet with given
-     * sequence number.
-     * <p>
-     * Meant to be invoked as a callback by the transport layer.
+     * sequence number. Meant to be invoked as a callback by the transport layer.
      * 
      * @param seqNum
+     *            sequence number of the packet which the server claims is unimplemented
      * @throws SSHException
+     *             if the packet is unexpected and may represent a disruption
      */
     void notifyUnimplemented(long seqNum) throws SSHException;
     
     /**
-     * Request and install this service with the associated transport.
+     * Request and install this service with the associated transport. Implementations should aim to
+     * make this method idempotent by first checking the {@link Transport#getService() currently
+     * active service}.
      * 
-     * @throws SSHException
+     * @throws TransportException
+     *             if there is an error sending the service request
      */
-    void request() throws SSHException;
+    void request() throws TransportException;
     
 }

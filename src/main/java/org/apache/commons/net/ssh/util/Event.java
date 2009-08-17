@@ -25,9 +25,9 @@ import java.util.concurrent.locks.ReentrantLock;
  */
 
 /**
- * A type of {@link Future} that caters to boolean values. Similar to Python's {@code
- * threading.event}, with the key difference that a waiter may be delivered an exception of type
- * {@code T}.
+ * A type of {@link Future} that caters to boolean values. An event can be set, cleared, or awaited,
+ * similar to Python's {@code threading.event}. The key difference is that a waiter may be delivered
+ * an exception of parameterized type {@code T}.
  * 
  * @see Future
  * 

@@ -39,7 +39,7 @@ import org.slf4j.LoggerFactory;
  * 
  * @see <a href="http://blogs.sun.com/janp/entry/how_the_scp_protocol_works">SCP Protocol</a>
  */
-abstract class SCPClient
+public abstract class SCP
 {
     
     public static class SCPException extends SSHException
@@ -95,7 +95,7 @@ abstract class SCPClient
     
     protected Command scp;
     
-    protected SCPClient(SSHClient host)
+    protected SCP(SSHClient host)
     {
         this.host = host;
     }
@@ -161,7 +161,7 @@ abstract class SCPClient
         warnings.clear();
     }
     
-    synchronized void execSCPWith(List<String> args) throws ConnectionException, TransportException
+    void execSCPWith(List<String> args) throws ConnectionException, TransportException
     {
         String cmd = SCP_COMMAND;
         for (String arg : args)
@@ -245,7 +245,7 @@ abstract class SCPClient
         final double timeSeconds = (System.currentTimeMillis() - startTime) / 1000.0;
         log.info(sizeKiB / 1024.0 + " MiB transferred  in {} seconds ({} KiB/s)", timeSeconds, (sizeKiB / timeSeconds));
         
-        if (read == -1 && !(count == len))
+        if (read == -1)
             throw new IOException("Had EOF before transfer completed");
     }
     

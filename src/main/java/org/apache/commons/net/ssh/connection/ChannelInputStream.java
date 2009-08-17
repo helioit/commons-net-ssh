@@ -19,14 +19,14 @@ import org.apache.commons.net.ssh.util.Buffer;
 public class ChannelInputStream extends InputStream implements ErrorNotifiable
 {
     
-    protected final Channel chan;
-    protected final LocalWindow win;
-    protected final Buffer buf;
-    protected final byte[] b = new byte[1];
-    protected boolean eof;
-    protected SSHException error;
+    private final Channel chan;
+    private final LocalWindow win;
+    private final Buffer buf;
+    private final byte[] b = new byte[1];
+    private boolean eof;
+    private SSHException error;
     
-    protected ChannelInputStream(Channel chan, LocalWindow win)
+    public ChannelInputStream(Channel chan, LocalWindow win)
     {
         this.chan = chan;
         this.win = win;
@@ -48,6 +48,16 @@ public class ChannelInputStream extends InputStream implements ErrorNotifiable
         eof();
     }
     
+    public void eof()
+    {
+        synchronized (buf) {
+            if (!eof) {
+                eof = true;
+                buf.notifyAll();
+            }
+        }
+    }
+    
     public synchronized void notifyError(SSHException error)
     {
         this.error = error;
@@ -65,7 +75,6 @@ public class ChannelInputStream extends InputStream implements ErrorNotifiable
     @Override
     public int read(byte[] b, int off, int len) throws IOException
     {
-        int growMax;
         synchronized (buf) {
             for (;;) {
                 if (buf.available() > 0)
@@ -85,10 +94,9 @@ public class ChannelInputStream extends InputStream implements ErrorNotifiable
                 len = buf.available();
             buf.getRawBytes(b, off, len);
             if (buf.rpos() > win.getMaxPacketSize() || buf.available() == 0)
-                buf.compact();
-            growMax = win.getInitialSize() - buf.available();
+                buf.clear();
         }
-        win.check(growMax);
+        win.check();
         return len;
     }
     
@@ -103,7 +111,7 @@ public class ChannelInputStream extends InputStream implements ErrorNotifiable
         synchronized (win) {
             win.consume(len);
             if (chan.getAutoExpand())
-                win.check(len);
+                win.check();
         }
     }
     
@@ -111,16 +119,6 @@ public class ChannelInputStream extends InputStream implements ErrorNotifiable
     public String toString()
     {
         return "< ChannelInputStream for Channel #" + chan.getID() + " >";
-    }
-    
-    protected void eof()
-    {
-        synchronized (buf) {
-            if (!eof) {
-                eof = true;
-                buf.notifyAll();
-            }
-        }
     }
     
 }

@@ -36,15 +36,15 @@ import org.apache.commons.net.ssh.util.Constants.Message;
 public class ChannelOutputStream extends OutputStream implements ErrorNotifiable
 {
     
-    protected final Channel chan;
-    protected final RemoteWindow win;
-    protected final Buffer buffer = new Buffer();
-    protected final byte[] b = new byte[1];
-    protected int bufferLength;
-    protected boolean closed;
-    protected SSHException error;
+    private final Channel chan;
+    private final RemoteWindow win;
+    private final Buffer buffer = new Buffer();
+    private final byte[] b = new byte[1];
+    private int bufferLength;
+    private boolean closed;
+    private SSHException error;
     
-    protected ChannelOutputStream(Channel chan, RemoteWindow win)
+    public ChannelOutputStream(Channel chan, RemoteWindow win)
     {
         this.chan = chan;
         this.win = win;
@@ -71,9 +71,10 @@ public class ChannelOutputStream extends OutputStream implements ErrorNotifiable
         if (bufferLength <= 0) // No data to send
             return;
         
+        putRecipientAndLength();
+        
         try {
             win.waitAndConsume(bufferLength);
-            putRecipientAndLength();
             chan.getTransport().writePacket(buffer);
         } finally {
             prepBuffer();
@@ -121,7 +122,7 @@ public class ChannelOutputStream extends OutputStream implements ErrorNotifiable
         write(b, 0, 1);
     }
     
-    protected void checkClose() throws SSHException
+    private void checkClose() throws SSHException
     {
         if (closed)
             if (error != null)
@@ -130,7 +131,7 @@ public class ChannelOutputStream extends OutputStream implements ErrorNotifiable
                 throw new ConnectionException("Stream closed");
     }
     
-    protected void prepBuffer()
+    private void prepBuffer()
     {
         bufferLength = 0;
         buffer.rpos(5);
@@ -140,14 +141,13 @@ public class ChannelOutputStream extends OutputStream implements ErrorNotifiable
         buffer.putInt(0); // meant to be data length        
     }
     
-    protected void putRecipientAndLength()
+    private void putRecipientAndLength()
     {
-        int pos = buffer.wpos();
+        int origPos = buffer.wpos();
         buffer.wpos(6);
         buffer.putInt(chan.getRecipient());
-        buffer.wpos(10);
         buffer.putInt(bufferLength);
-        buffer.wpos(pos);
+        buffer.wpos(origPos);
     }
     
 }

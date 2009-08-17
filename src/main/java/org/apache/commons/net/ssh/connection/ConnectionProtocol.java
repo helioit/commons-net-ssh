@@ -43,18 +43,17 @@ import org.apache.commons.net.ssh.util.Constants.Message;
 public class ConnectionProtocol extends AbstractService implements Connection
 {
     
-    protected final AtomicInteger nextID = new AtomicInteger();
+    private final AtomicInteger nextID = new AtomicInteger();
     
-    protected final Map<Integer, Channel> channels = new ConcurrentHashMap<Integer, Channel>();
+    private final Map<Integer, Channel> channels = new ConcurrentHashMap<Integer, Channel>();
     
-    protected final Map<String, ForwardedChannelOpener> openers =
-            new ConcurrentHashMap<String, ForwardedChannelOpener>();
+    private final Map<String, ForwardedChannelOpener> openers = new ConcurrentHashMap<String, ForwardedChannelOpener>();
     
-    protected final Queue<Future<Buffer, ConnectionException>> globalReqs =
+    private final Queue<Future<Buffer, ConnectionException>> globalReqs =
             new LinkedList<Future<Buffer, ConnectionException>>();
     
-    protected int windowSize = 2048 * 1024;
-    protected int maxPacketSize = 32 * 1024;
+    private int windowSize = 2048 * 1024;
+    private int maxPacketSize = 32 * 1024;
     
     /**
      * Create with an associated {@link Transport}.
@@ -191,7 +190,7 @@ public class ConnectionProtocol extends AbstractService implements Connection
         this.windowSize = windowSize;
     }
     
-    protected Channel getChannel(Buffer buffer) throws ConnectionException
+    private Channel getChannel(Buffer buffer) throws ConnectionException
     {
         int recipient = buffer.getInt();
         Channel channel = get(recipient);
@@ -203,7 +202,7 @@ public class ConnectionProtocol extends AbstractService implements Connection
         return channel;
     }
     
-    protected void gotChannelOpen(Buffer buf) throws ConnectionException, TransportException
+    private void gotChannelOpen(Buffer buf) throws ConnectionException, TransportException
     {
         String type = buf.getString();
         log.debug("Received CHANNEL_OPEN for `{}` channel", type);
@@ -215,17 +214,16 @@ public class ConnectionProtocol extends AbstractService implements Connection
         }
     }
     
-    protected synchronized void gotResponse(Buffer response) throws ConnectionException
+    private synchronized void gotResponse(Buffer response) throws ConnectionException
     {
         Future<Buffer, ConnectionException> gr = globalReqs.poll();
-        if (gr != null) {
-            if (response != null)
-                gr.set(response);
-            else
-                gr.error("Global request failed");
-        } else
+        if (gr == null)
             throw new ConnectionException(DisconnectReason.PROTOCOL_ERROR,
                                           "Got a global request response when none was requested");
+        else if (response == null)
+            gr.error("Global request failed");
+        else
+            gr.set(response);
     }
     
 }

@@ -36,7 +36,7 @@ import org.apache.commons.net.ssh.util.IOUtils;
  * 
  * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
  */
-public class SCPUploadClient extends SCPClient
+public class SCPUploadClient extends SCP
 {
     
     private final ModeGetter modeGetter;

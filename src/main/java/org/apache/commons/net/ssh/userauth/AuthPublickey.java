@@ -59,15 +59,6 @@ public class AuthPublickey extends KeyedAuthMethod
     }
     
     /**
-     * Builds a feeler request (sans signature).
-     */
-    @Override
-    protected Buffer buildReq() throws UserAuthException
-    {
-        return buildReq(false);
-    }
-    
-    /**
      * Builds SSH_MSG_USERAUTH_REQUEST packet.
      * 
      * @param signed
@@ -75,7 +66,7 @@ public class AuthPublickey extends KeyedAuthMethod
      * @return the {@link Buffer} containing the request packet
      * @throws UserAuthException
      */
-    protected Buffer buildReq(boolean signed) throws UserAuthException
+    private Buffer buildReq(boolean signed) throws UserAuthException
     {
         try {
             kProv.getPublic();
@@ -91,10 +82,19 @@ public class AuthPublickey extends KeyedAuthMethod
      * @throws UserAuthException
      * @throws TransportException
      */
-    protected void sendSignedReq() throws UserAuthException, TransportException
+    private void sendSignedReq() throws UserAuthException, TransportException
     {
         log.debug("Sending signed request");
         params.getTransport().writePacket(putSig(buildReq(true)));
+    }
+    
+    /**
+     * Builds a feeler request (sans signature).
+     */
+    @Override
+    protected Buffer buildReq() throws UserAuthException
+    {
+        return buildReq(false);
     }
     
 }

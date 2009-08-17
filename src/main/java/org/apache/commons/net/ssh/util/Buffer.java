@@ -57,7 +57,7 @@ public class Buffer
      */
     public static final int DEFAULT_SIZE = 256;
     
-    protected static int getNextPowerOf2(int i)
+    private static int getNextPowerOf2(int i)
     {
         int j = 1;
         while (j < i)
@@ -150,26 +150,11 @@ public class Buffer
      */
     public void compact()
     {
+        System.err.println("COMPACTING");
         if (available() > 0)
             System.arraycopy(data, rpos, data, 0, wpos - rpos);
         wpos -= rpos;
         rpos = 0;
-    }
-    
-    public void ensureAvailable(int a)
-    {
-        if (available() < a)
-            throw new BufferException("Underflow");
-    }
-    
-    public void ensureCapacity(int capacity)
-    {
-        if (data.length - wpos < capacity) {
-            int cw = wpos + capacity;
-            byte[] tmp = new byte[getNextPowerOf2(cw)];
-            System.arraycopy(data, 0, tmp, 0, data.length);
-            data = tmp;
-        }
     }
     
     /**
@@ -591,6 +576,22 @@ public class Buffer
     {
         ensureCapacity(wpos - this.wpos);
         this.wpos = wpos;
+    }
+    
+    private void ensureAvailable(int a)
+    {
+        if (available() < a)
+            throw new BufferException("Underflow");
+    }
+    
+    private void ensureCapacity(int capacity)
+    {
+        if (data.length - wpos < capacity) {
+            int cw = wpos + capacity;
+            byte[] tmp = new byte[getNextPowerOf2(cw)];
+            System.arraycopy(data, 0, tmp, 0, data.length);
+            data = tmp;
+        }
     }
     
 }

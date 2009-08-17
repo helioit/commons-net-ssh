@@ -34,7 +34,7 @@ import org.apache.commons.net.ssh.util.IOUtils;
  * 
  * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
  */
-public class SCPDownloadClient extends SCPClient
+public class SCPDownloadClient extends SCP
 {
     
     private final ModeSetter modeSetter;
@@ -88,8 +88,8 @@ public class SCPDownloadClient extends SCPClient
         if (f.exists()) {
             if (f.isDirectory())
                 f = new File(f, filename);
-        } else
-            f.createNewFile();
+        } else if (!f.createNewFile())
+            throw new SCPException("Could not create: " + f);
         return f;
     }
     

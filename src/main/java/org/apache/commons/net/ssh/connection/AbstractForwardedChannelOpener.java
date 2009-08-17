@@ -8,6 +8,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
+ * Base class for {@link ForwardedChannelOpener}'s.
+ * 
  * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
  */
 public abstract class AbstractForwardedChannelOpener implements ForwardedChannelOpener

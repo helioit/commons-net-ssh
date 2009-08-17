@@ -22,21 +22,23 @@ import org.apache.commons.net.ssh.util.Buffer;
 import org.apache.commons.net.ssh.util.Constants.Message;
 
 /**
- * Internal API for classes to which packet handling may be delegated.
+ * An interface for classes to which packet handling may be delegated. Chains of such delegations
+ * may be used, e.g. {@code packet decoder -> (PacketHandler) transport layer -> (PacketHandler)
+ * connection layer -> (PacketHandler) channel}.
  * 
  * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
  */
 public interface PacketHandler
 {
     /**
-     * Delegate handling of some SSH packet to this instance.
+     * Delegate handling of some SSH packet to this object.
      * 
      * @param msg
      *            the SSH {@link Message message identifier}
      * @param buf
      *            {@link Buffer} containing rest of the request
      * @throws SSHException
-     *             if the handler so feels appropriate
+     *             if there is a non-recoverable error
      */
     void handle(Message msg, Buffer buf) throws SSHException;
 }

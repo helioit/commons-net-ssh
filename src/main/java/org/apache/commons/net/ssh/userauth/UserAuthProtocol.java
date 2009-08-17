@@ -43,19 +43,19 @@ import org.apache.commons.net.ssh.util.Constants.Message;
 public class UserAuthProtocol extends AbstractService implements UserAuth, AuthParams
 {
     
-    protected final Set<String> allowed = new HashSet<String>();
+    private final Set<String> allowed = new HashSet<String>();
     
-    protected final Deque<UserAuthException> savedEx = new ArrayDeque<UserAuthException>();
+    private final Deque<UserAuthException> savedEx = new ArrayDeque<UserAuthException>();
     
-    protected final Event<UserAuthException> result =
+    private final Event<UserAuthException> result =
             new Event<UserAuthException>("userauth result", UserAuthException.chainer);
     
-    protected String username;
-    protected AuthMethod currentMethod = new AuthNone();
-    protected Service nextService;
+    private String username;
+    private AuthMethod currentMethod = new AuthNone();
+    private Service nextService;
     
-    protected volatile String banner;
-    protected volatile boolean partialSuccess;
+    private volatile String banner;
+    private volatile boolean partialSuccess;
     
     public UserAuthProtocol(Transport trans)
     {
@@ -175,19 +175,19 @@ public class UserAuthProtocol extends AbstractService implements UserAuth, AuthP
         result.error(error);
     }
     
-    protected void clearState()
+    private void clearState()
     {
         allowed.clear();
         savedEx.clear();
         banner = null;
     }
     
-    protected void gotBanner(Buffer buf)
+    private void gotBanner(Buffer buf)
     {
         banner = buf.getString();
     }
     
-    protected void gotFailure(Buffer buf) throws UserAuthException, TransportException
+    private void gotFailure(Buffer buf) throws UserAuthException, TransportException
     {
         allowed.clear();
         allowed.addAll(Arrays.<String> asList(buf.getString().split(",")));
@@ -201,17 +201,19 @@ public class UserAuthProtocol extends AbstractService implements UserAuth, AuthP
         }
     }
     
-    protected void gotSuccess()
+    private void gotSuccess()
     {
         trans.setAuthenticated(); // So it can put delayed compression into force if applicable
         trans.setService(nextService); // We aren't in charge anymore, next service is
         result.set(true);
     }
     
-    protected void gotUnknown(Message msg, Buffer buf) throws SSHException
+    private void gotUnknown(Message msg, Buffer buf) throws SSHException
     {
-        if (currentMethod == null || result == null)
+        if (currentMethod == null || result == null) {
             trans.sendUnimplemented();
+            return;
+        }
         
         log.debug("Asking {} method to handle {} packet", currentMethod.getName(), msg);
         try {
@@ -221,18 +223,18 @@ public class UserAuthProtocol extends AbstractService implements UserAuth, AuthP
         }
     }
     
-    protected void saveException(String msg)
+    private void saveException(String msg)
     {
         saveException(new UserAuthException(msg));
     }
     
-    protected void saveException(UserAuthException e)
+    private void saveException(UserAuthException e)
     {
         log.error("Saving for later - {}", e.toString());
         savedEx.push(e);
     }
     
-    protected boolean tryWith(AuthMethod meth) throws UserAuthException, TransportException
+    private boolean tryWith(AuthMethod meth) throws UserAuthException, TransportException
     {
         meth.init(this);
         result.clear();

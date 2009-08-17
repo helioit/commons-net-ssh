@@ -23,7 +23,6 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.security.PublicKey;
-import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -53,7 +52,7 @@ public class KnownHosts implements HostKeyVerifier
      * 
      * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
      */
-    class Entry
+    static class Entry
     {
         
         private final String[] hosts;
@@ -206,14 +205,6 @@ public class KnownHosts implements HostKeyVerifier
                 }
         
         return false;
-    }
-    
-    /**
-     * For tests
-     */
-    List<Entry> getEntries()
-    {
-        return Collections.unmodifiableList(entries);
     }
     
 }

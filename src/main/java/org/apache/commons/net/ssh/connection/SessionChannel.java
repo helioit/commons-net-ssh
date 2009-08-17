@@ -36,13 +36,15 @@ public class SessionChannel extends AbstractDirectChannel implements Session, Se
         Session.Subsystem
 {
     
-    protected Integer exitStatus;
+    private Integer exitStatus;
     
-    protected Signal exitSignal;
+    private Signal exitSignal;
+    private Boolean wasCoreDumped;
+    private String exitErrMsg;
     
-    protected Boolean flowControl;
+    private Boolean canDoFlowControl;
     
-    protected final ChannelInputStream err = new ChannelInputStream(this, lwin);
+    private final ChannelInputStream err = new ChannelInputStream(this, lwin);
     
     public SessionChannel(Connection conn)
     {
@@ -53,21 +55,21 @@ public class SessionChannel extends AbstractDirectChannel implements Session, Se
     {
         /*
          * FIXME (maybe?): These modes were originally copied from what SSHD was doing; and then the
-         * echo modes were set to false to better serve the PTY example. Not sure what default PTY
-         * modes should be.
+         * echo modes were set to 0 to better serve the PTY example. Not sure what default PTY modes
+         * should be.
          */
-        Map<PTYMode, Buffer> modes = new HashMap<PTYMode, Buffer>();
-        modes.put(PTYMode.ISIG, new Buffer().putInt(1));
-        modes.put(PTYMode.ICANON, new Buffer().putInt(1));
-        modes.put(PTYMode.ECHO, new Buffer().putInt(0));
-        modes.put(PTYMode.ECHOE, new Buffer().putInt(0));
-        modes.put(PTYMode.ECHOK, new Buffer().putInt(0));
-        modes.put(PTYMode.ECHONL, new Buffer().putInt(0));
-        modes.put(PTYMode.NOFLSH, new Buffer().putInt(0));
-        allocatePTY("vt100", 80, 40, 640, 480, modes);
+        Map<PTYMode, Integer> modes = new HashMap<PTYMode, Integer>();
+        modes.put(PTYMode.ISIG, 1);
+        modes.put(PTYMode.ICANON, 1);
+        modes.put(PTYMode.ECHO, 0);
+        modes.put(PTYMode.ECHOE, 0);
+        modes.put(PTYMode.ECHOK, 0);
+        modes.put(PTYMode.ECHONL, 0);
+        modes.put(PTYMode.NOFLSH, 0);
+        allocatePTY("vt100", 0, 0, 0, 0, modes);
     }
     
-    public void allocatePTY(String term, int cols, int rows, int width, int height, Map<PTYMode, Buffer> modes)
+    public void allocatePTY(String term, int cols, int rows, int width, int height, Map<PTYMode, Integer> modes)
             throws ConnectionException, TransportException
     {
         sendChannelRequest("pty-req", //
@@ -83,7 +85,7 @@ public class SessionChannel extends AbstractDirectChannel implements Session, Se
     
     public Boolean canDoFlowControl()
     {
-        return flowControl;
+        return canDoFlowControl;
     }
     
     public void changeWindowDimensions(int cols, int rows, int width, int height) throws TransportException
@@ -113,6 +115,11 @@ public class SessionChannel extends AbstractDirectChannel implements Session, Se
         return err;
     }
     
+    public String getExitErrorMessage()
+    {
+        return exitErrMsg;
+    }
+    
     public Signal getExitSignal()
     {
         return exitSignal;
@@ -125,7 +132,7 @@ public class SessionChannel extends AbstractDirectChannel implements Session, Se
     
     public String getOutputAsString() throws IOException
     {
-        return getStreamAsString(in);
+        return getStreamAsString(getInputStream());
     }
     
     public String getStreamAsString(InputStream stream) throws IOException
@@ -141,12 +148,15 @@ public class SessionChannel extends AbstractDirectChannel implements Session, Se
     public void handleRequest(String req, Buffer buf) throws ConnectionException, TransportException
     {
         if ("xon-xoff".equals(req))
-            flowControl = buf.getBoolean();
+            canDoFlowControl = buf.getBoolean();
         else if ("exit-status".equals(req))
             exitStatus = buf.getInt();
-        else if ("exit-signal".equals(req))
+        else if ("exit-signal".equals(req)) {
             exitSignal = Signal.fromString(buf.getString());
-        else
+            wasCoreDumped = buf.getBoolean(); // core dumped
+            exitErrMsg = buf.getString();
+            sendClose();
+        } else
             super.handleRequest(req, buf);
     }
     
@@ -183,30 +193,30 @@ public class SessionChannel extends AbstractDirectChannel implements Session, Se
         return this;
     }
     
-    public void waitForClose() throws ConnectionException
+    public Boolean getExitWasCoreDumped()
     {
-        close.await(conn.getTimeout());
+        return wasCoreDumped;
     }
     
     @Override
-    protected void closeStreams()
+    protected void closeAllStreams()
     {
-        super.closeStreams();
+        super.closeAllStreams();
         IOUtils.closeQuietly(err);
     }
     
     @Override
-    protected void gotEOF() throws TransportException
+    protected void eofInputStreams()
     {
         err.eof(); // also close the stderr stream
-        super.gotEOF();
+        super.eofInputStreams();
     }
     
     @Override
     protected void gotExtendedData(int dataTypeCode, Buffer buf) throws ConnectionException, TransportException
     {
         if (dataTypeCode == 1)
-            doWrite(buf, err);
+            receiveInto(buf, err);
         else
             super.gotExtendedData(dataTypeCode, buf);
     }

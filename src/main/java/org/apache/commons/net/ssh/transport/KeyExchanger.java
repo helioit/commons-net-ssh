@@ -47,7 +47,7 @@ import org.slf4j.LoggerFactory;
  * TODO:
  * 
  * Allow client2server & server2client algorithms to be different; right now they can only be symmetric.
- * This would entail API support in Config (setting) and changes in KeyExchanger to use that API (getting).
+ * This would entail API support in Config (setters) and changes in KeyExchanger to use that API (getters).
  */
 
 /**
@@ -308,10 +308,8 @@ public final class KeyExchanger implements PacketHandler, ErrorNotifiable
     /**
      * Put new keys into use. This method will intialize the ciphers, digests, MACs and compression
      * according to the negotiated server and client proposals.
-     * <p>
-     * TODO: refactor; too huge
      */
-    private void gotNewKeys()
+    private void gotNewKeys() // TODO: refactor; too huge
     {
         byte[] IVc2s;
         byte[] IVs2c;
@@ -516,4 +514,5 @@ public final class KeyExchanger implements PacketHandler, ErrorNotifiable
                 + "` for `" + transport.getRemoteHost() + "`");
         
     }
+    
 }

@@ -46,7 +46,7 @@ public class X11Forwarder extends AbstractForwardedChannelOpener
         
     }
     
-    protected final ConnectListener listener;
+    private final ConnectListener listener;
     
     /**
      * Creates and registers itself with {@code conn}.
@@ -60,7 +60,6 @@ public class X11Forwarder extends AbstractForwardedChannelOpener
     {
         super(X11Channel.TYPE, conn);
         this.listener = listener;
-        conn.attach(this);
     }
     
     /**

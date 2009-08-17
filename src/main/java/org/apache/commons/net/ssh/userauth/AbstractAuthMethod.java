@@ -32,13 +32,22 @@ import org.slf4j.LoggerFactory;
 public abstract class AbstractAuthMethod implements AuthMethod
 {
     
+    /**
+     * Logger
+     */
     protected final Logger log = LoggerFactory.getLogger(getClass());
     
-    protected final String name;
+    private final String name;
     
+    /**
+     * {@link AuthParams} useful for building request.
+     */
     protected AuthParams params;
     
-    AbstractAuthMethod(String name)
+    /**
+     * Create with the {@code name} of this authentication method.
+     */
+    protected AbstractAuthMethod(String name)
     {
         this.name = name;
     }
@@ -68,12 +77,16 @@ public abstract class AbstractAuthMethod implements AuthMethod
         return false;
     }
     
+    /**
+     * Builds a {@link Buffer} containing the fields common to all authentication methods.
+     * Method-specific fields can further be put into this buffer.
+     */
     protected Buffer buildReq() throws UserAuthException
     {
         return new Buffer(Message.USERAUTH_REQUEST) // SSH_MSG_USERAUTH_REQUEST
                                                    .putString(params.getUsername()) // username goes first
                                                    .putString(params.getNextServiceName()) // the service that we'd like on success
-                                                   .putString(getName()); // name of auth method
+                                                   .putString(name); // name of auth method
         
     }
     

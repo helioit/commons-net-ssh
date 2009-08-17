@@ -38,48 +38,66 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
+ * Base class for {@link Channel channels}, implements most of the functionality.
+ * 
  * @author <a href="mailto:dev@mina.apache.org">Apache MINA SSHD Project</a>
  * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
  */
 public abstract class AbstractChannel implements Channel
 {
     
+    /** Logger */
     protected final Logger log;
     
+    /** Transport layer */
     protected final Transport trans;
+    /** Connection layer */
     protected final Connection conn;
     
+    /** Local window */
     protected final LocalWindow lwin = new LocalWindow(this);
+    /** Remote window */
     protected final RemoteWindow rwin = new RemoteWindow(this);
     
-    protected volatile boolean autoExpand = false;
+    private volatile boolean autoExpand = false;
     
-    protected final ChannelInputStream in = new ChannelInputStream(this, lwin);
-    protected final ChannelOutputStream out = new ChannelOutputStream(this, rwin);
+    /** stdout stream */
+    private final ChannelInputStream in = new ChannelInputStream(this, lwin);
+    /** stdin stream */
+    private final ChannelOutputStream out = new ChannelOutputStream(this, rwin);
     
-    protected final Queue<Event<ConnectionException>> chanReqResponseEvents =
+    private final Queue<Event<ConnectionException>> chanReqResponseEvents =
             new LinkedList<Event<ConnectionException>>();
     
-    protected final ReentrantLock lock = new ReentrantLock();
+    private final ReentrantLock lock = new ReentrantLock();
+    /** Channel open event */
     protected final Event<ConnectionException> open;
-    protected final Event<ConnectionException> close;
+    /** Channel close event */
+    private final Event<ConnectionException> close;
     
-    protected final String type;
-    protected final int id;
-    protected int recipient;
+    /** Channel type */
+    private final String type;
+    /** Channel ID */
+    private final int id;
+    /** Remote recipient ID */
+    private int recipient;
     
-    protected boolean eofSent;
-    protected boolean eofGot;
-    protected boolean closeReqd;
+    private boolean eofSent;
+    private boolean eofGot;
+    private boolean closeReqd;
     
     protected AbstractChannel(String type, Connection conn)
     {
         this.type = type;
         this.conn = conn;
         this.trans = conn.getTransport();
+        
         id = conn.nextID();
-        lwin.init(conn.getWindowSize(), conn.getMaxPacketSize());
+        
         log = LoggerFactory.getLogger("chan#" + id);
+        
+        lwin.init(conn.getWindowSize(), conn.getMaxPacketSize());
+        
         open = newEvent("open");
         close = newEvent("close");
     }
@@ -162,7 +180,7 @@ public abstract class AbstractChannel implements Channel
         {
         
         case CHANNEL_DATA:
-            doWrite(buf, in);
+            receiveInto(buf, in);
             break;
         
         case CHANNEL_EXTENDED_DATA:
@@ -251,28 +269,7 @@ public abstract class AbstractChannel implements Channel
                 + rwin + " >";
     }
     
-    protected void closeStreams()
-    {
-        IOUtils.closeQuietly(in, out);
-    }
-    
-    protected void doWrite(Buffer buf, ChannelInputStream stream) throws ConnectionException, TransportException
-    {
-        int len = buf.getInt();
-        if (len < 0 || len > getLocalMaxPacketSize())
-            throw new ConnectionException(DisconnectReason.PROTOCOL_ERROR, "Bad item length: " + len);
-        if (log.isTraceEnabled())
-            log.trace("IN: {}", BufferUtils.printHex(buf.array(), buf.rpos(), len));
-        stream.receive(buf.array(), buf.rpos(), len);
-    }
-    
-    protected void finishOff()
-    {
-        conn.forget(this);
-        close.set();
-    }
-    
-    protected void gotChannelRequest(Buffer buf) throws ConnectionException, TransportException
+    private void gotChannelRequest(Buffer buf) throws ConnectionException, TransportException
     {
         String reqType = buf.getString();
         buf.getBoolean(); // We don't care about the 'want-reply' value
@@ -280,33 +277,27 @@ public abstract class AbstractChannel implements Channel
         handleRequest(reqType, buf);
     }
     
-    protected void gotClose() throws TransportException
+    private void gotClose() throws TransportException
     {
         log.info("Got close");
         try {
-            closeStreams();
+            closeAllStreams();
             sendClose();
         } finally {
             finishOff();
         }
     }
     
-    protected synchronized void gotEOF() throws TransportException
+    private synchronized void gotEOF() throws TransportException
     {
         log.info("Got EOF");
         eofGot = true;
-        in.eof();
+        eofInputStreams();
         if (eofSent)
             sendClose();
     }
     
-    protected void gotExtendedData(int dataTypeCode, Buffer buf) throws ConnectionException, TransportException
-    {
-        throw new ConnectionException(DisconnectReason.PROTOCOL_ERROR, "Extended data not supported on " + type
-                + " channel");
-    }
-    
-    protected synchronized void gotResponse(boolean success) throws ConnectionException
+    private synchronized void gotResponse(boolean success) throws ConnectionException
     {
         Event<ConnectionException> responseEvent = chanReqResponseEvents.poll();
         if (responseEvent != null) {
@@ -319,25 +310,54 @@ public abstract class AbstractChannel implements Channel
                                           "Received response to channel request when none was requested");
     }
     
-    protected void gotUnknown(Message msg, Buffer buf) throws ConnectionException, TransportException
-    {
-        trans.sendUnimplemented();
-    }
-    
-    protected void gotWindowAdjustment(int howmuch)
+    private void gotWindowAdjustment(int howmuch)
     {
         log.info("Received window adjustment for {} bytes", howmuch);
         rwin.expand(howmuch);
     }
     
+    private Event<ConnectionException> newEvent(String name)
+    {
+        return new Event<ConnectionException>("chan#" + id + " / " + name, ConnectionException.chainer, lock);
+    }
+    
     /**
-     * Subclasses can override this method to handle specific requests.
-     * 
-     * @param reqType
-     * @param buf
-     * @throws ConnectionException
-     * @throws TransportException
+     * Called when all I/O streams should be closed. Subclasses can override but must call super.
      */
+    protected void closeAllStreams()
+    {
+        IOUtils.closeQuietly(in, out);
+    }
+    
+    /**
+     * Called when EOF has been received. Subclasses can override but must call super.
+     */
+    protected void eofInputStreams()
+    {
+        in.eof();
+    }
+    
+    /**
+     * Called when this channel's end-of-life has been reached. Subclasses may override but must
+     * call super.
+     */
+    protected void finishOff()
+    {
+        conn.forget(this);
+        close.set();
+    }
+    
+    protected void gotExtendedData(int dataTypeCode, Buffer buf) throws ConnectionException, TransportException
+    {
+        throw new ConnectionException(DisconnectReason.PROTOCOL_ERROR, "Extended data not supported on " + type
+                + " channel");
+    }
+    
+    protected void gotUnknown(Message msg, Buffer buf) throws ConnectionException, TransportException
+    {
+        trans.sendUnimplemented();
+    }
+    
     protected void handleRequest(String reqType, Buffer buf) throws ConnectionException, TransportException
     {
         trans.writePacket(newBuffer(Message.CHANNEL_FAILURE));
@@ -348,9 +368,14 @@ public abstract class AbstractChannel implements Channel
         return new Buffer(cmd).putInt(recipient);
     }
     
-    protected Event<ConnectionException> newEvent(String name)
+    protected void receiveInto(Buffer buf, ChannelInputStream stream) throws ConnectionException, TransportException
     {
-        return new Event<ConnectionException>("chan#" + id + " / " + name, ConnectionException.chainer, lock);
+        int len = buf.getInt();
+        if (len < 0 || len > getLocalMaxPacketSize())
+            throw new ConnectionException(DisconnectReason.PROTOCOL_ERROR, "Bad item length: " + len);
+        if (log.isTraceEnabled())
+            log.trace("IN #{}: {}", id, BufferUtils.printHex(buf.array(), buf.rpos(), len));
+        stream.receive(buf.array(), buf.rpos(), len);
     }
     
     protected synchronized Event<ConnectionException> sendChannelRequest(String reqType, boolean wantReply,

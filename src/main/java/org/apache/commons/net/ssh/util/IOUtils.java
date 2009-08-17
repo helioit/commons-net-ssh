@@ -32,7 +32,7 @@ import org.slf4j.LoggerFactory;
 public class IOUtils
 {
     
-    protected static final Logger LOG = LoggerFactory.getLogger(IOUtils.class);
+    private static final Logger LOG = LoggerFactory.getLogger(IOUtils.class);
     
     public static void closeQuietly(Closeable... closeables)
     {

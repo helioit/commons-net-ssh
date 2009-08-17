@@ -34,10 +34,14 @@ import org.slf4j.LoggerFactory;
 public abstract class AbstractService implements Service
 {
     
+    /** Logger */
     protected final Logger log = LoggerFactory.getLogger(getClass());
     
+    /** Assigned name of this service */
     protected final String name;
+    /** Transport layer */
     protected final Transport trans;
+    /** Timeout for blocking operations */
     protected int timeout;
     
     public AbstractService(String name, Transport trans)

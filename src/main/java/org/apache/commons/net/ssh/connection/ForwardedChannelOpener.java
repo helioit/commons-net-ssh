@@ -22,6 +22,9 @@ import org.apache.commons.net.ssh.transport.TransportException;
 import org.apache.commons.net.ssh.util.Buffer;
 
 /**
+ * Takes care of handling {@code SSH_MSG_CHANNEL_OPEN} requests for forwarded channels of a specific
+ * type.
+ * 
  * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
  */
 public interface ForwardedChannelOpener
@@ -33,8 +36,7 @@ public interface ForwardedChannelOpener
     String getChannelType();
     
     /**
-     * {@code CHANNEL_OPEN} requests for the channel type claimed by this opener are delegated to
-     * it.
+     * Delegates a {@code SSH_MSG_CHANNEL_OPEN} request for the channel type claimed by this opener.
      * 
      * @param buf
      *            {@link Buffer} containg the request except for the message identifier and channel

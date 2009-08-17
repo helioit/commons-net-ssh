@@ -8,6 +8,11 @@ import org.apache.commons.net.ssh.connection.SocketForwardingConnectListener;
 import org.apache.commons.net.ssh.connection.Session.Command;
 import org.apache.commons.net.ssh.util.Pipe;
 
+/**
+ * This example demonstrates how forwarding X11 connections from a remote host can be accomplished.
+ * 
+ * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
+ */
 public class X11
 {
     
@@ -19,7 +24,10 @@ public class X11
     {
         SSHClient ssh = new SSHClient();
         
-        ssh.initUserKnownHosts();
+        // Compression makes X11 more feasible over slower connections
+        ssh.useCompression();
+        
+        ssh.loadKnownHosts();
         
         /*
          * NOTE: Forwarding incoming X connections to localhost:6000 only works if X is started
@@ -39,7 +47,7 @@ public class X11
              * connection comes in replace it with the real one. But here simply one from `xauth
              * list` is being used.
              */
-            sess.reqX11Forwarding("MIT-MAGIC-COOKIE-1", "499964c789ea9bc82e117c1e696cbf88", 0);
+            sess.reqX11Forwarding("MIT-MAGIC-COOKIE-1", "47ef972d72cb2a7e4f87346c419500c6", 0);
             
             Command cmd = sess.exec("firefox");
             

@@ -5,21 +5,24 @@ import java.net.InetSocketAddress;
 import org.apache.commons.net.ssh.SSHClient;
 import org.apache.commons.net.ssh.connection.SocketForwardingConnectListener;
 import org.apache.commons.net.ssh.connection.RemotePortForwarder.Forward;
-import org.apache.log4j.BasicConfigurator;
-import org.apache.log4j.ConsoleAppender;
-import org.apache.log4j.PatternLayout;
 
+/**
+ * This example demonstrates remote port forwarding i.e. when the remote host is made to listen on a
+ * specific address and port; and forwards us incoming connections.
+ * 
+ * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
+ */
 public class RemotePF
 {
     
-    static {
-        BasicConfigurator.configure(new ConsoleAppender(new PatternLayout("%d [%-15.15t] %-5p %-30.30c{1} - %m%n")));
-    }
+    //    static {
+    //        BasicConfigurator.configure(new ConsoleAppender(new PatternLayout("%d [%-15.15t] %-5p %-30.30c{1} - %m%n")));
+    //    }
     
     public static void main(String... args) throws Exception
     {
         SSHClient client = new SSHClient();
-        client.initUserKnownHosts();
+        client.loadKnownHosts();
         
         client.connect("localhost");
         try {

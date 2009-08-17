@@ -7,6 +7,11 @@ import org.apache.commons.net.ssh.connection.Session;
 import org.apache.commons.net.ssh.connection.Session.Shell;
 import org.apache.commons.net.ssh.util.Pipe;
 
+/**
+ * A very rudimentary psuedo-terminal based on console I/O.
+ * 
+ * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
+ */
 class RudimentaryPTY
 {
     
@@ -16,17 +21,22 @@ class RudimentaryPTY
     
     public static void main(String... args) throws IOException
     {
-        SSHClient client = new SSHClient();
-        client.initUserKnownHosts();
-        client.connect("localhost");
+        SSHClient ssh = new SSHClient();
+        
+        ssh.loadKnownHosts();
+        
+        ssh.connect("localhost");
+        
+        Shell shell = null;
+        
         try {
             
-            client.authPublickey(System.getProperty("user.name"));
+            ssh.authPublickey(System.getProperty("user.name"));
             
-            Session session = client.startSession();
+            Session session = ssh.startSession();
             session.allocateDefaultPTY();
             
-            Shell shell = session.startShell();
+            shell = session.startShell();
             
             new Pipe("stdout", shell.getInputStream(), System.out) //
                                                                   .bufSize(shell.getLocalMaxPacketSize()) //
@@ -44,7 +54,11 @@ class RudimentaryPTY
             Pipe.pipe(System.in, shell.getOutputStream(), shell.getRemoteMaxPacketSize(), true);
             
         } finally {
-            client.disconnect();
+            
+            if (shell != null)
+                shell.close();
+            
+            ssh.disconnect();
         }
     }
     

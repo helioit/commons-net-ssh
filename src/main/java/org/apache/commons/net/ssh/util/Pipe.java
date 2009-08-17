@@ -66,13 +66,13 @@ public class Pipe extends Thread
             out.close();
     }
     
-    protected final Logger log;
-    protected final InputStream in;
-    protected final OutputStream out;
-    protected int bufSize = 1;
-    protected boolean closeStreamOnEOF;
+    private final Logger log;
+    private final InputStream in;
+    private final OutputStream out;
+    private int bufSize = 1;
+    private boolean closeStreamOnEOF;
     
-    protected ErrorCallback errCB;
+    private ErrorCallback errCB;
     
     public Pipe(String name, InputStream in, OutputStream out)
     {

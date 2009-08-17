@@ -246,6 +246,7 @@ public final class TransportProtocol implements Transport
             case DISCONNECT:
             {
                 gotDisconnect(buf);
+                break;
             }
             case IGNORE:
             {
@@ -274,7 +275,7 @@ public final class TransportProtocol implements Transport
     
     public void init(String hostname, Socket socket) throws TransportException
     {
-        this.hostname = hostname == null ? socket.getInetAddress().getHostName() : hostname;
+        this.hostname = hostname;
         this.socket = socket;
         
         try {
@@ -336,7 +337,7 @@ public final class TransportProtocol implements Transport
         decoder.setAuthenticated();
     }
     
-    public synchronized void setService(Service service)
+    public void setService(Service service)
     {
         if (service == null)
             service = nullService;

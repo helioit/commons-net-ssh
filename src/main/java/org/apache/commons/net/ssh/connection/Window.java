@@ -18,19 +18,17 @@
  */
 package org.apache.commons.net.ssh.connection;
 
+import org.apache.commons.net.ssh.SSHRuntimeException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
  * Base class for a window that controls data flow restrictions between local and remote end.
  * 
- * @see LocalWindow
- * @see RemoteWindow
- * 
  * @author <a href="mailto:dev@mina.apache.org">Apache MINA SSHD Project</a>
  * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
  */
-public class Window
+abstract class Window
 {
     
     protected final Logger log;
@@ -38,7 +36,6 @@ public class Window
     protected final Channel chan;
     
     protected int size;
-    protected int initSize;
     protected int maxPacketSize;
     
     public Window(Channel chan, boolean local)
@@ -49,8 +46,10 @@ public class Window
     
     public synchronized void consume(int dec)
     {
-        size -= dec;
         log.debug("Consuming by " + dec + " down to " + size);
+        size -= dec;
+        if (size < 0)
+            throw new SSHRuntimeException("Window consumed to below 0");
     }
     
     public synchronized void expand(int inc)
@@ -58,11 +57,6 @@ public class Window
         size += inc;
         log.debug("Increasing by {} up to {}", inc, size);
         notifyAll();
-    }
-    
-    public int getInitialSize()
-    {
-        return initSize;
     }
     
     public int getMaxPacketSize()
@@ -77,14 +71,14 @@ public class Window
     
     public void init(int initialWinSize, int maxPacketSize)
     {
-        this.size = this.initSize = initialWinSize;
+        this.size = initialWinSize;
         this.maxPacketSize = maxPacketSize;
     }
     
     @Override
     public String toString()
     {
-        return "[ size=" + size + " | maxPacketSize=" + maxPacketSize + " ]";
+        return "[size=" + size + ";maxPacket=" + maxPacketSize + "]";
     }
     
 }

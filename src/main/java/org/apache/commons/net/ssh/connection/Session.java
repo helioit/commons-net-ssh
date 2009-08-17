@@ -23,15 +23,14 @@ import java.io.InputStream;
 import java.util.Map;
 
 import org.apache.commons.net.ssh.transport.TransportException;
-import org.apache.commons.net.ssh.util.Buffer;
 
 /**
- * A {@code session} channel provides execution of a remote {@link Command command}, {@link Shell
- * shell} or {@link Subsystem subsystem}. Before this requests like starting X11 forwarding, setting
- * environment variables, window dimensions etc. can be made.
+ * A {@code session} channel provides for execution of a remote {@link Command command},
+ * {@link Shell shell} or {@link Subsystem subsystem}. Before this requests like starting X11
+ * forwarding, setting environment variables, allocating a PTY etc. can be made.
  * <p>
  * It is not legal to reuse a {@code session} channel for more than one of command, shell, or
- * subsystem. Once one of these has been started, this instance's API is invalid and that of the
+ * subsystem. Once one of these has been started this instance's API is invalid and that of the
  * {@link Command specific} {@link Shell targets} {@link Subsystem returned} should be used.
  * 
  * @see Command
@@ -44,27 +43,34 @@ public interface Session extends Channel
 {
     
     /**
-     * Remote command.
+     * Command API.
      */
     interface Command extends Channel
     {
         
         /**
-         * Read from the command's stderr stream into a string (blocking).
+         * Read from the command's {@code stderr} stream into a string (blocking).
          * 
-         * @return the stderr output as a string
+         * @return the commands {@code stderr} output as a string
          * @throws IOException
          *             if error reading from the stream
          */
         String getErrorAsString() throws IOException;
         
         /**
-         * Returns the command's stderr stream.
+         * Returns the command's {@code stderr} stream.
          */
         InputStream getErrorStream();
         
         /**
-         * Returns the {@link Signal signal} the command exit with, or {@code null} if this
+         * If the command exit violently {@link #getExitSignal() with a signal}, an error message
+         * would have been received and can be retrieved via this method. Otherwise, this method
+         * will return {@code null}.
+         */
+        String getExitErrorMessage();
+        
+        /**
+         * Returns the {@link Signal signal} if the command exit violently, or {@code null} if this
          * information was not received.
          */
         Signal getExitSignal();
@@ -76,9 +82,16 @@ public interface Session extends Channel
         Integer getExitStatus();
         
         /**
-         * Read from the command's stdout stream into a string (blocking).
+         * If the command exit violently {@link #getExitSignal() with a signal}, information about
+         * whether a core dump took place would have been received and can be retrieved via this
+         * method. Otherwise, this method will return {@code null}.
+         */
+        Boolean getExitWasCoreDumped();
+        
+        /**
+         * Read from the command's {@code stdout} stream into a string (blocking).
          * 
-         * @return the command's output as a string
+         * @return the command's {@code stdout} output as a string
          * @throws IOException
          *             if error reading from the stream
          */
@@ -87,33 +100,65 @@ public interface Session extends Channel
         /**
          * Send a signal to the remote command.
          * 
-         * @param sig
-         *            {@link Signal} identifier
+         * @param signal
+         *            the signal
          * @throws TransportException
          *             if error sending the signal
          */
-        void signal(Signal sig) throws TransportException;
+        void signal(Signal signal) throws TransportException;
         
     }
     
     /**
-     * Shell.
+     * Shell API.
      */
     interface Shell extends Channel
     {
         
+        /**
+         * Whether the client can do local flow control using {@code control-S} and {@code
+         * control-Q}.
+         * 
+         * @return boolean value indicating whether 'client can do', or {@code null} if no such
+         *         information was received
+         */
         Boolean canDoFlowControl();
         
+        /**
+         * Sends a window dimension change message.
+         * 
+         * @param cols
+         *            terminal width, columns
+         * @param rows
+         *            terminal height, rows
+         * @param width
+         *            terminal width, pixels
+         * @param height
+         *            terminal height, pixels
+         * @throws TransportException
+         */
         void changeWindowDimensions(int cols, int rows, int width, int height) throws TransportException;
         
+        /**
+         * Returns the shell's {@code stderr} stream.
+         */
         InputStream getErrorStream();
         
-        void signal(Signal sig) throws TransportException;
+        /**
+         * Send a signal.
+         * 
+         * @param signal
+         *            the signal
+         * @throws TransportException
+         *             if error sending the signal
+         */
+        void signal(Signal signal) throws TransportException;
         
     }
     
     /**
-     * The different signals that may be sent or received.
+     * Various signals that may be sent or received. The signals are from POSIX and simply miss the
+     * {@code "SIG_"} prefix.
      */
     public enum Signal
     {
@@ -133,6 +178,14 @@ public interface Session extends Channel
         USR2("USR2"),
         UNKNOWN("UNKNOWN");
         
+        /**
+         * Create from the string representation used when the signal is received as part of an SSH
+         * packet.
+         * 
+         * @param name
+         *            name of the signal as received
+         * @return the enum constant inferred
+         */
         public static Signal fromString(String name)
         {
             for (Signal sig : Signal.values())
@@ -156,13 +209,41 @@ public interface Session extends Channel
         
     }
     
+    /**
+     * Subsystem API.
+     */
     interface Subsystem extends Channel
     { // there isn't really any subsystem-specific API, or is there...
     }
     
+    /**
+     * Allocates a default PTY. The default PTY is {@code "vt100"} with the echo modes disabled.
+     * 
+     * @throws ConnectionException
+     * @throws TransportException
+     */
     void allocateDefaultPTY() throws ConnectionException, TransportException;
     
-    void allocatePTY(String term, int cols, int rows, int width, int height, Map<PTYMode, Buffer> modes)
+    /**
+     * Allocate a psuedo-terminal for this session.
+     * <p>
+     * {@code 0} dimension parameters will be ignored by the server.
+     * 
+     * @param term
+     *            {@code TERM} environment variable value (e.g., {@code vt100})
+     * @param cols
+     *            terminal width, cols (e.g., 80)
+     * @param rows
+     *            terminal height, rows (e.g., 24)
+     * @param width
+     *            terminal width, pixels (e.g., 640)
+     * @param height
+     *            terminal height, pixels (e.g., 480)
+     * @param modes
+     * @throws ConnectionException
+     * @throws TransportException
+     */
+    void allocatePTY(String term, int cols, int rows, int width, int height, Map<PTYMode, Integer> modes)
             throws ConnectionException, TransportException;
     
     /**
@@ -187,9 +268,9 @@ public interface Session extends Channel
      * @param screen
      *            X11 screen number
      * @throws ConnectionException
-     *             if the request fails
+     *             if the request failed
      * @throws TransportException
-     *             if there is an error sending the request
+     *             if there was an error sending the request
      */
     void reqX11Forwarding(String authProto, String authCookie, int screen) throws ConnectionException,
             TransportException;
@@ -202,9 +283,9 @@ public interface Session extends Channel
      * @param value
      *            value to set
      * @throws ConnectionException
-     *             if the request fails
+     *             if the request failed
      * @throws TransportException
-     *             error writing the request
+     *             if there was an error sending the request
      */
     void setEnvVar(String name, String value) throws ConnectionException, TransportException;
     
@@ -213,9 +294,9 @@ public interface Session extends Channel
      * 
      * @return {@link Shell} instance which should now be used
      * @throws ConnectionException
-     *             if the request fails
+     *             if the request failed
      * @throws TransportException
-     *             if there is an error sending the request
+     *             if there was an error sending the request
      */
     Shell startShell() throws ConnectionException, TransportException;
     
@@ -223,11 +304,12 @@ public interface Session extends Channel
      * Request a subsystem.
      * 
      * @param name
+     *            subsystem name
      * @return {@link Subsystem} instance which should now be used
      * @throws ConnectionException
-     *             if the request fails
+     *             if the request failed
      * @throws TransportException
-     *             if there is an error sending the request
+     *             if there was an error sending the request
      */
     Subsystem startSubsysytem(String name) throws ConnectionException, TransportException;
     

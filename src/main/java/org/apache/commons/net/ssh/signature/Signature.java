@@ -22,7 +22,7 @@ import java.security.PrivateKey;
 import java.security.PublicKey;
 
 /**
- * Signature interface for SSH used to sign or verify packets.
+ * Signature interface for SSH used to sign or verify data.
  * <p>
  * Usually wraps a javax.crypto.Signature object.
  * 

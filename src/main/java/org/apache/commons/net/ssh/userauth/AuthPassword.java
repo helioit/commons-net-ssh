@@ -82,7 +82,7 @@ public class AuthPassword extends AbstractAuthMethod
      * Returns the associated {@link Resource} for which this method requests password from the
      * {@link PasswordFinder}.
      */
-    protected Resource getResource()
+    private Resource getResource()
     {
         return new Resource(Resource.Type.ACCOUNT, params.getUsername() + "@" + params.getTransport().getRemoteHost());
     }

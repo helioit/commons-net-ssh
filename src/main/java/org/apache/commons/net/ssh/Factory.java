@@ -24,7 +24,7 @@ import java.util.List;
  * A basic factory interface.
  * 
  * @param <T>
- *            the type of instances created by this factory
+ *            the type of object created by this factory
  * 
  * @author <a href="mailto:dev@mina.apache.org">Apache MINA SSHD Project</a>
  * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
@@ -33,8 +33,8 @@ public interface Factory<T>
 {
     
     /**
-     * A named factory is a factory identified by a name. Such names are used mainly in the
-     * algorithm negotiation at the beginning of the SSH connection.
+     * Inteface for a named factory. Named factories are simply factories that are identified by a
+     * name. Such names are used mainly in SSH algorithm negotiation.
      * 
      * @param <T>
      *            type of object created by this factory
@@ -43,22 +43,22 @@ public interface Factory<T>
     {
         
         /**
-         * Utility functions for ease-of-dealing with named factories..
+         * Utility functions
          */
         public static class Util
         {
             
             /**
-             * Create an instance of the specified name by looking up the needed factory in the
-             * list.
+             * Creates an object by picking a factory from {@code factories} that is identified by
+             * {@code name} from a list of named {@code factories}. Uses the first match.
              * 
              * @param factories
              *            list of available factories
              * @param name
-             *            the factory name to use
+             *            name of the desired factory
              * @param <T>
-             *            type of object to create
-             * @return a newly created object or <code>null</code> if the factory is not in the list
+             *            type of the {@code factories}
+             * @return a newly created instance of {@code T} or {@code null} if there was no match
              */
             public static <T> T create(List<Named<T>> factories, String name)
             {
@@ -70,15 +70,16 @@ public interface Factory<T>
             }
             
             /**
-             * Retrieve the factory identified by its name from the list.
+             * Retrieve a particular factory as identified by {@code name} from a list of named
+             * {@code factories}. Returns the first match.
              * 
              * @param factories
-             *            list of available factories
+             *            list of factories
              * @param name
              *            the name of the factory to retrieve
              * @param <T>
-             *            type of object created by the factories
-             * @return a factory or <code>null</code> if not found in the list
+             *            type of the {@code factories}
+             * @return a factory or {@code null} if there was no match
              */
             public static <T> Named<T> get(List<Named<T>> factories, String name)
             {
@@ -89,12 +90,13 @@ public interface Factory<T>
             }
             
             /**
-             * Get a comma separated list of the factory names from the given list.
+             * Get a comma-delimited string containing the factory names from the given list of
+             * {@code factories}.
              * 
              * @param factories
              *            list of available factories
              * @param <T>
-             *            type of object to create
+             *            type of the {@code factories}
              * @return a comma separated list of factory names
              */
             public static <T> String getNames(List<Named<T>> factories)
@@ -116,7 +118,7 @@ public interface Factory<T>
              * @param name
              *            the name of the factory to remove
              * @param <T>
-             *            type of object to create
+             *            type of the {@code factories}
              * @return the factory removed from the list or <code>null</code> if not in the list
              */
             public static <T> Named<T> remove(List<Named<T>> factories, String name)
@@ -132,14 +134,14 @@ public interface Factory<T>
         }
         
         /**
-         * Name of this factory
+         * Returns the name of this factory.
          */
         String getName();
         
     }
     
     /**
-     * Create a new instance
+     * Returns a new object created using this factory.
      */
     T create();
     

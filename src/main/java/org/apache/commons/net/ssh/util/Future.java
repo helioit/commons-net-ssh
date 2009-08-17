@@ -49,14 +49,14 @@ public class Future<V, T extends Throwable> implements ErrorNotifiable
         }
     }
     
-    protected final Logger log;
+    private final Logger log;
     
-    protected final FriendlyChainer<T> chainer;
-    protected final ReentrantLock lock;
-    protected final Condition cond;
+    private final FriendlyChainer<T> chainer;
+    private final ReentrantLock lock;
+    private final Condition cond;
     
-    protected V val;
-    protected T pendingEx;
+    private V val;
+    private T pendingEx;
     
     public Future(String name, FriendlyChainer<T> chainer)
     {

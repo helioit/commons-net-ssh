@@ -28,13 +28,9 @@ import org.apache.commons.net.ssh.keyprovider.FileKeyProvider;
 import org.apache.commons.net.ssh.mac.MAC;
 import org.apache.commons.net.ssh.random.Random;
 import org.apache.commons.net.ssh.signature.Signature;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
- * Holds configuration information and factories.
- * <p>
- * This is a container for {@link Factory.Named named factory} implementations of
+ * Holds configuration information and factories. Acts a container for factories of
  * {@link KeyExchange}, {@link Cipher}, {@link Compression}, {@link MAC}, {@link Signature},
  * {@link Random}, and {@link FileKeyProvider}.
  * 
@@ -44,23 +40,21 @@ import org.slf4j.LoggerFactory;
 public class Config
 {
     
-    protected static final Logger log = LoggerFactory.getLogger(Config.class);
+    private String version;
     
-    protected String version;
+    private Factory<Random> randomFactory;
     
-    protected Factory<Random> randomFactory;
-    
-    protected List<Factory.Named<KeyExchange>> kexFactories;
-    protected List<Factory.Named<Cipher>> cipherFactories;
-    protected List<Factory.Named<Compression>> compressionFactories;
-    protected List<Factory.Named<MAC>> macFactories;
-    protected List<Factory.Named<Signature>> signatureFactories;
-    protected List<Factory.Named<FileKeyProvider>> fileKeyProviderFactories;
+    private List<Factory.Named<KeyExchange>> kexFactories;
+    private List<Factory.Named<Cipher>> cipherFactories;
+    private List<Factory.Named<Compression>> compressionFactories;
+    private List<Factory.Named<MAC>> macFactories;
+    private List<Factory.Named<Signature>> signatureFactories;
+    private List<Factory.Named<FileKeyProvider>> fileKeyProviderFactories;
     
     /**
-     * Retrieve the list of named factories for <code>Cipher</code>.
+     * Retrieve the list of named factories for {@code Cipher}.
      * 
-     * @return a list of named <code>Cipher</code> factories, never {@code null}
+     * @return a list of named {@code Cipher} factories
      */
     public List<Factory.Named<Cipher>> getCipherFactories()
     {
@@ -68,9 +62,9 @@ public class Config
     }
     
     /**
-     * Retrieve the list of named factories for <code>Compression</code>.
+     * Retrieve the list of named factories for {@code Compression}.
      * 
-     * @return a list of named {@code Compression} factories, never {@code null}
+     * @return a list of named {@code Compression} factories
      */
     public List<Factory.Named<Compression>> getCompressionFactories()
     {
@@ -90,7 +84,7 @@ public class Config
     /**
      * Retrieve the list of named factories for <code>KeyExchange</code>.
      * 
-     * @return a list of named <code>KeyExchange</code> factories, never {@code null}
+     * @return a list of named <code>KeyExchange</code> factories
      */
     public List<Factory.Named<KeyExchange>> getKeyExchangeFactories()
     {
@@ -100,7 +94,7 @@ public class Config
     /**
      * Retrieve the list of named factories for <code>MAC</code>.
      * 
-     * @return a list of named <code>Mac</code> factories, never {@code null}
+     * @return a list of named <code>MAC</code> factories
      */
     public List<Factory.Named<MAC>> getMACFactories()
     {
@@ -108,9 +102,9 @@ public class Config
     }
     
     /**
-     * Retrieve the {@link Random} factory to be used.
+     * Retrieve the {@link Random} factory.
      * 
-     * @return the {@link Random} factory, never {@code null}
+     * @return the {@link Random} factory
      */
     public Factory<Random> getRandomFactory()
     {
@@ -120,83 +114,172 @@ public class Config
     /**
      * Retrieve the list of named factories for {@link Signature}
      * 
-     * @return a list of named {@link Signature} factories, never {@code null}
+     * @return a list of named {@link Signature} factories
      */
     public List<Factory.Named<Signature>> getSignatureFactories()
     {
         return signatureFactories;
     }
     
+    /**
+     * Returns the software version information for identification during SSH connection
+     * initialization. For example, {@code "NET_3_0"}.
+     */
     public String getVersion()
     {
         return version;
     }
     
+    /**
+     * Set the named factories for {@link Cipher}.
+     * 
+     * @param cipherFactories
+     *            any number of named factories
+     */
     public void setCipherFactories(Factory.Named<Cipher>... cipherFactories)
     {
         setCipherFactories(Arrays.<Factory.Named<Cipher>> asList(cipherFactories));
     }
     
+    /**
+     * Set the named factories for {@link Cipher}.
+     * 
+     * @param cipherFactories
+     *            a list of named factories
+     */
     public void setCipherFactories(List<Factory.Named<Cipher>> cipherFactories)
     {
         this.cipherFactories = cipherFactories;
     }
     
+    /**
+     * Set the named factories for {@link Compression}.
+     * 
+     * @param compressionFactories
+     *            any number of named factories
+     */
     public void setCompressionFactories(Factory.Named<Compression>... compressionFactories)
     {
         setCompressionFactories(Arrays.<Factory.Named<Compression>> asList(compressionFactories));
     }
     
+    /**
+     * Set the named factories for {@link Compression}.
+     * 
+     * @param compressionFactories
+     *            a list of named factories
+     */
     public void setCompressionFactories(List<Factory.Named<Compression>> compressionFactories)
     {
         this.compressionFactories = compressionFactories;
     }
     
+    /**
+     * Set the named factories for {@link FileKeyProvider}.
+     * 
+     * @param fileKeyProviderFactories
+     *            any number of named factories
+     */
     public void setFileKeyProviderFactories(Factory.Named<FileKeyProvider>... fileKeyProviderFactories)
     {
         setFileKeyProviderFactories(Arrays.<Factory.Named<FileKeyProvider>> asList(fileKeyProviderFactories));
     }
     
+    /**
+     * Set the named factories for {@link FileKeyProvider}.
+     * 
+     * @param fileKeyProviderFactories
+     *            a list of named factories
+     */
     public void setFileKeyProviderFactories(List<Factory.Named<FileKeyProvider>> fileKeyProviderFactories)
     {
         this.fileKeyProviderFactories = fileKeyProviderFactories;
     }
     
+    /**
+     * Set the named factories for {@link KeyExchange}.
+     * 
+     * @param kexFactories
+     *            any number of named factories
+     */
     public void setKeyExchangeFactories(Factory.Named<KeyExchange>... kexFactories)
     {
         setKeyExchangeFactories(Arrays.<Factory.Named<KeyExchange>> asList(kexFactories));
     }
     
+    /**
+     * Set the named factories for {@link KeyExchange}.
+     * 
+     * @param kexFactories
+     *            a list of named factories
+     */
     public void setKeyExchangeFactories(List<Factory.Named<KeyExchange>> kexFactories)
     {
         this.kexFactories = kexFactories;
     }
     
+    /**
+     * Set the named factories for {@link MAC}.
+     * 
+     * @param macFactories
+     *            any number of named factories
+     */
     public void setMACFactories(Factory.Named<MAC>... macFactories)
     {
         setMACFactories(Arrays.<Factory.Named<MAC>> asList(macFactories));
     }
     
+    /**
+     * Set the named factories for {@link MAC}.
+     * 
+     * @param macFactories
+     *            a list of named factories
+     */
     public void setMACFactories(List<Factory.Named<MAC>> macFactories)
     {
         this.macFactories = macFactories;
     }
     
-    public void setRandomFactory(Factory<Random> prngFactory)
+    /**
+     * Set the factory for {@link Random}.
+     * 
+     * @param randomFactory
+     *            the factory
+     */
+    public void setRandomFactory(Factory<Random> randomFactory)
     {
-        this.randomFactory = prngFactory;
+        this.randomFactory = randomFactory;
     }
     
+    /**
+     * Set the named factories for {@link Signature}.
+     * 
+     * @param signatureFactories
+     *            any number of named factories
+     */
     public void setSignatureFactories(Factory.Named<Signature>... signatureFactories)
     {
         setSignatureFactories(Arrays.<Factory.Named<Signature>> asList(signatureFactories));
     }
     
+    /**
+     * Set the named factories for {@link Signature}.
+     * 
+     * @param signatureFactories
+     *            a list of named factories
+     */
     public void setSignatureFactories(List<Factory.Named<Signature>> signatureFactories)
     {
         this.signatureFactories = signatureFactories;
     }
     
+    /**
+     * Set the software version information for identification during SSH connection initialization.
+     * For example, {@code "NET_3_0"}.
+     * 
+     * @param version
+     *            software version info
+     */
     public void setVersion(String version)
     {
         this.version = version;

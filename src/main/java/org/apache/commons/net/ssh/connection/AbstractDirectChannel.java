@@ -23,6 +23,8 @@ import org.apache.commons.net.ssh.util.Buffer;
 import org.apache.commons.net.ssh.util.Constants.Message;
 
 /**
+ * Base class for direct channels whose open is initated by the client.
+ * 
  * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
  */
 public abstract class AbstractDirectChannel extends AbstractChannel implements Channel.Direct
@@ -41,34 +43,29 @@ public abstract class AbstractDirectChannel extends AbstractChannel implements C
     
     public void open() throws ConnectionException, TransportException
     {
-        lock.lock();
-        try {
-            trans.writePacket(buildOpenReq());
-            open.await(conn.getTimeout());
-        } finally {
-            lock.unlock();
-        }
+        trans.writePacket(buildOpenReq());
+        open.await(conn.getTimeout());
     }
     
-    protected Buffer buildOpenReq()
-    {
-        return new Buffer(Message.CHANNEL_OPEN) //
-                                               .putString(type) //
-                                               .putInt(id) //
-                                               .putInt(lwin.getSize()) //
-                                               .putInt(lwin.getMaxPacketSize());
-    }
-    
-    protected void gotOpenConfirmation(Buffer buf)
+    private void gotOpenConfirmation(Buffer buf)
     {
         init(buf.getInt(), buf.getInt(), buf.getInt());
         open.set();
     }
     
-    protected void gotOpenFailure(Buffer buf)
+    private void gotOpenFailure(Buffer buf)
     {
-        open.error(new OpenFailException(type, buf.getInt(), buf.getString()));
-        conn.forget(this);
+        open.error(new OpenFailException(getType(), buf.getInt(), buf.getString()));
+        finishOff();
+    }
+    
+    protected Buffer buildOpenReq()
+    {
+        return new Buffer(Message.CHANNEL_OPEN) //
+                                               .putString(getType()) //
+                                               .putInt(getID()) //
+                                               .putInt(getLocalWinSize()) //
+                                               .putInt(getLocalMaxPacketSize());
     }
     
     @Override

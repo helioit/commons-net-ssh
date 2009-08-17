@@ -30,30 +30,44 @@ import org.apache.commons.net.ssh.util.Constants.Message;
  */
 public class LocalWindow extends Window
 {
+    int initSize;
+    int threshold;
     
     LocalWindow(Channel chan)
     {
         super(chan, true);
     }
     
-    /*
-     * This is slightly confusing and not sure I completely understand but works well
-     */
-    public synchronized void check(int max) throws TransportException
+    public synchronized void check() throws TransportException
     {
-        int threshold = Math.min(maxPacketSize * 8, max / 4);
-        int diff = max - size;
-        if (diff > maxPacketSize && (diff > threshold || size < threshold))
-            growBy(diff);
+        int diff = size - threshold;
+        if (diff <= 0)
+            growBy(initSize - size);
     }
     
-    protected synchronized void growBy(int inc) throws TransportException
+    //    public synchronized void check(int max) throws TransportException
+    //    {
+    //        int threshold = Math.min(maxPacketSize * 8, max / 4);
+    //        int diff = max - size;
+    //        if (diff > maxPacketSize && (diff > threshold || size < threshold))
+    //            growBy(diff);
+    //    }
+    
+    @Override
+    public void init(int initialWinSize, int maxPacketSize)
+    {
+        initSize = initialWinSize;
+        threshold = Math.min(maxPacketSize * 20, initialWinSize / 4);
+        super.init(initialWinSize, maxPacketSize);
+    }
+    
+    private synchronized void growBy(int inc) throws TransportException
     {
         sendWindowAdjust(inc);
         expand(inc);
     }
     
-    protected synchronized void sendWindowAdjust(int inc) throws TransportException
+    private synchronized void sendWindowAdjust(int inc) throws TransportException
     {
         log.info("Sending SSH_MSG_CHANNEL_WINDOW_ADJUST to #{} for {} bytes", chan.getRecipient(), inc);
         chan.getTransport().writePacket(new Buffer(Message.CHANNEL_WINDOW_ADJUST) //

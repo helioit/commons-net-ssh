@@ -25,16 +25,25 @@ import java.security.PublicKey;
 import org.apache.commons.net.ssh.util.Constants.KeyType;
 
 /**
+ * A KeyProvider is a container for a public-private keypair.
  * 
  * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
  */
 public interface KeyProvider
 {
-    
+    /**
+     * Returns the private key.
+     */
     PrivateKey getPrivate() throws IOException;
     
+    /**
+     * Returns the public key.
+     */
     PublicKey getPublic() throws IOException;
     
+    /**
+     * Returns the {@link KeyType}.
+     */
     KeyType getType() throws IOException;
     
 }

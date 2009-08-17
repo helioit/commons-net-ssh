@@ -188,7 +188,8 @@ public class RemotePortForwarder extends AbstractForwardedChannelOpener
      * @throws ConnectionException
      *             if there is an error requesting the forwarding
      */
-    public Forward bind(Forward forward, ConnectListener listener) throws ConnectionException, TransportException
+    public synchronized Forward bind(Forward forward, ConnectListener listener) throws ConnectionException,
+            TransportException
     {
         Buffer reply = conn.sendGlobalRequest(PF_REQ, true, new Buffer() //
                                                                         .putString(forward.address) //
@@ -198,17 +199,6 @@ public class RemotePortForwarder extends AbstractForwardedChannelOpener
             forward.port = reply.getInt();
         log.info("Remote end listening on {}", forward);
         listeners.put(forward, listener);
-        
-        /*
-         * Make sure we actually get the CHANNEL_OPEN packets of 'forwarded-tcpip' type
-         */
-        if (listeners.isEmpty())
-            if (conn.get(getChannelType()) != null && conn.get(getChannelType()) != this)
-                // Some other opener was already attached for 'forwarded-tcpip'
-                throw new AssertionError("Singleton constraint violated");
-            else
-                conn.attach(this);
-        
         return forward;
     }
     
@@ -220,7 +210,7 @@ public class RemotePortForwarder extends AbstractForwardedChannelOpener
      * @throws ConnectionException
      *             if there is an error with the cancellation request
      */
-    public void cancel(Forward forward) throws ConnectionException, TransportException
+    public synchronized void cancel(Forward forward) throws ConnectionException, TransportException
     {
         try {
             conn.sendGlobalRequest(PF_CANCEL, true, new Buffer() //
@@ -229,8 +219,6 @@ public class RemotePortForwarder extends AbstractForwardedChannelOpener
                 .get(conn.getTimeout());
         } finally {
             listeners.remove(forward);
-            if (listeners.isEmpty())
-                conn.forget(this);
         }
     }
     

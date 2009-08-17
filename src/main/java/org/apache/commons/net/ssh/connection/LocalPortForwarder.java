@@ -36,15 +36,37 @@ import org.slf4j.LoggerFactory;
 public class LocalPortForwarder
 {
     
-    protected class DirectTCPIPChannel extends AbstractDirectChannel
+    private class DirectTCPIPChannel extends AbstractDirectChannel
     {
         
-        protected final Socket sock;
+        private final Socket sock;
         
-        protected DirectTCPIPChannel(Connection conn, Socket sock)
+        private DirectTCPIPChannel(Connection conn, Socket sock)
         {
             super("direct-tcpip", conn);
             this.sock = sock;
+        }
+        
+        private void start() throws IOException
+        {
+            sock.setSendBufferSize(getRemoteMaxPacketSize());
+            
+            ErrorCallback chanCloser = Pipe.closeOnErrorCallback(this);
+            
+            new Pipe("chan2soc", getInputStream(), sock.getOutputStream()) //
+                                                                          .bufSize(getLocalMaxPacketSize()) //
+                                                                          .closeOutputStreamOnEOF(true) //
+                                                                          .errorCallback(chanCloser) //
+                                                                          .daemon(true) //
+                                                                          .start();
+            
+            new Pipe("soc2chan", sock.getInputStream(), getOutputStream()) //
+                                                                          .bufSize(getRemoteMaxPacketSize()) //
+                                                                          .closeOutputStreamOnEOF(true) //
+                                                                          .errorCallback(chanCloser) //
+                                                                          .daemon(true) //
+                                                                          .start();
+            
         }
         
         @Override
@@ -57,40 +79,18 @@ public class LocalPortForwarder
                         .putInt(ss.getLocalPort());
         }
         
-        protected void start() throws IOException
-        {
-            sock.setSendBufferSize(getRemoteMaxPacketSize());
-            
-            ErrorCallback chanCloser = Pipe.closeOnErrorCallback(this);
-            
-            new Pipe("chan2soc", in, sock.getOutputStream()) //
-                                                            .bufSize(getLocalMaxPacketSize()) //
-                                                            .closeOutputStreamOnEOF(true) //
-                                                            .errorCallback(chanCloser) //
-                                                            .daemon(true) //
-                                                            .start();
-            
-            new Pipe("soc2chan", sock.getInputStream(), out) //
-                                                            .bufSize(getRemoteMaxPacketSize()) //
-                                                            .closeOutputStreamOnEOF(true) //
-                                                            .errorCallback(chanCloser) //
-                                                            .daemon(true) //
-                                                            .start();
-            
-        }
-        
     }
     
-    protected final Logger log = LoggerFactory.getLogger(getClass());
+    private final Logger log = LoggerFactory.getLogger(getClass());
     
-    protected final Connection conn;
-    protected final Event<ConnectionException> close =
+    private final Connection conn;
+    private final Event<ConnectionException> close =
             new Event<ConnectionException>("pfd close", ConnectionException.chainer);
-    protected final ServerSocket ss;
-    protected final String host;
-    protected final int port;
+    private final ServerSocket ss;
+    private final String host;
+    private final int port;
     
-    protected final Thread listener = new Thread()
+    private final Thread listener = new Thread()
         {
             {
                 setName("pfd"); // "port forwarding daemon"
