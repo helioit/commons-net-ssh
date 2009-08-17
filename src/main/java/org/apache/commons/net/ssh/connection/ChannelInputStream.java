@@ -96,7 +96,8 @@ public class ChannelInputStream extends InputStream implements ErrorNotifiable
             if (buf.rpos() > win.getMaxPacketSize() || buf.available() == 0)
                 buf.clear();
         }
-        win.check();
+        if (!chan.getAutoExpand())
+            win.check();
         return len;
     }
     

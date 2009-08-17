@@ -25,7 +25,6 @@ import org.apache.commons.net.ssh.Config;
 import org.apache.commons.net.ssh.PacketHandler;
 import org.apache.commons.net.ssh.Service;
 import org.apache.commons.net.ssh.util.Buffer;
-import org.apache.commons.net.ssh.util.Constants;
 import org.apache.commons.net.ssh.util.Constants.DisconnectReason;
 
 /**
@@ -37,8 +36,8 @@ public interface Transport extends PacketHandler
 {
     
     /**
-     * Send a disconnection packet with reason as {@link Constants#SSH_DISCONNECT_BY_APPLICATION},
-     * and closes this transport.
+     * Send a disconnection packet with reason as {@link DisconnectReason#BY_APPLICATION}, and
+     * closes this transport.
      */
     void disconnect();
     
@@ -49,19 +48,19 @@ public interface Transport extends PacketHandler
     void disconnect(DisconnectReason reason);
     
     /**
-     * Send a disconnect packet with the given {@link DisconnectReason reason} and message, and
-     * closes this transport.
+     * Send a disconnect packet with the given {@link DisconnectReason reason} and {@code message},
+     * and closes this transport.
      * 
      * @param reason
      *            the reason code for this disconnect
-     * @param msg
+     * @param message
      *            the text message
      */
-    void disconnect(DisconnectReason reason, String msg);
+    void disconnect(DisconnectReason reason, String message);
     
     /**
      * Returns the version string used by this client to identify itself to an SSH server, e.g.
-     * "NET_3.0"
+     * "NET_3_0"
      * 
      * @return client's version string
      */
@@ -74,7 +73,7 @@ public interface Transport extends PacketHandler
     
     /**
      * Returns the associated {@link KeyExchanger}. This allows {@link KeyExchanger#startKex
-     * starting key (re)exchange}.
+     * starting key (re)exchange} and other operations.
      */
     KeyExchanger getKeyExchanger();
     
@@ -105,7 +104,7 @@ public interface Transport extends PacketHandler
     Service getService();
     
     /**
-     * Returns the timeout that is currently set.
+     * Returns the timeout that is currently set for blocking operations.
      */
     int getTimeout();
     
@@ -115,7 +114,7 @@ public interface Transport extends PacketHandler
      * incompatibility.
      * 
      * @param socket
-     *            the socket on which connection to SSH server has already been established
+     *            a socket which is already connected to SSH server
      * @throws TransportException
      *             if there is an error during exchange of identification information
      */

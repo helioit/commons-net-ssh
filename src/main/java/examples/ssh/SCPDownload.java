@@ -18,18 +18,12 @@ public class SCPDownload
     public static void main(String[] args) throws Exception
     {
         SSHClient ssh = new SSHClient();
+        //ssh.useCompression(); // => significant speedup for large file transfers on fast links
         ssh.loadKnownHosts();
         ssh.connect("localhost");
         try {
-            
             ssh.authPublickey(System.getProperty("user.name"));
-            
-            // Compression = significant speedup for large file transfers on fast links
-            // present here to demo renegotiation - could have just put this before connect() 
-            //ssh.useCompression();
-            
             new SCPDownloadClient(ssh).copy("ten", "/tmp");
-            
         } finally {
             ssh.disconnect();
         }

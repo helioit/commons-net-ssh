@@ -16,6 +16,8 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+/* Kinda basic right now */
+
 public class SmokeTest
 {
     //    static {
@@ -57,7 +59,7 @@ public class SmokeTest
     }
     
     @Test
-    public void testIsAuthenticated() throws IOException
+    public void testAuthenticate() throws IOException
     {
         connect();
         authenticate();
@@ -65,7 +67,7 @@ public class SmokeTest
     }
     
     @Test
-    public void testIsConnected() throws IOException
+    public void testConnect() throws IOException
     {
         connect();
         assertTrue(ssh.isConnected());
@@ -77,8 +79,10 @@ public class SmokeTest
     {
         connect();
         authenticate();
+        
         Shell shell = ssh.startSession().startShell();
         assertTrue(shell.isOpen());
+        
         shell.close();
         assertFalse(shell.isOpen());
     }

@@ -83,9 +83,9 @@ public abstract class AbstractService implements Service
     
     public void request() throws TransportException
     {
-        Service active = trans.getService();
+        final Service active = trans.getService();
         if (!equals(active))
-            if (active != null && getName().equals(active.getName()))
+            if (name.equals(active.getName()))
                 trans.setService(this);
             else
                 trans.reqService(this);

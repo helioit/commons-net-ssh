@@ -25,7 +25,7 @@ public class X11
         SSHClient ssh = new SSHClient();
         
         // Compression makes X11 more feasible over slower connections
-        ssh.useCompression();
+        //ssh.useCompression();
         
         ssh.loadKnownHosts();
         
@@ -47,7 +47,7 @@ public class X11
              * connection comes in replace it with the real one. But here simply one from `xauth
              * list` is being used.
              */
-            sess.reqX11Forwarding("MIT-MAGIC-COOKIE-1", "47ef972d72cb2a7e4f87346c419500c6", 0);
+            sess.reqX11Forwarding("MIT-MAGIC-COOKIE-1", "26e8700422fd3efb99a918ce02324e9e", 0);
             
             Command cmd = sess.exec("firefox");
             

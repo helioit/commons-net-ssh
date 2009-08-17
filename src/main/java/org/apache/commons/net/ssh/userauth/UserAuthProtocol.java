@@ -71,7 +71,8 @@ public class UserAuthProtocol extends AbstractService implements UserAuth, AuthP
         this.username = username;
         this.nextService = nextService;
         
-        request(); // Request "ssh-userauth" service (if not already active)
+        // Request "ssh-userauth" service (if not already active)
+        request();
         
         if (firstAttempt) { // Assume all allowed
             for (AuthMethod meth : methods)
@@ -81,34 +82,30 @@ public class UserAuthProtocol extends AbstractService implements UserAuth, AuthP
         
         try {
             
-            for (AuthMethod meth : methods) {
+            for (AuthMethod meth : methods)
                 
-                currentMethod = meth;
-                
-                if (allowed.contains(currentMethod.getName())) {
+                if (allowed.contains(meth.getName())) {
                     
-                    log.info("Trying `{}` auth...", currentMethod.getName());
+                    log.info("Trying `{}` auth...", meth.getName());
                     
                     boolean success = false;
                     try {
-                        success = tryWith(currentMethod);
+                        success = tryWith(meth);
                     } catch (UserAuthException e) {
                         // Give other methods a shot
                         saveException(e);
                     }
                     
                     if (success) {
-                        log.info("`{}` auth successful", currentMethod.getName());
+                        log.info("`{}` auth successful", meth.getName());
                         return;
                     } else
-                        log.info("`{}` auth failed", currentMethod.getName());
+                        log.info("`{}` auth failed", meth.getName());
                     
                 }
 
                 else
                     saveException(currentMethod.getName() + " auth not allowed by server");
-                
-            }
             
         } finally {
             currentMethod = null;
@@ -243,8 +240,9 @@ public class UserAuthProtocol extends AbstractService implements UserAuth, AuthP
     
     private boolean tryWith(AuthMethod meth) throws UserAuthException, TransportException
     {
-        meth.init(this);
+        currentMethod = meth;
         result.clear();
+        meth.init(this);
         meth.request();
         return result.get(timeout);
     }
