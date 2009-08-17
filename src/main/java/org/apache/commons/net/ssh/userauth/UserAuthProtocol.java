@@ -22,7 +22,6 @@ import java.util.ArrayDeque;
 import java.util.Arrays;
 import java.util.Deque;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.Set;
 
 import org.apache.commons.net.ssh.AbstractService;
@@ -51,8 +50,10 @@ public class UserAuthProtocol extends AbstractService implements UserAuth, AuthP
             new Event<UserAuthException>("userauth result", UserAuthException.chainer);
     
     private String username;
-    private AuthMethod currentMethod = new AuthNone();
+    private AuthMethod currentMethod;
     private Service nextService;
+    
+    private boolean firstAttempt = true;
     
     private volatile String banner;
     private volatile boolean partialSuccess;
@@ -72,38 +73,45 @@ public class UserAuthProtocol extends AbstractService implements UserAuth, AuthP
         
         request(); // Request "ssh-userauth" service (if not already active)
         
-        allowed.add(currentMethod.getName()); // "none" auth
+        if (firstAttempt) { // Assume all allowed
+            for (AuthMethod meth : methods)
+                allowed.add(meth.getName());
+            firstAttempt = false;
+        }
         
-        Iterator<AuthMethod> iter = methods.iterator();
-        
-        for (;;) {
+        try {
             
-            if (!allowed.contains(currentMethod.getName())) {
-                saveException(currentMethod.getName() + " auth not allowed by server");
-                break;
-            } else
-                log.info("Trying `{}` auth...", currentMethod.getName());
-            
-            boolean success = false;
-            try {
-                success = tryWith(currentMethod);
-            } catch (UserAuthException e) { // Give other methods a shot
-                saveException(e);
-            }
-            
-            if (success) {
-                log.info("`{}` auth successful", currentMethod.getName());
-                return;
-            } else {
-                log.info("`{}` auth failed", currentMethod.getName());
-                if (iter.hasNext())
-                    currentMethod = iter.next();
-                else {
-                    currentMethod = null;
-                    break;
+            for (AuthMethod meth : methods) {
+                
+                currentMethod = meth;
+                
+                if (allowed.contains(currentMethod.getName())) {
+                    
+                    log.info("Trying `{}` auth...", currentMethod.getName());
+                    
+                    boolean success = false;
+                    try {
+                        success = tryWith(currentMethod);
+                    } catch (UserAuthException e) {
+                        // Give other methods a shot
+                        saveException(e);
+                    }
+                    
+                    if (success) {
+                        log.info("`{}` auth successful", currentMethod.getName());
+                        return;
+                    } else
+                        log.info("`{}` auth failed", currentMethod.getName());
+                    
                 }
+
+                else
+                    saveException(currentMethod.getName() + " auth not allowed by server");
+                
             }
             
+        } finally {
+            currentMethod = null;
         }
         
         log.debug("Had {} saved exception(s)", savedEx.size());
@@ -195,8 +203,7 @@ public class UserAuthProtocol extends AbstractService implements UserAuth, AuthP
         if (allowed.contains(currentMethod.getName()) && currentMethod.shouldRetry())
             currentMethod.request();
         else {
-            if (!"none".equals(currentMethod.getName()))
-                saveException(currentMethod.getName() + " auth failed");
+            saveException(currentMethod.getName() + " auth failed");
             result.set(false);
         }
     }
