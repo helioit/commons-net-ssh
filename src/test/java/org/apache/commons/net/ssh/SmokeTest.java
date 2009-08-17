@@ -6,6 +6,8 @@ import java.io.IOException;
 import java.net.ServerSocket;
 
 import org.apache.commons.net.ssh.connection.Session.Shell;
+import org.apache.commons.net.ssh.transport.TransportException;
+import org.apache.commons.net.ssh.userauth.UserAuthException;
 import org.apache.commons.net.ssh.util.BogusPasswordAuthenticator;
 import org.apache.commons.net.ssh.util.EchoShellFactory;
 import org.apache.sshd.SshServer;
@@ -44,8 +46,7 @@ public class SmokeTest
         
         ssh = new SSHClient();
         ssh.addHostKeyVerifier(fingerprint);
-        ssh.connect("localhost", port);
-        ssh.authPassword("same", "same");
+        
     }
     
     @After
@@ -58,12 +59,15 @@ public class SmokeTest
     @Test
     public void testIsAuthenticated() throws IOException
     {
+        connect();
+        authenticate();
         assertTrue(ssh.isAuthenticated());
     }
     
     @Test
     public void testIsConnected() throws IOException
     {
+        connect();
         assertTrue(ssh.isConnected());
     }
     
@@ -71,10 +75,22 @@ public class SmokeTest
     // TODO -- test I/O
     public void testShell() throws IOException
     {
+        connect();
+        authenticate();
         Shell shell = ssh.startSession().startShell();
         assertTrue(shell.isOpen());
         shell.close();
         assertFalse(shell.isOpen());
+    }
+    
+    private void authenticate() throws UserAuthException, TransportException
+    {
+        ssh.authPassword("same", "same");
+    }
+    
+    private void connect() throws IOException
+    {
+        ssh.connect("localhost", port);
     }
     
 }
