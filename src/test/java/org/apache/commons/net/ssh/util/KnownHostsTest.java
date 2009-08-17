@@ -8,18 +8,15 @@ import java.net.UnknownHostException;
 import java.security.GeneralSecurityException;
 import java.security.PublicKey;
 
-import org.apache.log4j.BasicConfigurator;
-import org.apache.log4j.ConsoleAppender;
-import org.apache.log4j.PatternLayout;
 import org.junit.Before;
 import org.junit.Test;
 
 public class KnownHostsTest
 {
     
-    static {
-        BasicConfigurator.configure(new ConsoleAppender(new PatternLayout("%d [%-15.15t] %-5p %-30.30c{1} - %m%n")));
-    }
+    //    static {
+    //        BasicConfigurator.configure(new ConsoleAppender(new PatternLayout("%d [%-15.15t] %-5p %-30.30c{1} - %m%n")));
+    //    }
     
     private KnownHosts kh;
     
