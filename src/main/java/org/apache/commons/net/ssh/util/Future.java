@@ -58,11 +58,31 @@ public class Future<V, T extends Throwable> implements ErrorNotifiable
     private V val;
     private T pendingEx;
     
+    /**
+     * Creates this future with given {@code name} and exception {@code chainer}. Allocates a new
+     * {@link java.util.concurrent.locks.Lock lock} object for this future.
+     * 
+     * @param name
+     *            name of this future
+     * @param chainer
+     *            {@link FriendlyChainer} that will be used for chaining exceptions
+     */
     public Future(String name, FriendlyChainer<T> chainer)
     {
         this(name, chainer, null);
     }
     
+    /**
+     * Creates this future with given {@code name}, exception {@code chainer}, and associated
+     * {@code lock}.
+     * 
+     * @param name
+     *            name of this future
+     * @param chainer
+     *            {@link FriendlyChainer} that will be used for chaining exceptions
+     * @param lock
+     *            lock to use
+     */
     public Future(String name, FriendlyChainer<T> chainer, ReentrantLock lock)
     {
         this.log = LoggerFactory.getLogger("<< " + name + " >>");
@@ -71,32 +91,70 @@ public class Future<V, T extends Throwable> implements ErrorNotifiable
         this.cond = this.lock.newCondition();
     }
     
+    /**
+     * Clears this future by setting its value and queued exception to {@code null}.
+     */
     public void clear()
     {
-        set(null);
+        lock();
+        try {
+            pendingEx = null;
+            set(null);
+        } finally {
+            unlock();
+        }
     }
     
+    /**
+     * Queues error that will be thrown in any waiting thread or any thread that attempts to wait on
+     * this future hereafter.
+     * 
+     * @param message
+     *            error message
+     */
     public void error(String message)
     {
         error(new FutureException(message));
     }
     
-    public void error(Throwable t)
+    /**
+     * Queues error that will be thrown in any waiting thread or any thread that attempts to wait on
+     * this future hereafter.
+     * 
+     * @param throwable
+     *            the error
+     */
+    public void error(Throwable throwable)
     {
         lock();
         try {
-            pendingEx = chainer.chain(t);
+            pendingEx = chainer.chain(throwable);
             cond.signalAll();
         } finally {
             unlock();
         }
     }
     
+    /**
+     * Wait indefinitely for this future's value to be set.
+     * 
+     * @return the value
+     * @throws T
+     *             in case another thread informs the future of an error meanwhile
+     */
     public V get() throws T
     {
         return get(0);
     }
     
+    /**
+     * Wait for {@code timeout} seconds for this future's value to be set.
+     * 
+     * @return the value
+     * @throws T
+     *             in case another thread informs the future of an error meanwhile, or the timeout
+     *             expires
+     */
     public V get(int timeout) throws T
     {
         lock();
@@ -110,7 +168,7 @@ public class Future<V, T extends Throwable> implements ErrorNotifiable
                 if (timeout == 0)
                     cond.await();
                 else if (!cond.await(timeout, TimeUnit.SECONDS))
-                    chainer.chain(new FutureException("Timeout expired"));
+                    throw chainer.chain(new FutureException("Timeout expired"));
             if (pendingEx != null) {
                 log.error("Woke to: {}", pendingEx.toString());
                 throw pendingEx;
@@ -123,11 +181,17 @@ public class Future<V, T extends Throwable> implements ErrorNotifiable
         return val;
     }
     
+    /**
+     * Returns the associated lock object.
+     */
     public Lock getLock()
     {
         return lock;
     }
     
+    /**
+     * Returns whether this future currently has an error set.
+     */
     public boolean hasError()
     {
         lock();
@@ -138,6 +202,9 @@ public class Future<V, T extends Throwable> implements ErrorNotifiable
         }
     }
     
+    /**
+     * Returns whether this future has threads waiting on it.
+     */
     public boolean hasWaiters()
     {
         lock();
@@ -148,26 +215,39 @@ public class Future<V, T extends Throwable> implements ErrorNotifiable
         }
     }
     
+    /**
+     * Returns whether this future has a value set, and no error waiting to pop.
+     */
     public boolean isSet()
     {
         lock();
         try {
-            return val != null;
+            return pendingEx != null && val != null;
         } finally {
             unlock();
         }
     }
     
+    /**
+     * Lock using the associated lock. Use as part of a {@code try-finally} construct in conjunction
+     * with {@link #unlock()}.
+     */
     public void lock()
     {
         lock.lock();
     }
     
+    /**
+     * Internal API.
+     */
     public void notifyError(SSHException error)
     {
         error(error);
     }
     
+    /**
+     * Set this future's value to {@code val}. Any waiters will be delivered this value.
+     */
     public void set(V val)
     {
         lock();
@@ -180,6 +260,10 @@ public class Future<V, T extends Throwable> implements ErrorNotifiable
         }
     }
     
+    /**
+     * Unlock using the associated lock. Use as part of a {@code try-finally} construct in
+     * conjunction with {@link #lock()}.
+     */
     public void unlock()
     {
         lock.unlock();

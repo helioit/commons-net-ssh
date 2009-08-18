@@ -25,7 +25,7 @@ import java.util.concurrent.locks.ReentrantLock;
  */
 
 /**
- * A type of {@link Future} that caters to boolean values. An event can be set, cleared, or awaited,
+ * A kind of {@link Future} that caters to boolean values. An event can be set, cleared, or awaited,
  * similar to Python's {@code threading.event}. The key difference is that a waiter may be delivered
  * an exception of parameterized type {@code T}.
  * 
@@ -35,14 +35,6 @@ import java.util.concurrent.locks.ReentrantLock;
  */
 public class Event<T extends Throwable> extends Future<Boolean, T>
 {
-    
-    public static class EventException extends Exception
-    {
-        public EventException(String message)
-        {
-            super(message);
-        }
-    }
     
     /**
      * Creates this event with given {@code name} and exception {@code chainer}. Allocates a new
@@ -59,26 +51,49 @@ public class Event<T extends Throwable> extends Future<Boolean, T>
     }
     
     /**
+     * Creates this event with given {@code name}, exception {@code chainer}, and associated {@code
+     * lock}.
      * 
      * @param name
+     *            name of this event
      * @param chainer
+     *            {@link FriendlyChainer} that will be used for chaining exceptions
      * @param lock
+     *            lock to use
      */
     public Event(String name, FriendlyChainer<T> chainer, ReentrantLock lock)
     {
         super(name, chainer, lock);
     }
     
+    /**
+     * Await this event to have a definite {@code true} or {@code false} value.
+     * 
+     * @throws T
+     *             if another thread meanwhile informs this event of an error
+     */
     public void await() throws T
     {
         super.get();
     }
     
+    /**
+     * Await this event to have a definite {@code true} or {@code false} value, for {@code timeout}
+     * seconds.
+     * 
+     * @param timeout
+     *            timeout in seconds
+     * @throws T
+     *             if another thread meanwhile informs this event of an error, or timeout expires
+     */
     public void await(int timeout) throws T
     {
         super.get(timeout);
     }
     
+    /**
+     * Sets this event to be {@code true}. Short for {@code set(true)}.
+     */
     public void set()
     {
         super.set(true);
