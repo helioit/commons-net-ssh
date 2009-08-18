@@ -49,7 +49,7 @@ import org.slf4j.LoggerFactory;
 public final class TransportProtocol implements Transport
 {
     
-    private static class NullService extends AbstractService
+    private static final class NullService extends AbstractService
     {
         public NullService(Transport trans)
         {
@@ -153,7 +153,7 @@ public final class TransportProtocol implements Transport
     
     public void disconnect(DisconnectReason reason, String message)
     {
-        close.lock();
+        close.lock(); // CAS type operation on close
         try {
             if (!close.isSet()) {
                 sendDisconnect(reason, message);
@@ -195,7 +195,8 @@ public final class TransportProtocol implements Transport
         return serverID == null ? serverID : serverID.substring(8);
     }
     
-    public Service getService()
+    // synchronized in case concurrent update in setService()
+    public synchronized Service getService()
     {
         return service;
     }
@@ -315,6 +316,7 @@ public final class TransportProtocol implements Transport
         close.await();
     }
     
+    // synchronized for mutual exclusion
     public synchronized void reqService(Service service) throws TransportException
     {
         serviceAccept.clear();
@@ -337,7 +339,8 @@ public final class TransportProtocol implements Transport
         decoder.setAuthenticated();
     }
     
-    public void setService(Service service)
+    // synchronized for atomic update of `service`
+    public synchronized void setService(Service service)
     {
         if (service == null)
             service = nullService;
@@ -353,6 +356,8 @@ public final class TransportProtocol implements Transport
     
     public long writePacket(Buffer payload) throws TransportException
     {
+        // synchronized to queue packets correctly & also to guarantee that 
+        // there won't be a mid-way change in encoder's algos 
         synchronized (encoder) {
             
             if (kexer.isKexOngoing()) {
@@ -377,7 +382,7 @@ public final class TransportProtocol implements Transport
     
     private void die(Exception ex)
     {
-        close.lock();
+        close.lock(); // CAS-type operation on close
         try {
             if (!close.isSet()) {
                 

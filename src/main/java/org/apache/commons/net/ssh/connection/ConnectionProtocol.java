@@ -49,7 +49,7 @@ public class ConnectionProtocol extends AbstractService implements Connection
     
     private final Map<String, ForwardedChannelOpener> openers = new ConcurrentHashMap<String, ForwardedChannelOpener>();
     
-    private final Queue<Future<Buffer, ConnectionException>> globalReqs =
+    private final Queue<Future<Buffer, ConnectionException>> globalReqFutures =
             new LinkedList<Future<Buffer, ConnectionException>>();
     
     private int windowSize = 2048 * 1024;
@@ -63,26 +63,29 @@ public class ConnectionProtocol extends AbstractService implements Connection
         super("ssh-connection", trans);
     }
     
-    public synchronized void attach(Channel chan)
+    public void attach(Channel chan)
     {
         log.info("Attaching `{}` channel (#{})", chan.getType(), chan.getID());
         channels.put(chan.getID(), chan);
     }
     
-    public synchronized void attach(ForwardedChannelOpener opener)
+    public void attach(ForwardedChannelOpener opener)
     {
         log.info("Attaching opener for `{}` channels: {}", opener.getChannelType(), opener);
         openers.put(opener.getChannelType(), opener);
     }
     
-    public synchronized void forget(Channel chan)
+    public void forget(Channel chan)
     {
         log.info("Forgetting `{}` channel (#{})", chan.getType(), chan.getID());
         channels.remove(chan.getID());
-        notifyAll();
+        if (channels.isEmpty())
+            synchronized (this) {
+                notifyAll();
+            }
     }
     
-    public synchronized void forget(ForwardedChannelOpener opener)
+    public void forget(ForwardedChannelOpener opener)
     {
         log.info("Forgetting opener for `{}` channels: {}", opener.getChannelType(), opener);
         openers.remove(opener.getChannelType());
@@ -93,7 +96,7 @@ public class ConnectionProtocol extends AbstractService implements Connection
         return channels.get(id);
     }
     
-    public synchronized ForwardedChannelOpener get(String chanType)
+    public ForwardedChannelOpener get(String chanType)
     {
         return openers.get(chanType);
     }
@@ -149,12 +152,15 @@ public class ConnectionProtocol extends AbstractService implements Connection
     public void notifyError(SSHException error)
     {
         super.notifyError(error);
-        ErrorNotifiable.Util.alertAll(error, globalReqs.toArray());
+        
+        ErrorNotifiable.Util.alertAll(error, globalReqFutures.toArray());
+        globalReqFutures.clear();
+        
         ErrorNotifiable.Util.alertAll(error, channels.values().toArray());
-        globalReqs.clear();
         channels.clear();
     }
     
+    // synchronized for mutex with gotResponse()
     public synchronized Future<Buffer, ConnectionException> sendGlobalRequest(String name, boolean wantReply,
             Buffer specifics) throws TransportException
     {
@@ -167,7 +173,7 @@ public class ConnectionProtocol extends AbstractService implements Connection
         Future<Buffer, ConnectionException> future = null;
         if (wantReply) {
             future = new Future<Buffer, ConnectionException>("global req for " + name, ConnectionException.chainer);
-            globalReqs.add(future);
+            globalReqFutures.add(future);
         }
         return future;
     }
@@ -214,9 +220,10 @@ public class ConnectionProtocol extends AbstractService implements Connection
         }
     }
     
+    // synchronized for mutex with sendGlobalReq()
     private synchronized void gotResponse(Buffer response) throws ConnectionException
     {
-        Future<Buffer, ConnectionException> gr = globalReqs.poll();
+        Future<Buffer, ConnectionException> gr = globalReqFutures.poll();
         if (gr == null)
             throw new ConnectionException(DisconnectReason.PROTOCOL_ERROR,
                                           "Got a global request response when none was requested");

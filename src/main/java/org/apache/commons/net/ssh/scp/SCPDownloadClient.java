@@ -85,11 +85,13 @@ public class SCPDownloadClient extends SCP
     
     File getTargetFile(File f, String filename) throws IOException
     {
-        if (f.exists()) {
-            if (f.isDirectory())
-                f = new File(f, filename);
-        } else if (!f.createNewFile())
-            throw new SCPException("Could not create: " + f);
+        if (f.isDirectory())
+            f = new File(f, filename);
+        
+        if (!f.exists())
+            if (!f.createNewFile())
+                throw new SCPException("Could not create: " + f);
+        
         return f;
     }
     

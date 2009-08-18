@@ -18,9 +18,9 @@
  */
 package org.apache.commons.net.ssh.connection;
 
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.commons.net.ssh.transport.TransportException;
 import org.apache.commons.net.ssh.util.Buffer;
@@ -166,7 +166,7 @@ public class RemotePortForwarder extends AbstractForwardedChannelOpener
     protected static final String PF_REQ = "tcpip-forward";
     protected static final String PF_CANCEL = "cancel-tcpip-forward";
     
-    protected final Map<Forward, ConnectListener> listeners = new HashMap<Forward, ConnectListener>();
+    protected final Map<Forward, ConnectListener> listeners = new ConcurrentHashMap<Forward, ConnectListener>();
     
     public RemotePortForwarder(Connection conn)
     {
@@ -188,8 +188,7 @@ public class RemotePortForwarder extends AbstractForwardedChannelOpener
      * @throws ConnectionException
      *             if there is an error requesting the forwarding
      */
-    public synchronized Forward bind(Forward forward, ConnectListener listener) throws ConnectionException,
-            TransportException
+    public Forward bind(Forward forward, ConnectListener listener) throws ConnectionException, TransportException
     {
         Buffer reply = conn.sendGlobalRequest(PF_REQ, true, new Buffer() //
                                                                         .putString(forward.address) //
@@ -210,7 +209,7 @@ public class RemotePortForwarder extends AbstractForwardedChannelOpener
      * @throws ConnectionException
      *             if there is an error with the cancellation request
      */
-    public synchronized void cancel(Forward forward) throws ConnectionException, TransportException
+    public void cancel(Forward forward) throws ConnectionException, TransportException
     {
         try {
             conn.sendGlobalRequest(PF_CANCEL, true, new Buffer() //

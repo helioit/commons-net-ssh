@@ -173,12 +173,12 @@ public class Future<V, T extends Throwable> implements ErrorNotifiable
                 log.error("Woke to: {}", pendingEx.toString());
                 throw pendingEx;
             }
+            return val;
         } catch (InterruptedException ie) {
             throw chainer.chain(ie);
         } finally {
             unlock();
         }
-        return val;
     }
     
     /**

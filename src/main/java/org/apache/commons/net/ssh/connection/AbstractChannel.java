@@ -224,9 +224,10 @@ public abstract class AbstractChannel implements Channel
         log.info("Initialized - {}", this);
     }
     
+    // synchronized to protect `closeReqd`
     public synchronized boolean isOpen()
     {
-        lock.lock();
+        lock.lock(); // it is the lock associated with 'open' and 'close' events
         try {
             return open.isSet() && !close.isSet() && !closeReqd;
         } finally {
@@ -242,6 +243,7 @@ public abstract class AbstractChannel implements Channel
         finishOff();
     }
     
+    // synchronized to protect 'closeReqd' and 'eofSent'
     public synchronized void sendEOF() throws TransportException
     {
         try {
@@ -288,6 +290,7 @@ public abstract class AbstractChannel implements Channel
         }
     }
     
+    // synchronized to protect 'eofGot'
     private synchronized void gotEOF() throws TransportException
     {
         log.info("Got EOF");
@@ -297,6 +300,7 @@ public abstract class AbstractChannel implements Channel
             sendClose();
     }
     
+    // synchronized for mutex with sendChannelRequest()
     private synchronized void gotResponse(boolean success) throws ConnectionException
     {
         Event<ConnectionException> responseEvent = chanReqResponseEvents.poll();
@@ -378,6 +382,7 @@ public abstract class AbstractChannel implements Channel
         stream.receive(buf.array(), buf.rpos(), len);
     }
     
+    // synchronized for mutex with gotResponse
     protected synchronized Event<ConnectionException> sendChannelRequest(String reqType, boolean wantReply,
             Buffer reqSpecific) throws TransportException
     {
@@ -394,6 +399,7 @@ public abstract class AbstractChannel implements Channel
         return responseEvent;
     }
     
+    // synchronized to protect 'closeReqd'
     protected synchronized void sendClose() throws TransportException
     {
         try {

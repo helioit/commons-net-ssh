@@ -35,9 +35,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
- * 
  * @see <a href="http://blogs.sun.com/janp/entry/how_the_scp_protocol_works">SCP Protocol</a>
+ * 
+ * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
  */
 public abstract class SCP
 {
@@ -241,9 +241,9 @@ public abstract class SCP
         }
         out.flush();
         
-        final long sizeKiB = count / 1024;
+        final float sizeKiB = count / 1024;
         final double timeSeconds = (System.currentTimeMillis() - startTime) / 1000.0;
-        log.info(sizeKiB / 1024.0 + " MiB transferred  in {} seconds ({} KiB/s)", timeSeconds, (sizeKiB / timeSeconds));
+        log.info(sizeKiB + " KiB transferred  in {} seconds ({} KiB/s)", timeSeconds, (sizeKiB / timeSeconds));
         
         if (read == -1)
             throw new IOException("Had EOF before transfer completed");

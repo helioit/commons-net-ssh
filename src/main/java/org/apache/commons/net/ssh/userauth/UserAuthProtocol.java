@@ -63,6 +63,7 @@ public class UserAuthProtocol extends AbstractService implements UserAuth, AuthP
         super("ssh-userauth", trans);
     }
     
+    // synchronized for mutual exclusion; ensure one authenticate() ever in progress
     public synchronized void authenticate(String username, Service nextService, Iterable<AuthMethod> methods)
             throws UserAuthException, TransportException
     {
