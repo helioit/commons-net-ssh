@@ -159,10 +159,10 @@ public class Future<V, T extends Throwable> implements ErrorNotifiable
     {
         lock();
         try {
-            if (val != null)
-                return val;
             if (pendingEx != null)
                 throw pendingEx;
+            if (val != null)
+                return val;
             log.debug("Awaiting");
             while (val == null && pendingEx == null)
                 if (timeout == 0)
@@ -222,7 +222,7 @@ public class Future<V, T extends Throwable> implements ErrorNotifiable
     {
         lock();
         try {
-            return pendingEx != null && val != null;
+            return pendingEx == null && val != null;
         } finally {
             unlock();
         }
