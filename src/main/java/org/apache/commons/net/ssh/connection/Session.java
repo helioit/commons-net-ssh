@@ -25,19 +25,17 @@ import java.util.Map;
 import org.apache.commons.net.ssh.transport.TransportException;
 
 /**
- * A {@code session} channel provides for execution of a remote {@link Command command},
- * {@link Shell shell} or {@link Subsystem subsystem}. Before this requests like starting X11
- * forwarding, setting environment variables, allocating a PTY etc. can be made.
+ * A {@code session} channel provides for execution of a remote {@link Command command}, {@link Shell shell} or
+ * {@link Subsystem subsystem}. Before this requests like starting X11 forwarding, setting environment variables,
+ * allocating a PTY etc. can be made.
  * <p>
- * It is not legal to reuse a {@code session} channel for more than one of command, shell, or
- * subsystem. Once one of these has been started this instance's API is invalid and that of the
- * {@link Command specific} {@link Shell targets} {@link Subsystem returned} should be used.
+ * It is not legal to reuse a {@code session} channel for more than one of command, shell, or subsystem. Once one of
+ * these has been started this instance's API is invalid and that of the {@link Command specific} {@link Shell targets}
+ * {@link Subsystem returned} should be used.
  * 
  * @see Command
  * @see Shell
  * @see Subsystem
- * 
- * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
  */
 public interface Session extends Channel
 {
@@ -63,28 +61,27 @@ public interface Session extends Channel
         InputStream getErrorStream();
         
         /**
-         * If the command exit violently {@link #getExitSignal() with a signal}, an error message
-         * would have been received and can be retrieved via this method. Otherwise, this method
-         * will return {@code null}.
+         * If the command exit violently {@link #getExitSignal() with a signal}, an error message would have been
+         * received and can be retrieved via this method. Otherwise, this method will return {@code null}.
          */
         String getExitErrorMessage();
         
         /**
-         * Returns the {@link Signal signal} if the command exit violently, or {@code null} if this
-         * information was not received.
+         * Returns the {@link Signal signal} if the command exit violently, or {@code null} if this information was not
+         * received.
          */
         Signal getExitSignal();
         
         /**
-         * Returns the exit status of the command if it was received, or {@code null} if this
-         * information was not received.
+         * Returns the exit status of the command if it was received, or {@code null} if this information was not
+         * received.
          */
         Integer getExitStatus();
         
         /**
-         * If the command exit violently {@link #getExitSignal() with a signal}, information about
-         * whether a core dump took place would have been received and can be retrieved via this
-         * method. Otherwise, this method will return {@code null}.
+         * If the command exit violently {@link #getExitSignal() with a signal}, information about whether a core dump
+         * took place would have been received and can be retrieved via this method. Otherwise, this method will return
+         * {@code null}.
          */
         Boolean getExitWasCoreDumped();
         
@@ -116,11 +113,9 @@ public interface Session extends Channel
     {
         
         /**
-         * Whether the client can do local flow control using {@code control-S} and {@code
-         * control-Q}.
+         * Whether the client can do local flow control using {@code control-S} and {@code control-Q}.
          * 
-         * @return boolean value indicating whether 'client can do', or {@code null} if no such
-         *         information was received
+         * @return boolean value indicating whether 'client can do', or {@code null} if no such information was received
          */
         Boolean canDoFlowControl();
         
@@ -157,30 +152,17 @@ public interface Session extends Channel
     }
     
     /**
-     * Various signals that may be sent or received. The signals are from POSIX and simply miss the
-     * {@code "SIG_"} prefix.
+     * Various signals that may be sent or received. The signals are from POSIX and simply miss the {@code "SIG_"}
+     * prefix.
      */
     public enum Signal
     {
         
-        ABRT("ABRT"),
-        ALRM("ALRM"),
-        FPE("FPE"),
-        HUP("HUP"),
-        ILL("ILL"),
-        INT("INT"),
-        KILL("KILL"),
-        PIPE("PIPE"),
-        QUIT("QUIT"),
-        SEGV("SEGV"),
-        TERM("TERM"),
-        USR1("USR1"),
-        USR2("USR2"),
-        UNKNOWN("UNKNOWN");
+        ABRT("ABRT"), ALRM("ALRM"), FPE("FPE"), HUP("HUP"), ILL("ILL"), INT("INT"), KILL("KILL"), PIPE("PIPE"), QUIT(
+                "QUIT"), SEGV("SEGV"), TERM("TERM"), USR1("USR1"), USR2("USR2"), UNKNOWN("UNKNOWN");
         
         /**
-         * Create from the string representation used when the signal is received as part of an SSH
-         * packet.
+         * Create from the string representation used when the signal is received as part of an SSH packet.
          * 
          * @param name
          *            name of the signal as received
@@ -213,7 +195,8 @@ public interface Session extends Channel
      * Subsystem API.
      */
     interface Subsystem extends Channel
-    { // there isn't really any subsystem-specific API, or is there...
+    { // there isn't really any subsystem-specific API, or is
+        // there...
     }
     
     /**
@@ -311,6 +294,6 @@ public interface Session extends Channel
      * @throws TransportException
      *             if there was an error sending the request
      */
-    Subsystem startSubsysytem(String name) throws ConnectionException, TransportException;
+    Subsystem startSubsystem(String name) throws ConnectionException, TransportException;
     
 }

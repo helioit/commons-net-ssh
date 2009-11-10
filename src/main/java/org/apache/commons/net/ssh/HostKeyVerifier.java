@@ -22,8 +22,6 @@ import java.security.PublicKey;
 
 /**
  * Host key verification interface.
- * 
- * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
  */
 public interface HostKeyVerifier
 {

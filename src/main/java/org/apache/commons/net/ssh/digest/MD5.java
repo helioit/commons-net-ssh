@@ -20,8 +20,6 @@ package org.apache.commons.net.ssh.digest;
 
 /**
  * MD5 Digest.
- * 
- * @author <a href="mailto:dev@mina.apache.org">Apache MINA SSHD Project</a>
  */
 public class MD5 extends BaseDigest
 {

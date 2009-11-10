@@ -37,9 +37,6 @@ import org.apache.commons.net.ssh.util.Constants.Message;
  * Provides support for reading and writing SSH binary data types.
  * 
  * Has convenient mappings from Java to SSH primitives.
- * 
- * @author <a href="mailto:dev@mina.apache.org">Apache MINA SSHD Project</a>
- * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>o
  */
 public class Buffer
 {
@@ -162,9 +159,9 @@ public class Buffer
      * 
      * @return the {@code true} or {@code false} value read
      */
-    public boolean getBoolean()
+    public boolean readBoolean()
     {
-        return getByte() != 0;
+        return readByte() != 0;
     }
     
     /**
@@ -172,7 +169,7 @@ public class Buffer
      * 
      * @return the byte read
      */
-    public byte getByte()
+    public byte readByte()
     {
         ensureAvailable(1);
         return data[rpos++];
@@ -183,20 +180,21 @@ public class Buffer
      * 
      * @return the byte-array read
      */
-    public byte[] getBytes()
+    public byte[] readBytes()
     {
-        int len = getInt();
+        int len = readInt();
         if (len < 0 || len > 32768)
             throw new BufferException("Bad item length: " + len);
         byte[] b = new byte[len];
-        getRawBytes(b);
+        readRawBytes(b);
         return b;
     }
     
     public byte[] getCompactData()
     {
         int len = available();
-        if (len > 0) {
+        if (len > 0)
+        {
             byte[] b = new byte[len];
             System.arraycopy(data, rpos, b, 0, len);
             return b;
@@ -204,12 +202,12 @@ public class Buffer
             return new byte[0];
     }
     
-    public int getInt()
+    public int readInt()
     {
-        return (int) getLong();
+        return (int) readLong();
     }
     
-    public long getLong()
+    public long readLong()
     {
         ensureAvailable(4);
         long i = data[rpos++] << 24 & 0xff000000L // 
@@ -224,9 +222,9 @@ public class Buffer
      * 
      * @return the message identifier
      */
-    public Message getMessageID()
+    public Message readMessageID()
     {
-        byte b = getByte();
+        byte b = readByte();
         Message cmd = Message.fromByte(b);
         if (cmd == null)
             throw new BufferException("Unknown command code: " + b);
@@ -238,9 +236,9 @@ public class Buffer
      * 
      * @return the MP integer as a {@code BigInteger}
      */
-    public BigInteger getMPInt()
+    public BigInteger readMPInt()
     {
-        return new BigInteger(getMPIntAsBytes());
+        return new BigInteger(readMPIntAsBytes());
     }
     
     /**
@@ -248,31 +246,32 @@ public class Buffer
      * 
      * @return
      */
-    public byte[] getMPIntAsBytes()
+    public byte[] readMPIntAsBytes()
     {
-        return getBytes();
+        return readBytes();
     }
     
-    public PublicKey getPublicKey()
+    public PublicKey readPublicKey()
     {
         PublicKey key = null;
-        try {
-            switch (KeyType.fromString(getString()))
+        try
+        {
+            switch (KeyType.fromString(readString()))
             {
             case RSA:
             {
-                BigInteger e = getMPInt();
-                BigInteger n = getMPInt();
+                BigInteger e = readMPInt();
+                BigInteger n = readMPInt();
                 KeyFactory keyFactory = SecurityUtils.getKeyFactory("RSA");
                 key = keyFactory.generatePublic(new RSAPublicKeySpec(n, e));
                 break;
             }
             case DSA:
             {
-                BigInteger p = getMPInt();
-                BigInteger q = getMPInt();
-                BigInteger g = getMPInt();
-                BigInteger y = getMPInt();
+                BigInteger p = readMPInt();
+                BigInteger q = readMPInt();
+                BigInteger g = readMPInt();
+                BigInteger y = readMPInt();
                 KeyFactory keyFactory = SecurityUtils.getKeyFactory("DSA");
                 key = keyFactory.generatePublic(new DSAPublicKeySpec(y, p, q, g));
                 break;
@@ -280,22 +279,24 @@ public class Buffer
             default:
                 assert false;
             }
-        } catch (GeneralSecurityException e) {
+        } catch (GeneralSecurityException e)
+        {
             throw new SSHRuntimeException(e);
         }
         return key;
     }
     
-    public void getRawBytes(byte[] buf)
+    public Buffer readRawBytes(byte[] buf)
     {
-        getRawBytes(buf, 0, buf.length);
+        return readRawBytes(buf, 0, buf.length);
     }
     
-    public void getRawBytes(byte[] buf, int off, int len)
+    public Buffer readRawBytes(byte[] buf, int off, int len)
     {
         ensureAvailable(len);
         System.arraycopy(data, rpos, buf, off, len);
         rpos += len;
+        return this;
     }
     
     /**
@@ -303,16 +304,18 @@ public class Buffer
      * 
      * @return the string as a Java {@code String}
      */
-    public String getString()
+    public String readString()
     {
-        int len = getInt();
+        int len = readInt();
         if (len < 0 || len > 32768)
             throw new BufferException("Bad item length: " + len);
         ensureAvailable(len);
         String s = null;
-        try {
+        try
+        {
             s = new String(data, rpos, len, "UTF-8");
-        } catch (UnsupportedEncodingException e) {
+        } catch (UnsupportedEncodingException e)
+        {
         }
         rpos += len;
         return s;
@@ -323,9 +326,9 @@ public class Buffer
      * 
      * @return the string as a byte-array
      */
-    public byte[] getStringAsBytes()
+    public byte[] readStringAsBytes()
     {
-        return getBytes();
+        return readBytes();
     }
     
     /**
@@ -359,7 +362,8 @@ public class Buffer
      */
     public Buffer putBuffer(Buffer buffer)
     {
-        if (buffer != null) {
+        if (buffer != null)
+        {
             int r = buffer.available();
             ensureCapacity(r);
             System.arraycopy(buffer.data, buffer.rpos, data, wpos, r);
@@ -406,15 +410,12 @@ public class Buffer
      */
     public Buffer putBytes(byte[] b, int off, int len)
     {
-        putInt(len);
-        ensureCapacity(len);
-        System.arraycopy(b, off, data, wpos, len);
-        wpos += len;
-        return this;
+        putInt(len - off);
+        return putRawBytes(b, off, len);
     }
     
     /**
-     * Writes an integer
+     * Writes a uint32 integer
      * 
      * @param uint32
      * @return this
@@ -429,6 +430,23 @@ public class Buffer
         data[wpos++] = (byte) (uint32 >> 8);
         data[wpos++] = (byte) uint32;
         return this;
+    }
+    
+    public Buffer putUINT64(long uint64)
+    {
+        if (uint64 < 0)
+            throw new BufferException("Invalid value: " + uint64);
+        putInt((uint64 & 0xffffffff00000000L) >>> 31);
+        putInt(uint64 & 0x00000000ffffffffL);
+        return this;
+    }
+    
+    public long getUINT64()
+    {
+        long uint64 = (readLong() << 32) | readLong();
+        if (uint64 < 0)
+            throw new BufferException("Cannot handle values > Long.MAX_VALUE");
+        return uint64;
     }
     
     /**
@@ -465,7 +483,8 @@ public class Buffer
     public Buffer putMPInt(byte[] foo)
     {
         int i = foo.length;
-        if ((foo[0] & 0x80) != 0) {
+        if ((foo[0] & 0x80) != 0)
+        {
             i++;
             putInt(i);
             putByte((byte) 0);
@@ -503,15 +522,15 @@ public class Buffer
         {
         case RSA:
             putString(type.toString()) // ssh-rsa
-                                      .putMPInt(((RSAPublicKey) key).getPublicExponent()) // e
-                                      .putMPInt(((RSAPublicKey) key).getModulus()); // n
+                    .putMPInt(((RSAPublicKey) key).getPublicExponent()) // e
+                    .putMPInt(((RSAPublicKey) key).getModulus()); // n
             break;
         case DSA:
             putString(type.toString()) // ssh-dss
-                                      .putMPInt(((DSAPublicKey) key).getParams().getP()) // p
-                                      .putMPInt(((DSAPublicKey) key).getParams().getQ()) // q
-                                      .putMPInt(((DSAPublicKey) key).getParams().getG()) // g
-                                      .putMPInt(((DSAPublicKey) key).getY()); // y
+                    .putMPInt(((DSAPublicKey) key).getParams().getP()) // p
+                    .putMPInt(((DSAPublicKey) key).getParams().getQ()) // q
+                    .putMPInt(((DSAPublicKey) key).getParams().getG()) // g
+                    .putMPInt(((DSAPublicKey) key).getY()); // y
             break;
         default:
             assert false;
@@ -534,16 +553,20 @@ public class Buffer
     
     public Buffer putSignature(String sigFormat, byte[] sigData)
     {
-        return putString(new Buffer() // signature blob as string 
-                                     .putString(sigFormat) // sig format identifier
-                                     .putBytes(sigData) // sig as byte array
-                                     .getCompactData());
+        return putString(new Buffer() // signature blob as string
+                .putString(sigFormat) // sig format identifier
+                .putBytes(sigData) // sig as byte array
+                .getCompactData());
     }
     
     public Buffer putString(byte[] str)
     {
-        putInt(str.length);
-        return putRawBytes(str);
+        return putBytes(str);
+    }
+    
+    public Buffer putString(byte[] str, int offset, int len)
+    {
+        return putBytes(str, offset, len);
     }
     
     public Buffer putString(String string)
@@ -584,9 +607,10 @@ public class Buffer
             throw new BufferException("Underflow");
     }
     
-    private void ensureCapacity(int capacity)
+    public void ensureCapacity(int capacity)
     {
-        if (data.length - wpos < capacity) {
+        if (data.length - wpos < capacity)
+        {
             int cw = wpos + capacity;
             byte[] tmp = new byte[getNextPowerOf2(cw)];
             System.arraycopy(data, 0, tmp, 0, data.length);

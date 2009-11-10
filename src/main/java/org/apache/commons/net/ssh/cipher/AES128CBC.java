@@ -20,8 +20,6 @@ package org.apache.commons.net.ssh.cipher;
 
 /**
  * AES128CBC cipher
- * 
- * @author <a href="mailto:dev@mina.apache.org">Apache MINA SSHD Project</a>
  */
 public class AES128CBC extends BaseCipher
 {

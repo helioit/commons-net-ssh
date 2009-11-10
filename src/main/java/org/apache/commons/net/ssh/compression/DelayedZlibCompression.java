@@ -22,8 +22,6 @@ package org.apache.commons.net.ssh.compression;
  * ZLib delayed compression.
  * 
  * @see Compression#isDelayed()
- * 
- * @author <a href="mailto:dev@mina.apache.org">Apache MINA SSHD Project</a>
  */
 public class DelayedZlibCompression extends ZlibCompression
 {

@@ -19,9 +19,9 @@
 package org.apache.commons.net.ssh.transport;
 
 import java.io.IOException;
-import java.net.Socket;
 
 import org.apache.commons.net.ssh.Config;
+import org.apache.commons.net.ssh.ConnInfo;
 import org.apache.commons.net.ssh.PacketHandler;
 import org.apache.commons.net.ssh.Service;
 import org.apache.commons.net.ssh.util.Buffer;
@@ -29,34 +29,21 @@ import org.apache.commons.net.ssh.util.Constants.DisconnectReason;
 
 /**
  * Transport layer of the SSH protocol.
- * 
- * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
  */
 public interface Transport extends PacketHandler
 {
     
     /**
-     * Send a disconnection packet with reason as {@link DisconnectReason#BY_APPLICATION}, and
-     * closes this transport.
-     */
-    void disconnect();
-    
-    /**
-     * Send a disconnect packet with the given {@link DisconnectReason reason}, and closes this
-     * transport.
-     */
-    void disconnect(DisconnectReason reason);
-    
-    /**
-     * Send a disconnect packet with the given {@link DisconnectReason reason} and {@code message},
-     * and closes this transport.
+     * Sets the {@code socket} to be used by this transport; and identification information is
+     * exchanged. A {@link TransportException} is thrown in case of SSH protocol version
+     * incompatibility.
      * 
-     * @param reason
-     *            the reason code for this disconnect
-     * @param message
-     *            the text message
+     * @param socket
+     *            a socket which is already connected to SSH server
+     * @throws TransportException
+     *             if there is an error during exchange of identification information
      */
-    void disconnect(DisconnectReason reason, String message);
+    void init(ConnInfo connInfo) throws TransportException;
     
     /**
      * Returns the version string used by this client to identify itself to an SSH server, e.g.
@@ -70,6 +57,20 @@ public interface Transport extends PacketHandler
      * Retrieves the {@link Config} associated with this transport.
      */
     Config getConfig();
+    
+    /**
+     * Returns the timeout that is currently set for blocking operations.
+     */
+    int getTimeout();
+    
+    /**
+     * Set a timeout for methods that may block, e.g. {@link #reqService(Service)},
+     * {@link KeyExchanger#waitForDone()}.
+     * 
+     * @param timeout
+     *            the timeout in seconds
+     */
+    void setTimeout(int timeout);
     
     /**
      * Returns the associated {@link KeyExchanger}. This allows {@link KeyExchanger#startKex
@@ -104,26 +105,63 @@ public interface Transport extends PacketHandler
     Service getService();
     
     /**
-     * Returns the timeout that is currently set for blocking operations.
+     * Request a SSH service represented by a {@link Service} instance. A separate call to
+     * {@link #setService} is not needed.
+     * 
+     * @param service
+     *            the SSH service to be requested
+     * @throws IOException
+     *             if the request failed for any reason
      */
-    int getTimeout();
+    void reqService(Service service) throws TransportException;
     
     /**
-     * Sets the {@code socket} to be used by this transport; and identification information is
-     * exchanged. A {@link TransportException} is thrown in case of SSH protocol version
-     * incompatibility.
+     * Sets the currently active {@link Service}. Handling of non-transport-layer packets is
+     * {@link Service#handle delegated} to that service.
+     * <p>
+     * For this method to be successful, at least one service request via {@link #reqService} must
+     * have been successful (not necessarily for the service being set).
      * 
-     * @param socket
-     *            a socket which is already connected to SSH server
-     * @throws TransportException
-     *             if there is an error during exchange of identification information
+     * @param service
+     *            (null-ok) the {@link Service}
      */
-    void init(String hostname, Socket socket) throws TransportException;
+    void setService(Service service);
     
     /**
      * Returns whether the transport thinks it is authenticated.
      */
     boolean isAuthenticated();
+    
+    /**
+     * Informs this transport that authentication has been completed. This method
+     * <strong>must</strong> be called after successful authentication, so that delayed compression
+     * may become effective if applicable.
+     */
+    void setAuthenticated();
+    
+    /**
+     * Sends SSH_MSG_UNIMPLEMENTED in response to the last packet received.
+     * 
+     * @return the sequence number of the packet sent
+     * @throws TransportException
+     *             if an error occured sending the packet
+     */
+    long sendUnimplemented() throws TransportException;
+    
+    /**
+     * Write a packet over this transport.
+     * <p>
+     * The {@code payload} {@link Buffer} should have 5 bytes free at the beginning to avoid a
+     * performance penalty associated with making space for header bytes (packet length, padding
+     * length).
+     * 
+     * @param payload
+     *            the {@link Buffer} containing data to send
+     * @return sequence number of the sent packet
+     * @throws TransportException
+     *             if an error occured sending the packet
+     */
+    long writePacket(Buffer payload) throws TransportException;
     
     /**
      * Returns whether this transport is active.
@@ -142,66 +180,26 @@ public interface Transport extends PacketHandler
     void join() throws TransportException;
     
     /**
-     * Request a SSH service represented by a {@link Service} instance. A separate call to
-     * {@link #setService} is not needed.
-     * 
-     * @param service
-     *            the SSH service to be requested
-     * @throws IOException
-     *             if the request failed for any reason
+     * Send a disconnection packet with reason as {@link DisconnectReason#BY_APPLICATION}, and
+     * closes this transport.
      */
-    void reqService(Service service) throws TransportException;
+    void disconnect();
     
     /**
-     * Sends SSH_MSG_UNIMPLEMENTED in response to the last packet received.
-     * 
-     * @return the sequence number of the packet sent
-     * @throws TransportException
-     *             if an error occured sending the packet
+     * Send a disconnect packet with the given {@link DisconnectReason reason}, and closes this
+     * transport.
      */
-    long sendUnimplemented() throws TransportException;
+    void disconnect(DisconnectReason reason);
     
     /**
-     * Informs this transport that authentication has been completed. This method
-     * <strong>must</strong> be called after successful authentication, so that delayed compression
-     * may become effective if applicable.
-     */
-    void setAuthenticated();
-    
-    /**
-     * Sets the currently active {@link Service}. Handling of non-transport-layer packets is
-     * {@link Service#handle delegated} to that service.
-     * <p>
-     * For this method to be successful, at least one service request via {@link #reqService} must
-     * have been successful (not necessarily for the service being set).
+     * Send a disconnect packet with the given {@link DisconnectReason reason} and {@code message},
+     * and closes this transport.
      * 
-     * @param service
-     *            (null-ok) the {@link Service}
+     * @param reason
+     *            the reason code for this disconnect
+     * @param message
+     *            the text message
      */
-    void setService(Service service);
-    
-    /**
-     * Set a timeout for methods that may block, e.g. {@link #reqService(Service)},
-     * {@link KeyExchanger#waitForDone()}.
-     * 
-     * @param timeout
-     *            the timeout in seconds
-     */
-    void setTimeout(int timeout);
-    
-    /**
-     * Write a packet over this transport.
-     * <p>
-     * The {@code payload} {@link Buffer} should have 5 bytes free at the beginning to avoid a
-     * performance penalty associated with making space for header bytes (packet length, padding
-     * length).
-     * 
-     * @param payload
-     *            the {@link Buffer} containing data to send
-     * @return sequence number of the sent packet
-     * @throws TransportException
-     *             if an error occured sending the packet
-     */
-    long writePacket(Buffer payload) throws TransportException;
+    void disconnect(DisconnectReason reason, String message);
     
 }

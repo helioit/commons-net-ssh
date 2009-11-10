@@ -20,8 +20,6 @@ package org.apache.commons.net.ssh.random;
 
 /**
  * A pseudo random number generator.
- * 
- * @author <a href="mailto:dev@mina.apache.org">Apache MINA SSHD Project</a>
  */
 public interface Random
 {

@@ -21,11 +21,7 @@ package org.apache.commons.net.ssh.random;
 import org.apache.commons.net.ssh.Factory;
 
 /**
- * A random factory wrapper that uses a single random instance. The underlying random instance has
- * to be thread safe.
- * 
- * @author <a href="mailto:dev@mina.apache.org">Apache MINA SSHD Project</a>
- * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
+ * A random factory wrapper that uses a single random instance. The underlying random instance has to be thread safe.
  */
 public class SingletonRandomFactory implements Random, Factory<Random>
 {

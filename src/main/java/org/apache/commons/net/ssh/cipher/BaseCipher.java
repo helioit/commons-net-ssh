@@ -29,15 +29,14 @@ import org.apache.commons.net.ssh.util.SecurityUtils;
 
 /**
  * Base class for all Cipher implementations delegating to the JCE provider.
- * 
- * @author <a href="mailto:dev@mina.apache.org">Apache MINA SSHD Project</a>
  */
 public class BaseCipher implements Cipher
 {
     
     private static final byte[] resize(byte[] data, int size)
     {
-        if (data.length > size) {
+        if (data.length > size)
+        {
             final byte[] tmp = new byte[size];
             System.arraycopy(data, 0, tmp, 0, size);
             data = tmp;
@@ -74,12 +73,13 @@ public class BaseCipher implements Cipher
     {
         key = BaseCipher.resize(key, bsize);
         iv = BaseCipher.resize(iv, ivsize);
-        try {
+        try
+        {
             cipher = SecurityUtils.getCipher(transformation);
-            cipher.init((mode == Mode.Encrypt ? javax.crypto.Cipher.ENCRYPT_MODE
-                    : javax.crypto.Cipher.DECRYPT_MODE), new SecretKeySpec(key, algorithm),
-                    new IvParameterSpec(iv));
-        } catch (GeneralSecurityException e) {
+            cipher.init((mode == Mode.Encrypt ? javax.crypto.Cipher.ENCRYPT_MODE : javax.crypto.Cipher.DECRYPT_MODE),
+                    new SecretKeySpec(key, algorithm), new IvParameterSpec(iv));
+        } catch (GeneralSecurityException e)
+        {
             cipher = null;
             throw new SSHRuntimeException(e);
         }
@@ -87,9 +87,11 @@ public class BaseCipher implements Cipher
     
     public void update(byte[] input, int inputOffset, int inputLen)
     {
-        try {
+        try
+        {
             cipher.update(input, inputOffset, inputLen, input, inputOffset);
-        } catch (ShortBufferException e) {
+        } catch (ShortBufferException e)
+        {
             throw new SSHRuntimeException(e);
         }
     }

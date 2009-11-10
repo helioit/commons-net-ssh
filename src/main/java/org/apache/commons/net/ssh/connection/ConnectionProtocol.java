@@ -37,8 +37,6 @@ import org.apache.commons.net.ssh.util.Constants.Message;
 
 /**
  * {@link Connection} implementation.
- * 
- * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
  */
 public class ConnectionProtocol extends AbstractService implements Connection
 {
@@ -49,8 +47,7 @@ public class ConnectionProtocol extends AbstractService implements Connection
     
     private final Map<String, ForwardedChannelOpener> openers = new ConcurrentHashMap<String, ForwardedChannelOpener>();
     
-    private final Queue<Future<Buffer, ConnectionException>> globalReqFutures =
-            new LinkedList<Future<Buffer, ConnectionException>>();
+    private final Queue<Future<Buffer, ConnectionException>> globalReqFutures = new LinkedList<Future<Buffer, ConnectionException>>();
     
     private int windowSize = 2048 * 1024;
     private int maxPacketSize = 32 * 1024;
@@ -69,10 +66,9 @@ public class ConnectionProtocol extends AbstractService implements Connection
         channels.put(chan.getID(), chan);
     }
     
-    public void attach(ForwardedChannelOpener opener)
+    public Channel get(int id)
     {
-        log.info("Attaching opener for `{}` channels: {}", opener.getChannelType(), opener);
-        openers.put(opener.getChannelType(), opener);
+        return channels.get(id);
     }
     
     public void forget(Channel chan)
@@ -80,9 +76,21 @@ public class ConnectionProtocol extends AbstractService implements Connection
         log.info("Forgetting `{}` channel (#{})", chan.getType(), chan.getID());
         channels.remove(chan.getID());
         if (channels.isEmpty())
-            synchronized (this) {
+            synchronized (this)
+            {
                 notifyAll();
             }
+    }
+    
+    public void attach(ForwardedChannelOpener opener)
+    {
+        log.info("Attaching opener for `{}` channels: {}", opener.getChannelType(), opener);
+        openers.put(opener.getChannelType(), opener);
+    }
+    
+    public ForwardedChannelOpener get(String chanType)
+    {
+        return openers.get(chanType);
     }
     
     public void forget(ForwardedChannelOpener opener)
@@ -91,24 +99,18 @@ public class ConnectionProtocol extends AbstractService implements Connection
         openers.remove(opener.getChannelType());
     }
     
-    public Channel get(int id)
+    private Channel getChannel(Buffer buffer) throws ConnectionException
     {
-        return channels.get(id);
-    }
-    
-    public ForwardedChannelOpener get(String chanType)
-    {
-        return openers.get(chanType);
-    }
-    
-    public int getMaxPacketSize()
-    {
-        return maxPacketSize;
-    }
-    
-    public int getWindowSize()
-    {
-        return windowSize;
+        int recipient = buffer.readInt();
+        Channel channel = get(recipient);
+        if (channel != null)
+            return channel;
+        else
+        {
+            buffer.rpos(buffer.rpos() - 5);
+            throw new ConnectionException(DisconnectReason.PROTOCOL_ERROR, "Received " + buffer.readMessageID()
+                    + " on unknown channel #" + recipient);
+        }
     }
     
     @Override
@@ -121,10 +123,10 @@ public class ConnectionProtocol extends AbstractService implements Connection
             switch (msg)
             {
             case REQUEST_SUCCESS:
-                gotResponse(buf);
+                gotGlobalReqResponse(buf);
                 break;
             case REQUEST_FAILURE:
-                gotResponse(null);
+                gotGlobalReqResponse(null);
                 break;
             case CHANNEL_OPEN:
                 gotChannelOpen(buf);
@@ -135,17 +137,6 @@ public class ConnectionProtocol extends AbstractService implements Connection
         
         else
             super.handle(msg, buf);
-    }
-    
-    public synchronized void join() throws InterruptedException
-    {
-        while (!channels.isEmpty())
-            wait();
-    }
-    
-    public int nextID()
-    {
-        return nextID.getAndIncrement();
     }
     
     @Override
@@ -160,30 +151,9 @@ public class ConnectionProtocol extends AbstractService implements Connection
         channels.clear();
     }
     
-    // synchronized for mutex with gotResponse()
-    public synchronized Future<Buffer, ConnectionException> sendGlobalRequest(String name, boolean wantReply,
-            Buffer specifics) throws TransportException
+    public int getMaxPacketSize()
     {
-        log.info("Making global request for `{}`", name);
-        trans.writePacket(new Buffer(Message.GLOBAL_REQUEST) //
-                                                            .putString(name) //
-                                                            .putBoolean(wantReply) //
-                                                            .putBuffer(specifics)); //
-        
-        Future<Buffer, ConnectionException> future = null;
-        if (wantReply) {
-            future = new Future<Buffer, ConnectionException>("global req for " + name, ConnectionException.chainer);
-            globalReqFutures.add(future);
-        }
-        return future;
-    }
-    
-    public void sendOpenFailure(int recipient, Reason reason, String message) throws TransportException
-    {
-        trans.writePacket(new Buffer(Message.CHANNEL_OPEN_FAILURE) //
-                                                                  .putInt(recipient) //
-                                                                  .putInt(reason.getCode()) //
-                                                                  .putString(message));
+        return maxPacketSize;
     }
     
     public void setMaxPacketSize(int maxPacketSize)
@@ -191,46 +161,87 @@ public class ConnectionProtocol extends AbstractService implements Connection
         this.maxPacketSize = maxPacketSize;
     }
     
+    public int getWindowSize()
+    {
+        return windowSize;
+    }
+    
     public void setWindowSize(int windowSize)
     {
         this.windowSize = windowSize;
     }
     
-    private Channel getChannel(Buffer buffer) throws ConnectionException
+    public synchronized void join() throws InterruptedException
     {
-        int recipient = buffer.getInt();
-        Channel channel = get(recipient);
-        if (channel == null) {
-            buffer.rpos(buffer.rpos() - 5);
-            throw new ConnectionException(DisconnectReason.PROTOCOL_ERROR, "Received " + buffer.getMessageID()
-                    + " on unknown channel #" + recipient);
-        }
-        return channel;
+        while (!channels.isEmpty())
+            wait();
     }
     
-    private void gotChannelOpen(Buffer buf) throws ConnectionException, TransportException
+    public int nextID()
     {
-        String type = buf.getString();
-        log.debug("Received CHANNEL_OPEN for `{}` channel", type);
-        if (openers.containsKey(type))
-            openers.get(type).handleOpen(buf);
-        else {
-            log.warn("No opener found for `{}` CHANNEL_OPEN request -- rejecting", type);
-            sendOpenFailure(buf.getInt(), OpenFailException.Reason.UNKNOWN_CHANNEL_TYPE, "");
+        return nextID.getAndIncrement();
+    }
+    
+    // synchronized for mutex with gotResponse()
+    public synchronized Future<Buffer, ConnectionException> sendGlobalRequest(String name, boolean wantReply,
+            Buffer specifics) throws TransportException
+    {
+        log.info("Making global request for `{}`", name);
+        trans.writePacket(new Buffer(Message.GLOBAL_REQUEST) //
+                .putString(name) //
+                .putBoolean(wantReply) //
+                .putBuffer(specifics)); //
+        
+        Future<Buffer, ConnectionException> future = null;
+        if (wantReply)
+        {
+            future = new Future<Buffer, ConnectionException>("global req for " + name, ConnectionException.chainer);
+            globalReqFutures.add(future);
         }
+        return future;
     }
     
     // synchronized for mutex with sendGlobalReq()
-    private synchronized void gotResponse(Buffer response) throws ConnectionException
+    private synchronized void gotGlobalReqResponse(Buffer response) throws ConnectionException
     {
         Future<Buffer, ConnectionException> gr = globalReqFutures.poll();
         if (gr == null)
             throw new ConnectionException(DisconnectReason.PROTOCOL_ERROR,
-                                          "Got a global request response when none was requested");
+                    "Got a global request response when none was requested");
         else if (response == null)
             gr.error("Global request failed");
         else
             gr.set(response);
+    }
+    
+    private void gotChannelOpen(Buffer buf) throws ConnectionException, TransportException
+    {
+        String type = buf.readString();
+        log.debug("Received CHANNEL_OPEN for `{}` channel", type);
+        if (openers.containsKey(type))
+            openers.get(type).handleOpen(buf);
+        else
+        {
+            log.warn("No opener found for `{}` CHANNEL_OPEN request -- rejecting", type);
+            sendOpenFailure(buf.readInt(), OpenFailException.Reason.UNKNOWN_CHANNEL_TYPE, "");
+        }
+    }
+    
+    public void sendOpenFailure(int recipient, Reason reason, String message) throws TransportException
+    {
+        trans.writePacket(new Buffer(Message.CHANNEL_OPEN_FAILURE) //
+                .putInt(recipient) //
+                .putInt(reason.getCode()) //
+                .putString(message));
+    }
+    
+    @Override
+    public void notifyDisconnect() throws SSHException
+    {
+        super.notifyDisconnect();
+        // wh'about them futures?
+        for (Channel chan : channels.values())
+            chan.close();
     }
     
 }

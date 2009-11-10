@@ -25,8 +25,6 @@ import org.apache.commons.net.ssh.util.Future;
 
 /**
  * Connection layer of the SSH protocol.
- * 
- * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
  */
 public interface Connection
 {
@@ -40,8 +38,8 @@ public interface Connection
      *            whether a reply is requested
      * @param specifics
      *            {@link Buffer} containing fields specific to the request
-     * @return a {@link Future} for the reply data (in case {@code wantReply} is true) which allows
-     *         waiting on the reply, or {@code null} if a reply is not requested.
+     * @return a {@link Future} for the reply data (in case {@code wantReply} is true) which allows waiting on the
+     *         reply, or {@code null} if a reply is not requested.
      * @throws TransportException
      *             if there is an error sending the request
      */
@@ -49,15 +47,14 @@ public interface Connection
             throws TransportException;
     
     /**
-     * Attach a {@link Channel} to this connection. A channel must be attached to the connection if
-     * it is to receive any channel-specific data that is received.
+     * Attach a {@link Channel} to this connection. A channel must be attached to the connection if it is to receive any
+     * channel-specific data that is received.
      */
     void attach(Channel chan);
     
     /**
-     * Attach a {@link ForwardedChannelOpener} to this connection, which will be delegated opening
-     * of any {@code CHANNEL_OPEN} packets {@link ForwardedChannelOpener#getChannelType() for which
-     * it is responsible}.
+     * Attach a {@link ForwardedChannelOpener} to this connection, which will be delegated opening of any {@code
+     * CHANNEL_OPEN} packets {@link ForwardedChannelOpener#getChannelType() for which it is responsible}.
      */
     void attach(ForwardedChannelOpener opener);
     
@@ -72,26 +69,25 @@ public interface Connection
     void forget(ForwardedChannelOpener handler);
     
     /**
-     * Returns an attached {@link Channel} of specified channel-id, or {@code null} if no such
-     * channel was attached
+     * Returns an attached {@link Channel} of specified channel-id, or {@code null} if no such channel was attached
      */
     Channel get(int id);
     
     /**
-     * Returns an attached {@link ForwardedChannelOpener} of specified channel-type, or {@code null}
-     * if no such channel was attached
+     * Returns an attached {@link ForwardedChannelOpener} of specified channel-type, or {@code null} if no such channel
+     * was attached
      */
     ForwardedChannelOpener get(String chanType);
     
     /**
-     * Get the maximum packet size for the local window this connection recommends to any
-     * {@link Channel}'s that ask for it.
+     * Get the maximum packet size for the local window this connection recommends to any {@link Channel}'s that ask for
+     * it.
      */
     int getMaxPacketSize();
     
     /**
-     * Get the {@code timeout} this connection uses for blocking operations and recommends to any
-     * {@link Channel other} {@link ForwardedChannelOpener classes} that ask for it.
+     * Get the {@code timeout} this connection uses for blocking operations and recommends to any {@link Channel other}
+     * {@link ForwardedChannelOpener classes} that ask for it.
      */
     int getTimeout();
     
@@ -101,8 +97,7 @@ public interface Connection
     Transport getTransport();
     
     /**
-     * Get the size for the local window this connection recommends to any {@link Channel}'s that
-     * ask for it.
+     * Get the size for the local window this connection recommends to any {@link Channel}'s that ask for it.
      */
     int getWindowSize();
     
@@ -127,20 +122,19 @@ public interface Connection
     void sendOpenFailure(int recipient, OpenFailException.Reason reason, String message) throws TransportException;
     
     /**
-     * Set the maximum packet size for the local window this connection recommends to any
-     * {@link Channel}'s that ask for it.
+     * Set the maximum packet size for the local window this connection recommends to any {@link Channel}'s that ask for
+     * it.
      */
     void setMaxPacketSize(int maxPacketSize);
     
     /**
-     * Set the {@code timeout} this connection uses for blocking operations and recommends to any
-     * {@link Channel other} {@link ForwardedChannelOpener classes} that ask for it.
+     * Set the {@code timeout} this connection uses for blocking operations and recommends to any {@link Channel other}
+     * {@link ForwardedChannelOpener classes} that ask for it.
      */
     void setTimeout(int timeout);
     
     /**
-     * Set the size for the local window this connection recommends to any {@link Channel}'s that
-     * ask for it.
+     * Set the size for the local window this connection recommends to any {@link Channel}'s that ask for it.
      */
     void setWindowSize(int windowSize);
 }

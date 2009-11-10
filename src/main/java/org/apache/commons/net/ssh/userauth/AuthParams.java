@@ -4,8 +4,6 @@ import org.apache.commons.net.ssh.transport.Transport;
 
 /**
  * The parameters available to authentication methods
- * 
- * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
  */
 public interface AuthParams
 {

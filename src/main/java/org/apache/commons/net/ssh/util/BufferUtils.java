@@ -20,15 +20,11 @@ package org.apache.commons.net.ssh.util;
 
 /**
  * Utility functions for byte arrays.
- * 
- * @author <a href="mailto:dev@mina.apache.org">Apache MINA SSHD Project</a>
- * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
  */
 public class BufferUtils
 {
     
-    final static char[] digits = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c',
-            'd', 'e', 'f' };
+    final static char[] digits = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f' };
     
     /**
      * Check whether two byte arrays are the equal.
@@ -88,7 +84,8 @@ public class BufferUtils
     public static String printHex(byte[] array, int offset, int len)
     {
         StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < len; i++) {
+        for (int i = 0; i < len; i++)
+        {
             byte b = array[offset + i];
             if (sb.length() > 0)
                 sb.append(' ');
@@ -121,7 +118,8 @@ public class BufferUtils
     public static String toHex(byte[] array, int offset, int len)
     {
         StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < len; i++) {
+        for (int i = 0; i < len; i++)
+        {
             byte b = array[offset + i];
             sb.append(digits[b >> 4 & 0x0F]);
             sb.append(digits[b & 0x0F]);

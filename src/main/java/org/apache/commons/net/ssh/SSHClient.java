@@ -92,21 +92,19 @@ import org.slf4j.LoggerFactory;
 /**
  * Secure SHell client API.
  * <p>
- * Before connection is established, host key verification needs to be accounted for. This is done
- * by {@link #addHostKeyVerifier(HostKeyVerifier) specifying} one or more {@link HostKeyVerifier}
- * objects. Database of known hostname-key pairs in the OpenSSH {@code "known_hosts"} format can be
- * {@link #loadKnownHosts(String) loaded} for host key verification.
+ * Before connection is established, host key verification needs to be accounted for. This is done by
+ * {@link #addHostKeyVerifier(HostKeyVerifier) specifying} one or more {@link HostKeyVerifier} objects. Database of
+ * known hostname-key pairs in the OpenSSH {@code "known_hosts"} format can be {@link #loadKnownHosts(String) loaded}
+ * for host key verification.
  * <p>
  * User authentication can be performed by any of the {@code auth*()} methods.
  * <p>
- * {@link #startSession()} caters to the most typical use case of starting a {@code session} channel
- * and executing a remote command, starting a subsystem, etc. If you wish to request X11 forwarding
- * for some session, first {@link #registerX11Forwarder(ConnectListener) register} a
- * {@link ConnectListener} for {@code x11} channels.
+ * {@link #startSession()} caters to the most typical use case of starting a {@code session} channel and executing a
+ * remote command, starting a subsystem, etc. If you wish to request X11 forwarding for some session, first
+ * {@link #registerX11Forwarder(ConnectListener) register} a {@link ConnectListener} for {@code x11} channels.
  * <p>
- * {@link #newLocalPortForwarder Local} and {@link #getRemotePortForwarder() remote} port forwarding
- * is possible. For SCP, see {@link SCPDownloadClient} and {@link SCPUploadClient} which require a
- * connected {@code SSHClient}.
+ * {@link #newLocalPortForwarder Local} and {@link #getRemotePortForwarder() remote} port forwarding is possible. For
+ * SCP, see {@link SCPDownloadClient} and {@link SCPUploadClient} which require a connected {@code SSHClient}.
  * <p>
  * <em>A simple example:</em>
  * <p>
@@ -115,19 +113,19 @@ import org.slf4j.LoggerFactory;
  * client = new SSHClient();
  * client.initUserKnownHosts();
  * client.connect(&quot;hostname&quot;);
- * try {
+ * try
+ * {
  *     client.authPassword(&quot;username&quot;, &quot;password&quot;);
  *     client.startSession().exec(&quot;true&quot;);
  *     client.getConnection().join();
- * } finally {
+ * } finally
+ * {
  *     client.disconnect();
  * }
  * </pre>
  * <p>
- * Where a password or passphrase is required, if you're extra-paranoid use the {@code char[]} based
- * methods. The {@code char[]} will be blanked out after use.
- * 
- * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
+ * Where a password or passphrase is required, if you're extra-paranoid use the {@code char[]} based methods. The
+ * {@code char[]} will be blanked out after use.
  */
 public class SSHClient extends SocketClient
 {
@@ -139,25 +137,24 @@ public class SSHClient extends SocketClient
     protected static final Logger log = LoggerFactory.getLogger(SSHClient.class);
     
     /**
-     * Creates a {@link Config} object that is initialized as follows. Items marked with an asterisk
-     * are added to the config only if {@link BouncyCastle} is in the classpath.
+     * Creates a {@link Config} object that is initialized as follows. Items marked with an asterisk are added to the
+     * config only if {@link BouncyCastle} is in the classpath.
      * <p>
      * <ul>
      * <li>{@link Config#setKeyExchangeFactories Key exchange}: {@link DHG14}*, {@link DHG1}</li>
-     * <li>{@link Config#setCipherFactories Ciphers} [1]: {@link AES128CTR}, {@link AES192CTR},
-     * {@link AES256CTR}, {@link AES128CBC}, {@link AES192CBC}, {@link AES256CBC}, {@link AES192CBC}, {@link TripleDESCBC}, {@link BlowfishCBC}</li>
+     * <li>{@link Config#setCipherFactories Ciphers} [1]: {@link AES128CTR}, {@link AES192CTR}, {@link AES256CTR},
+     * {@link AES128CBC}, {@link AES192CBC}, {@link AES256CBC}, {@link AES192CBC}, {@link TripleDESCBC},
+     * {@link BlowfishCBC}</li>
      * <li>{@link Config#setMACFactories MAC}: {@link HMACSHA1}, {@link HMACSHA196}, {@link HMACMD5}, {@link HMACMD596}</li>
      * <li>{@link Config#setCompressionFactories Compression}: {@link NoneCompression}</li>
-     * <li>{@link Config#setSignatureFactories Signature}: {@link SignatureRSA},
-     * {@link SignatureDSA}</li>
+     * <li>{@link Config#setSignatureFactories Signature}: {@link SignatureRSA}, {@link SignatureDSA}</li>
      * <li>{@link Config#setRandomFactory PRNG}: {@link BouncyCastleRandom}* or {@link JCERandom}</li>
-     * <li>{@link Config#setFileKeyProviderFactories Key file support}: {@link PKCS8KeyFile}*,
-     * {@link OpenSSHKeyFile}*</li>
+     * <li>{@link Config#setFileKeyProviderFactories Key file support}: {@link PKCS8KeyFile}*, {@link OpenSSHKeyFile}*</li>
      * <li>{@link Config#setVersion Client version}: {@code "NET_3_0"}</li>
      * </ul>
      * <p>
-     * [1] It is worth noting that Sun's JRE does not have the unlimited cryptography extension
-     * enabled by default. This prevents using the ciphers of strength greater than 128.
+     * [1] It is worth noting that Sun's JRE does not have the unlimited cryptography extension enabled by default. This
+     * prevents using the ciphers of strength greater than 128.
      * 
      * @return initialized {@link Config}
      */
@@ -167,43 +164,48 @@ public class SSHClient extends SocketClient
         Config conf = new Config();
         conf.setVersion("NET_3_0");
         
-        if (SecurityUtils.isBouncyCastleRegistered()) {
+        if (SecurityUtils.isBouncyCastleRegistered())
+        {
             
             conf.setKeyExchangeFactories(new DHG14.Factory(), //
-                                         new DHG1.Factory());
+                    new DHG1.Factory());
             
             conf.setRandomFactory(new SingletonRandomFactory(new BouncyCastleRandom.Factory()));
             
             conf.setFileKeyProviderFactories(new PKCS8KeyFile.Factory(), //
-                                             new OpenSSHKeyFile.Factory());
+                    new OpenSSHKeyFile.Factory());
             
-        } else {
+        } else
+        {
             conf.setKeyExchangeFactories(new DHG1.Factory());
             conf.setRandomFactory(new SingletonRandomFactory(new JCERandom.Factory()));
         }
         
-        List<Named<Cipher>> avail = new LinkedList<Named<Cipher>> //
-                (Arrays.<Named<Cipher>> asList(new AES128CTR.Factory(), //
-                                               new AES192CTR.Factory(), //
-                                               new AES256CTR.Factory(), //
-                                               new AES128CBC.Factory(), //
-                                               new AES192CBC.Factory(), // 
-                                               new AES256CBC.Factory(), //
-                                               new TripleDESCBC.Factory(), //
-                                               new BlowfishCBC.Factory()));
+        List<Named<Cipher>> avail = new LinkedList<Named<Cipher>>(Arrays.<Named<Cipher>> asList(
+                new AES128CTR.Factory(), //
+                new AES192CTR.Factory(), //
+                new AES256CTR.Factory(), //
+                new AES128CBC.Factory(), //
+                new AES192CBC.Factory(), // 
+                new AES256CBC.Factory(), //
+                new TripleDESCBC.Factory(), //
+                new BlowfishCBC.Factory()));
         
         { /*
            * @see https://issues.apache.org/jira/browse/SSHD-24:
            * "AES256 and AES192 requires unlimited cryptography extension"
            */
-            for (Iterator<Named<Cipher>> i = avail.iterator(); i.hasNext();) {
+            for (Iterator<Named<Cipher>> i = avail.iterator(); i.hasNext();)
+            {
                 final Named<Cipher> f = i.next();
-                try {
+                try
+                {
                     final Cipher c = f.create();
                     final byte[] key = new byte[c.getBlockSize()];
                     final byte[] iv = new byte[c.getIVSize()];
                     c.init(Cipher.Mode.Encrypt, key, iv);
-                } catch (Exception e) {
+                } catch (Exception e)
+                {
                     log.warn("Disabling cipher: {}", f.getName());
                     i.remove();
                 }
@@ -214,13 +216,10 @@ public class SSHClient extends SocketClient
         
         conf.setCompressionFactories(new NoneCompression.Factory());
         
-        conf.setMACFactories(new HMACSHA1.Factory(), //
-                             new HMACSHA196.Factory(), //
-                             new HMACMD5.Factory(), //
-                             new HMACMD596.Factory());
+        conf.setMACFactories(new HMACSHA1.Factory(), new HMACSHA196.Factory(), new HMACMD5.Factory(),
+                new HMACMD596.Factory());
         
-        conf.setSignatureFactories(new SignatureRSA.Factory(), //
-                                   new SignatureDSA.Factory());
+        conf.setSignatureFactories(new SignatureRSA.Factory(), new SignatureDSA.Factory());
         
         return conf;
     }
@@ -234,7 +233,6 @@ public class SSHClient extends SocketClient
     /** {@code ssh-connection} service */
     protected final Connection conn;
     
-    /** Hostname to which connection was established. */
     protected String hostname;
     
     /** Default constructor. Initializes this object using {@link #getDefaultConfig()}. */
@@ -252,9 +250,19 @@ public class SSHClient extends SocketClient
         this.conn = new ConnectionProtocol(trans);
     }
     
+    public void upload(String source, String target) throws IOException
+    {
+        new SCPUploadClient(this).copy(source, target);
+    }
+    
+    public void download(String source, String target) throws IOException
+    {
+        new SCPDownloadClient(this).copy(source, target);
+    }
+    
     /**
-     * Add a {@link HostKeyVerifier} which will be invoked for verifying host key during connection
-     * establishment and future key exchanges.
+     * Add a {@link HostKeyVerifier} which will be invoked for verifying host key during connection establishment and
+     * future key exchanges.
      */
     public void addHostKeyVerifier(HostKeyVerifier hostKeyVerifier)
     {
@@ -262,24 +270,23 @@ public class SSHClient extends SocketClient
     }
     
     /**
-     * Add a {@link HostKeyVerifier} that will verify any host key that has the given {@code
-     * fingerprint}, e.g. {@code "4b:69:6c:72:6f:79:20:77:61:73:20:68:65:72:65:21"}
+     * Add a {@link HostKeyVerifier} that will verify any host key that has the given {@code fingerprint}, e.g. {@code
+     * "4b:69:6c:72:6f:79:20:77:61:73:20:68:65:72:65:21"}
      * 
      * @param fingerprint
-     *            the expected fingerprint in colon-delimited format (16 octets in hex delimited by
-     *            a colon)
+     *            the expected fingerprint in colon-delimited format (16 octets in hex delimited by a colon)
      * 
      * @see SecurityUtils#getFingerprint
      */
     public void addHostKeyVerifier(final String fingerprint)
     {
         addHostKeyVerifier(new HostKeyVerifier()
+        {
+            public boolean verify(String hostname, PublicKey key)
             {
-                public boolean verify(String hostname, PublicKey key)
-                {
-                    return SecurityUtils.getFingerprint(key).equals(fingerprint);
-                }
-            });
+                return SecurityUtils.getFingerprint(key).equals(fingerprint);
+            }
+        });
     }
     
     /**
@@ -315,8 +322,8 @@ public class SSHClient extends SocketClient
     }
     
     /**
-     * Authenticate {@code username} using the {@code "password"} authentication method. The {@code
-     * password} array is blanked out after use.
+     * Authenticate {@code username} using the {@code "password"} authentication method. The {@code password} array is
+     * blanked out after use.
      * 
      * @param username
      *            user to authenticate
@@ -361,9 +368,8 @@ public class SSHClient extends SocketClient
     }
     
     /**
-     * Authenticate {@code username} using the {@code "publickey"} authentication method, with keys
-     * from some commons locations on the file system. This method relies on {@code ~/.ssh/id_rsa}
-     * and {@code ~/.ssh/id_dsa}.
+     * Authenticate {@code username} using the {@code "publickey"} authentication method, with keys from some commons
+     * locations on the file system. This method relies on {@code ~/.ssh/id_rsa} and {@code ~/.ssh/id_dsa}.
      * <p>
      * This method does not provide a way to specify a passphrase.
      * 
@@ -381,10 +387,9 @@ public class SSHClient extends SocketClient
     /**
      * Authenticate {@code username} using the {@code "publickey"} authentication method.
      * <p>
-     * {@link KeyProvider} instances can be created using any of the of the {@code loadKeys(*)}
-     * methods provided in this class. In case multiple {@code keyProviders} are specified;
-     * authentication is attempted in order as long as the {@code "publickey"} authentication method
-     * is available.
+     * {@link KeyProvider} instances can be created using any of the of the {@code loadKeys(*)} methods provided in this
+     * class. In case multiple {@code keyProviders} are specified; authentication is attempted in order as long as the
+     * {@code "publickey"} authentication method is available.
      * 
      * @param username
      *            user to authenticate
@@ -405,9 +410,9 @@ public class SSHClient extends SocketClient
     /**
      * Authenticate {@code username} using the {@code "publickey"} authentication method.
      * <p>
-     * {@link KeyProvider} instances can be created using any of the {@code loadKeys(*)} methods
-     * provided in this class. In case multiple {@code keyProviders} are specified; authentication
-     * is attempted in order as long as the {@code "publickey"} authentication method is available.
+     * {@link KeyProvider} instances can be created using any of the {@code loadKeys(*)} methods provided in this class.
+     * In case multiple {@code keyProviders} are specified; authentication is attempted in order as long as the {@code
+     * "publickey"} authentication method is available.
      * 
      * @param username
      *            user to authenticate
@@ -423,13 +428,12 @@ public class SSHClient extends SocketClient
     }
     
     /**
-     * Authenticate {@code username} using the {@code "publickey"} authentication method, with keys
-     * from one or more {@code locations} in the file system.
+     * Authenticate {@code username} using the {@code "publickey"} authentication method, with keys from one or more
+     * {@code locations} in the file system.
      * <p>
-     * In case multiple {@code locations} are specified; authentication is attempted in order as
-     * long as the {@code "publickey"} authentication method is available. If there is an error
-     * loading keys from any of them (e.g. file could not be read, file format not recognized) that
-     * key file it is ignored.
+     * In case multiple {@code locations} are specified; authentication is attempted in order as long as the {@code
+     * "publickey"} authentication method is available. If there is an error loading keys from any of them (e.g. file
+     * could not be read, file format not recognized) that key file it is ignored.
      * <p>
      * This method does not provide a way to specify a passphrase.
      * 
@@ -444,42 +448,23 @@ public class SSHClient extends SocketClient
     {
         List<KeyProvider> keyProviders = new LinkedList<KeyProvider>();
         for (String loc : locations)
-            try {
+            try
+            {
+                log.debug("Attempting to load key from: {}", loc);
                 keyProviders.add(loadKeys(loc));
-            } catch (IOException ignore) {
+            } catch (IOException logged)
+            {
+                log.warn("Could not load keys due to: {}", logged);
             }
         authPublickey(username, keyProviders);
     }
     
-    @Override
-    public void connect(String hostname) throws SocketException, IOException
-    {
-        this.hostname = hostname;
-        super.connect(hostname);
-    }
-    
-    @Override
-    public void connect(String hostname, int port) throws SocketException, IOException
-    {
-        this.hostname = hostname;
-        super.connect(hostname, port);
-    }
-    
-    @Override
-    public void connect(String hostname, int port, InetAddress localAddr, int localPort) throws SocketException,
-            IOException
-    {
-        this.hostname = hostname;
-        super.connect(hostname, port, localAddr, localPort);
-    }
-    
     /**
-     * Disconnects from the connected SSH server. {@code SSHClient} objects are not
-     * reusable therefore it is incorrect to attempt connection after this method has been called.
+     * Disconnects from the connected SSH server. {@code SSHClient} objects are not reusable therefore it is incorrect
+     * to attempt connection after this method has been called.
      * <p>
-     * This method should be called from a {@code finally} construct after connection is
-     * established; so that proper cleanup is done and the thread spawned by the transport layer for
-     * dealing with incoming packets is stopped.
+     * This method should be called from a {@code finally} construct after connection is established; so that proper
+     * cleanup is done and the thread spawned by the transport layer for dealing with incoming packets is stopped.
      */
     @Override
     public void disconnect() throws IOException
@@ -504,12 +489,12 @@ public class SSHClient extends SocketClient
     }
     
     /**
-     * Returns a {@link RemotePortForwarder} that allows requesting remote forwarding over this
-     * connection.
+     * Returns a {@link RemotePortForwarder} that allows requesting remote forwarding over this connection.
      */
     public RemotePortForwarder getRemotePortForwarder()
     {
-        synchronized (conn) {
+        synchronized (conn)
+        {
             RemotePortForwarder rpf = (RemotePortForwarder) conn.get(ForwardedTCPIPChannel.TYPE);
             if (rpf == null)
                 conn.attach(rpf = new RemotePortForwarder(conn));
@@ -526,9 +511,8 @@ public class SSHClient extends SocketClient
     /**
      * Returns the associated {@link UserAuth} instance. This allows access to information like the
      * {@link UserAuth#getBanner() authentication banner}, whether authentication was at least
-     * {@link UserAuth#hadPartialSuccess() partially successful}, and any
-     * {@link UserAuth#getSavedExceptions() saved exceptions} that were ignored because there were
-     * more authentication methods that could be tried.
+     * {@link UserAuth#hadPartialSuccess() partially successful}, and any {@link UserAuth#getSavedExceptions() saved
+     * exceptions} that were ignored because there were more authentication methods that could be tried.
      */
     public UserAuth getUserAuth()
     {
@@ -561,17 +545,16 @@ public class SSHClient extends SocketClient
     }
     
     /**
-     * Returns a {@link FileKeyProvider} instance created from a location on the file system where
-     * an <em>unencrypted</em> private key file (does not require a passphrase) can be found. Simply
-     * calls {@link #loadKeys(String, PasswordFinder)} with the {@link PasswordFinder} argument as
-     * {@code null}.
+     * Returns a {@link FileKeyProvider} instance created from a location on the file system where an
+     * <em>unencrypted</em> private key file (does not require a passphrase) can be found. Simply calls
+     * {@link #loadKeys(String, PasswordFinder)} with the {@link PasswordFinder} argument as {@code null}.
      * 
      * @param location
      *            the location for the key file
      * @return the key provider ready for use in authentication
      * @throws SSHException
-     *             if there was no suitable key provider available for the file format; typically
-     *             because BouncyCastle is not in the classpath
+     *             if there was no suitable key provider available for the file format; typically because BouncyCastle
+     *             is not in the classpath
      * @throws IOException
      *             if the key file format is not known, if the file could not be read, etc.
      */
@@ -581,9 +564,8 @@ public class SSHClient extends SocketClient
     }
     
     /**
-     * Utility function for createing a {@link FileKeyProvider} instance from given location on the
-     * file system. Creates a one-off {@link PasswordFinder} using
-     * {@link PasswordFinder.Util#createOneOff(char[])}, and calls
+     * Utility function for createing a {@link FileKeyProvider} instance from given location on the file system. Creates
+     * a one-off {@link PasswordFinder} using {@link PasswordFinder.Util#createOneOff(char[])}, and calls
      * {@link #loadKeys(String,PasswordFinder)}.
      * 
      * @param location
@@ -592,8 +574,8 @@ public class SSHClient extends SocketClient
      *            passphrase as a char-array
      * @return the key provider ready for use in authentication
      * @throws SSHException
-     *             if there was no suitable key provider available for the file format; typically
-     *             because BouncyCastle is not in the classpath
+     *             if there was no suitable key provider available for the file format; typically because BouncyCastle
+     *             is not in the classpath
      * @throws IOException
      *             if the key file format is not known, if the file could not be read, etc.
      */
@@ -603,19 +585,19 @@ public class SSHClient extends SocketClient
     }
     
     /**
-     * Creates a {@link KeyProvider} instance from given location on the file system. Currently
-     * PKCS8 format private key files are supported (OpenSSH uses this format).
+     * Creates a {@link KeyProvider} instance from given location on the file system. Currently PKCS8 format private key
+     * files are supported (OpenSSH uses this format).
      * <p>
      * 
      * @param location
      *            the location of the key file
      * @param passwordFinder
-     *            the {@link PasswordFinder} that can supply the passphrase for decryption (may be
-     *            {@code null} in case keyfile is not encrypted)
+     *            the {@link PasswordFinder} that can supply the passphrase for decryption (may be {@code null} in case
+     *            keyfile is not encrypted)
      * @return the key provider ready for use in authentication
      * @throws SSHException
-     *             if there was no suitable key provider available for the file format; typically
-     *             because BouncyCastle is not in the classpath
+     *             if there was no suitable key provider available for the file format; typically because BouncyCastle
+     *             is not in the classpath
      * @throws IOException
      *             if the key file format is not known, if the file could not be read, etc.
      */
@@ -623,8 +605,8 @@ public class SSHClient extends SocketClient
     {
         File loc = new File(location);
         FileKeyProvider.Format format = SecurityUtils.detectKeyFileFormat(loc);
-        FileKeyProvider fkp =
-                Factory.Named.Util.create(trans.getConfig().getFileKeyProviderFactories(), format.toString());
+        FileKeyProvider fkp = Factory.Named.Util.create(trans.getConfig().getFileKeyProviderFactories(), format
+                .toString());
         if (fkp == null)
             throw new SSHException("No provider available for " + format + " key file");
         fkp.init(loc, passwordFinder);
@@ -632,9 +614,9 @@ public class SSHClient extends SocketClient
     }
     
     /**
-     * Convenience method for creating a {@link FileKeyProvider} instance from a {@code location}
-     * where an <i>encrypted</i> key file is located. Calls {@link #loadKeys(String, char[])} with a
-     * character array created from the supplied {@code passphrase} string.
+     * Convenience method for creating a {@link FileKeyProvider} instance from a {@code location} where an
+     * <i>encrypted</i> key file is located. Calls {@link #loadKeys(String, char[])} with a character array created from
+     * the supplied {@code passphrase} string.
      * 
      * @param location
      *            location of the key file
@@ -651,9 +633,9 @@ public class SSHClient extends SocketClient
     }
     
     /**
-     * Attempts loading the user's {@code known_hosts} file from the default location, i.e. {@code
-     * ~/.ssh/known_hosts} and {@code ~/.ssh/known_hosts2} on most platforms. Adds the resulting
-     * {@link KnownHosts} object as a host key verifier.
+     * Attempts loading the user's {@code known_hosts} file from the default location, i.e. {@code ~/.ssh/known_hosts}
+     * and {@code ~/.ssh/known_hosts2} on most platforms. Adds the resulting {@link KnownHosts} object as a host key
+     * verifier.
      * <p>
      * For finer control over which file is used, see {@link #loadKnownHosts(String)}.
      * 
@@ -664,16 +646,21 @@ public class SSHClient extends SocketClient
     {
         String homeDir = System.getProperty("user.home");
         boolean a = false, b = false;
-        if (homeDir != null) {
+        if (homeDir != null)
+        {
             String kh = homeDir + File.separator + ".ssh" + File.separator + "known_hosts";
-            try {
-                loadKnownHosts(kh); // "~/.ssh/known_hosts" 
-            } catch (IOException ignored) {
+            try
+            {
+                loadKnownHosts(kh); // "~/.ssh/known_hosts"
+            } catch (IOException ignored)
+            {
                 a = true;
             }
-            try {
-                loadKnownHosts(kh + "2"); // "~/.ssh/known_hosts2" 
-            } catch (IOException ignored) {
+            try
+            {
+                loadKnownHosts(kh + "2"); // "~/.ssh/known_hosts2"
+            } catch (IOException ignored)
+            {
                 b = true;
             }
         }
@@ -695,11 +682,11 @@ public class SSHClient extends SocketClient
     }
     
     /**
-     * Create a {@link LocalPortForwarder} that will listen on {@code address} and forward incoming
-     * connections to the server; which will further forward them to {@code host:port}.
+     * Create a {@link LocalPortForwarder} that will listen on {@code address} and forward incoming connections to the
+     * server; which will further forward them to {@code host:port}.
      * <p>
-     * The returned forwarder's {@link LocalPortForwarder#startListening() startListening()} method
-     * should be called to actually start listening, this method just creates an instance.
+     * The returned forwarder's {@link LocalPortForwarder#startListening() startListening()} method should be called to
+     * actually start listening, this method just creates an instance.
      * 
      * @param address
      *            defines where the {@link LocalPortForwarder} listens
@@ -716,18 +703,18 @@ public class SSHClient extends SocketClient
     }
     
     /**
-     * Register a {@code listener} for handling forwarded X11 channels. Without having done this, an
-     * incoming X11 forwarding will be summarily rejected.
+     * Register a {@code listener} for handling forwarded X11 channels. Without having done this, an incoming X11
+     * forwarding will be summarily rejected.
      * <p>
-     * It should be clarified that multiple listeners for X11 forwarding over a single SSH
-     * connection are not supported (and don't make much sense). So a subsequent call to this method
-     * is only going to replace the registered {@code listener}.
+     * It should be clarified that multiple listeners for X11 forwarding over a single SSH connection are not supported
+     * (and don't make much sense). So a subsequent call to this method is only going to replace the registered {@code
+     * listener}.
      * 
      * @param listener
-     *            the {@link ConnectListener} that should be delegated the responsibility of
-     *            handling forwarded {@link X11Channel} 's
-     * @return an {@link X11Forwarder} that allows to {@link X11Forwarder#stop() stop acting} on X11
-     *         requests from server
+     *            the {@link ConnectListener} that should be delegated the responsibility of handling forwarded
+     *            {@link X11Channel} 's
+     * @return an {@link X11Forwarder} that allows to {@link X11Forwarder#stop() stop acting} on X11 requests from
+     *         server
      */
     public X11Forwarder registerX11Forwarder(ConnectListener listener)
     {
@@ -748,10 +735,9 @@ public class SSHClient extends SocketClient
     }
     
     /**
-     * Opens a {@code session} channel. The returned {@link Session} instance allows
-     * {@link Session#exec(String) executing a remote command},
-     * {@link Session#startSubsysytem(String) starting a subsystem}, or {@link Session#startShell()
-     * starting a shell}.
+     * Opens a {@code session} channel. The returned {@link Session} instance allows {@link Session#exec(String)
+     * executing a remote command}, {@link Session#startSubsysytem(String) starting a subsystem}, or
+     * {@link Session#startShell() starting a shell}.
      * 
      * @return the opened {@code session} channel
      * @throws ConnectionException
@@ -768,11 +754,11 @@ public class SSHClient extends SocketClient
     }
     
     /**
-     * Adds {@code zlib} compression to preferred compression algorithms. There is no guarantee that
-     * it will be successfully negotiatied.
+     * Adds {@code zlib} compression to preferred compression algorithms. There is no guarantee that it will be
+     * successfully negotiatied.
      * <p>
-     * If the client is already connected renegotiation is done; otherwise this method simply
-     * returns (and compression will be negotiated during connection establishment).
+     * If the client is already connected renegotiation is done; otherwise this method simply returns (and compression
+     * will be negotiated during connection establishment).
      * 
      * @throws ClassNotFoundException
      *             if {@code JZlib} is not in classpath
@@ -783,23 +769,41 @@ public class SSHClient extends SocketClient
     public void useCompression() throws TransportException
     {
         trans.getConfig().setCompressionFactories(new DelayedZlibCompression.Factory(), //
-                                                  new ZlibCompression.Factory(), //
-                                                  new NoneCompression.Factory());
+                new ZlibCompression.Factory(), //
+                new NoneCompression.Factory());
         if (isConnected())
             rekey();
     }
     
     /**
-     * On connection establishment, also initialize the SSH transport via {@link Transport#init} and
-     * {@link #doKex()}.
+     * On connection establishment, also initialize the SSH transport via {@link Transport#init} and {@link #doKex()}.
      */
     @Override
     protected void _connectAction_() throws IOException
     {
         super._connectAction_();
-        hostname = hostname == null ? _socket_.getInetAddress().getHostName() : hostname;
-        trans.init(hostname, _socket_);
+        trans.init(new ConnInfo(getRemoteHostname(), _socket_));
         doKex();
+    }
+    
+    @Override
+    public void connect(String hostname, int port) throws SocketException, IOException
+    {
+        this.hostname = hostname;
+        super.connect(hostname, port);
+    }
+    
+    @Override
+    public void connect(String hostname, int port, InetAddress localAddr, int localPort) throws SocketException,
+            IOException
+    {
+        this.hostname = hostname;
+        super.connect(hostname, port, localAddr, localPort);
+    }
+    
+    public String getRemoteHostname()
+    {
+        return hostname;
     }
     
     /**
@@ -814,9 +818,11 @@ public class SSHClient extends SocketClient
         
         long start = System.currentTimeMillis();
         
-        try {
+        try
+        {
             trans.getKeyExchanger().startKex(true);
-        } catch (TransportException te) {
+        } catch (TransportException te)
+        {
             trans.disconnect(DisconnectReason.KEY_EXCHANGE_FAILED);
             throw te;
         }

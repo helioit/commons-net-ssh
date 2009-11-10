@@ -24,8 +24,6 @@ import org.apache.commons.net.ssh.util.PasswordFinder;
 
 /**
  * A file key provider is initialized with a location of
- * 
- * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
  */
 public interface FileKeyProvider extends KeyProvider
 {

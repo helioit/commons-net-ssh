@@ -27,8 +27,6 @@ import com.jcraft.jzlib.ZStream;
 
 /**
  * ZLib based Compression.
- * 
- * @author <a href="mailto:dev@mina.apache.org">Apache MINA SSHD Project</a>
  */
 public class ZlibCompression implements Compression
 {
@@ -67,7 +65,8 @@ public class ZlibCompression implements Compression
         stream.next_in_index = buffer.rpos();
         stream.avail_in = buffer.available();
         buffer.wpos(buffer.rpos());
-        do {
+        do
+        {
             stream.next_out = tmpbuf;
             stream.next_out_index = 0;
             stream.avail_out = BUF_SIZE;
@@ -103,7 +102,8 @@ public class ZlibCompression implements Compression
         stream.next_in_index = from.rpos();
         stream.avail_in = from.available();
         
-        while (true) {
+        while (true)
+        {
             stream.next_out = tmpbuf;
             stream.next_out_index = 0;
             stream.avail_out = BUF_SIZE;

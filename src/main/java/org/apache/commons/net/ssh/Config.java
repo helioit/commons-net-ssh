@@ -33,9 +33,6 @@ import org.apache.commons.net.ssh.signature.Signature;
  * Holds configuration information and factories. Acts a container for factories of
  * {@link KeyExchange}, {@link Cipher}, {@link Compression}, {@link MAC}, {@link Signature},
  * {@link Random}, and {@link FileKeyProvider}.
- * 
- * @author <a href="mailto:dev@mina.apache.org">Apache MINA SSHD Project</a>
- * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
  */
 public class Config
 {

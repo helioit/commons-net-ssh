@@ -52,9 +52,6 @@ import org.slf4j.LoggerFactory;
 
 /**
  * Algorithm negotiation and key exchange.
- * 
- * @author <a href="mailto:dev@mina.apache.org">Apache MINA SSHD Project</a>
- * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
  */
 public final class KeyExchanger implements PacketHandler, ErrorNotifiable
 {
@@ -92,7 +89,7 @@ public final class KeyExchanger implements PacketHandler, ErrorNotifiable
     private String[] clientProposal;
     // Friendlier names for array indexes w.r.t the above 3 arrays
     private static final int PROP_KEX_ALG = 0;
-    //private static final int PROP_SRVR_HOST_KEY_ALG = 1;
+    // private static final int PROP_SRVR_HOST_KEY_ALG = 1;
     private static final int PROP_ENC_ALG_C2S = 2;
     private static final int PROP_ENC_ALG_S2C = 3;
     private static final int PROP_MAC_ALG_C2S = 4;
@@ -115,11 +112,10 @@ public final class KeyExchanger implements PacketHandler, ErrorNotifiable
     /** Computed session ID */
     private byte[] sessionID;
     
-    private final Event<TransportException> kexInitSent =
-            new Event<TransportException>("kexinit sent", TransportException.chainer);
+    private final Event<TransportException> kexInitSent = new Event<TransportException>("kexinit sent",
+            TransportException.chainer);
     
-    private final Event<TransportException> done =
-            new Event<TransportException>("kex done", TransportException.chainer);
+    private final Event<TransportException> done = new Event<TransportException>("kex done", TransportException.chainer);
     
     KeyExchanger(TransportProtocol trans)
     {
@@ -179,7 +175,8 @@ public final class KeyExchanger implements PacketHandler, ErrorNotifiable
             ensureKexOngoing();
             log.info("Received kex followup data");
             buf.rpos(buf.rpos() - 1); // un-read the message byte
-            if (kex.next(buf)) {
+            if (kex.next(buf))
+            {
                 verifyHost(kex.getHostKey());
                 sendNewKeys();
                 expected = Expected.NEWKEYS;
@@ -240,7 +237,8 @@ public final class KeyExchanger implements PacketHandler, ErrorNotifiable
      */
     public void startKex(boolean waitForDone) throws TransportException
     {
-        if (!kexOngoing.getAndSet(true)) {
+        if (!kexOngoing.getAndSet(true))
+        {
             done.clear();
             sendKexInit();
         }
@@ -256,7 +254,7 @@ public final class KeyExchanger implements PacketHandler, ErrorNotifiable
     private String[] createProposal()
     {
         return new String[] { //
-        Factory.Named.Util.getNames(transport.getConfig().getKeyExchangeFactories()), // PROP_KEX_ALG 
+        Factory.Named.Util.getNames(transport.getConfig().getKeyExchangeFactories()), // PROP_KEX_ALG
                 Factory.Named.Util.getNames(transport.getConfig().getSignatureFactories()), // PROP_SRVR_HOST_KEY_ALG
                 Factory.Named.Util.getNames(transport.getConfig().getCipherFactories()), // PROP_ENC_ALG_C2S
                 Factory.Named.Util.getNames(transport.getConfig().getCipherFactories()), // PROP_ENC_ALG_S2C
@@ -264,8 +262,8 @@ public final class KeyExchanger implements PacketHandler, ErrorNotifiable
                 Factory.Named.Util.getNames(transport.getConfig().getMACFactories()), // PROP_MAC_ALG_S2C
                 Factory.Named.Util.getNames(transport.getConfig().getCompressionFactories()), // PROP_MAC_ALG_C2S
                 Factory.Named.Util.getNames(transport.getConfig().getCompressionFactories()), // PROP_COMP_ALG_S2C
-                "", // PROP_LANG_C2S (optional, thus empty string) 
-                "" // PROP_LANG_S2C (optional, thus empty string) 
+                "", // PROP_LANG_C2S (optional, thus empty string)
+                "" // PROP_LANG_S2C (optional, thus empty string)
         };
     }
     
@@ -273,7 +271,7 @@ public final class KeyExchanger implements PacketHandler, ErrorNotifiable
     {
         if (!isKexOngoing())
             throw new TransportException(DisconnectReason.PROTOCOL_ERROR,
-                                         "Key exchange packet received when key exchange was not ongoing");
+                    "Key exchange packet received when key exchange was not ongoing");
     }
     
     private void ensureReceivedMatchesExpected(Message got, Message expected) throws TransportException
@@ -294,7 +292,7 @@ public final class KeyExchanger implements PacketHandler, ErrorNotifiable
         buffer.rpos(buffer.rpos() + 16);
         // read proposal
         for (int i = 0; i < serverProposal.length; i++)
-            serverProposal[i] = buffer.getString();
+            serverProposal[i] = buffer.readString();
     }
     
     private void gotKexInit(Buffer buf) throws TransportException
@@ -327,15 +325,16 @@ public final class KeyExchanger implements PacketHandler, ErrorNotifiable
         Compression s2ccomp;
         Compression c2scomp;
         
-        if (sessionID == null) {
+        if (sessionID == null)
+        {
             sessionID = new byte[H.length];
             System.arraycopy(H, 0, sessionID, 0, H.length);
         }
         
         Buffer buffer = new Buffer().putMPInt(K) //
-                                    .putRawBytes(H) //
-                                    .putByte((byte) 0x41) //
-                                    .putRawBytes(sessionID);
+                .putRawBytes(H) //
+                .putByte((byte) 0x41) //
+                .putRawBytes(sessionID);
         int pos = buffer.available();
         byte[] buf = buffer.array();
         hash.update(buf, 0, pos);
@@ -377,12 +376,10 @@ public final class KeyExchanger implements PacketHandler, ErrorNotifiable
         c2smac = Factory.Named.Util.create(transport.getConfig().getMACFactories(), negotiated[PROP_MAC_ALG_C2S]);
         c2smac.init(MACc2s);
         
-        s2ccomp =
-                Factory.Named.Util.create(transport.getConfig().getCompressionFactories(),
-                                          negotiated[PROP_COMP_ALG_S2C]);
-        c2scomp =
-                Factory.Named.Util.create(transport.getConfig().getCompressionFactories(),
-                                          negotiated[PROP_COMP_ALG_C2S]);
+        s2ccomp = Factory.Named.Util.create(transport.getConfig().getCompressionFactories(),
+                negotiated[PROP_COMP_ALG_S2C]);
+        c2scomp = Factory.Named.Util.create(transport.getConfig().getCompressionFactories(),
+                negotiated[PROP_COMP_ALG_C2S]);
         
         transport.setClientToServerAlgorithms(c2scipher, c2smac, c2scomp);
         transport.setServerToClientAlgorithms(s2ccipher, s2cmac, s2ccomp);
@@ -395,12 +392,15 @@ public final class KeyExchanger implements PacketHandler, ErrorNotifiable
     private void negotiate() throws TransportException
     {
         String[] guess = new String[PROP_MAX];
-        for (int i = 0; i < PROP_MAX; i++) {
+        for (int i = 0; i < PROP_MAX; i++)
+        {
             String[] c = clientProposal[i].split(",");
             String[] s = serverProposal[i].split(",");
-            for (String ci : c) {
+            for (String ci : c)
+            {
                 for (String si : s)
-                    if (ci.equals(si)) { // first match wins
+                    if (ci.equals(si))
+                    { // first match wins
                         guess[i] = ci;
                         break;
                     }
@@ -437,10 +437,11 @@ public final class KeyExchanger implements PacketHandler, ErrorNotifiable
      */
     private byte[] resizeKey(byte[] E, int blockSize, Digest hash, byte[] K, byte[] H)
     {
-        while (blockSize > E.length) {
+        while (blockSize > E.length)
+        {
             Buffer buffer = new Buffer().putMPInt(K) //
-                                        .putRawBytes(H) //
-                                        .putRawBytes(E);
+                    .putRawBytes(H) //
+                    .putRawBytes(E);
             hash.update(buffer.array(), 0, buffer.available());
             byte[] foo = hash.digest();
             byte[] bar = new byte[E.length + foo.length];
@@ -470,7 +471,7 @@ public final class KeyExchanger implements PacketHandler, ErrorNotifiable
             buf.putString(s);
         
         buf.putBoolean(false) // Optimistic next packet does not follow
-           .putInt(0); // "Reserved" for future by spec
+                .putInt(0); // "Reserved" for future by spec
         
         I_C = buf.getCompactData(); // Store for future
         
@@ -503,7 +504,8 @@ public final class KeyExchanger implements PacketHandler, ErrorNotifiable
     private synchronized void verifyHost(PublicKey key) throws TransportException
     {
         
-        for (HostKeyVerifier hkv : hostVerifiers) {
+        for (HostKeyVerifier hkv : hostVerifiers)
+        {
             log.debug("Trying to verify host key with {}", hkv);
             if (hkv.verify(transport.getRemoteHost(), key))
                 return;

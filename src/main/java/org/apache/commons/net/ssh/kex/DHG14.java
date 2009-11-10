@@ -18,14 +18,11 @@
  */
 package org.apache.commons.net.ssh.kex;
 
-
 /**
  * Diffie-Hellman key exchange with SHA-1 and Oakley Group 14 [RFC3526] (2048-bit MODP Group).
  * <p>
- * DHG14 does not work with the default JCE implementation provided by Sun because it does not
- * support 2048 bits encryption. It requires BouncyCastle to be used.
- * 
- * @author <a href="mailto:dev@mina.apache.org">Apache MINA SSHD Project</a>
+ * DHG14 does not work with the default JCE implementation provided by Sun because it does not support 2048 bits
+ * encryption. It requires BouncyCastle to be used.
  */
 public class DHG14 extends AbstractDHG
 {

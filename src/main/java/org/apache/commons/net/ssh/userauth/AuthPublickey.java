@@ -32,8 +32,6 @@ import org.apache.commons.net.ssh.util.Constants.Message;
  * key, and if the server responds with {@code SSH_MSG_USERAUTH_PK_OK} indicating that the key is
  * acceptable, it proceeds to send a request signed with the private key. Therefore, private keys
  * are not requested from the associated {@link KeyProvider} unless needed.
- * 
- * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
  */
 public class AuthPublickey extends KeyedAuthMethod
 {
@@ -68,9 +66,11 @@ public class AuthPublickey extends KeyedAuthMethod
      */
     private Buffer buildReq(boolean signed) throws UserAuthException
     {
-        try {
+        try
+        {
             kProv.getPublic();
-        } catch (IOException ioe) {
+        } catch (IOException ioe)
+        {
             throw new UserAuthException("Problem getting public key", ioe);
         }
         return putPubKey(super.buildReq().putBoolean(signed));

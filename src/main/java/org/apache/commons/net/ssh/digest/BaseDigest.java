@@ -26,8 +26,6 @@ import org.apache.commons.net.ssh.util.SecurityUtils;
 
 /**
  * Base class for Digest algorithms based on the JCE provider.
- * 
- * @author <a href="mailto:dev@mina.apache.org">Apache MINA SSHD Project</a>
  */
 public class BaseDigest implements Digest
 {
@@ -37,8 +35,8 @@ public class BaseDigest implements Digest
     private MessageDigest md;
     
     /**
-     * Create a new digest using the given algorithm and block size. The initialization and creation
-     * of the underlying {@link MessageDigest} object will be done in the {@link #init()} method.
+     * Create a new digest using the given algorithm and block size. The initialization and creation of the underlying
+     * {@link MessageDigest} object will be done in the {@link #init()} method.
      * 
      * @param algorithm
      *            the JCE algorithm to use for this digest
@@ -63,9 +61,11 @@ public class BaseDigest implements Digest
     
     public void init()
     {
-        try {
+        try
+        {
             md = SecurityUtils.getMessageDigest(algorithm);
-        } catch (GeneralSecurityException e) {
+        } catch (GeneralSecurityException e)
+        {
             throw new SSHRuntimeException(e);
         }
     }

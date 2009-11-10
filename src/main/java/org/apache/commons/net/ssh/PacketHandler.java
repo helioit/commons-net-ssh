@@ -25,8 +25,6 @@ import org.apache.commons.net.ssh.util.Constants.Message;
  * An interface for classes to which packet handling may be delegated. Chains of such delegations
  * may be used, e.g. {@code packet decoder -> (PacketHandler) transport layer -> (PacketHandler)
  * connection layer -> (PacketHandler) channel}.
- * 
- * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
  */
 public interface PacketHandler
 {

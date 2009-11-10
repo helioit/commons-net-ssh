@@ -1,3 +1,21 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
 package examples.ssh;
 
 import java.net.InetSocketAddress;
@@ -7,17 +25,15 @@ import org.apache.commons.net.ssh.connection.SocketForwardingConnectListener;
 import org.apache.commons.net.ssh.connection.RemotePortForwarder.Forward;
 
 /**
- * This example demonstrates remote port forwarding i.e. when the remote host is made to listen on a
- * specific address and port; and forwards us incoming connections.
- * 
- * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
+ * This example demonstrates remote port forwarding i.e. when the remote host is made to listen on a specific address
+ * and port; and forwards us incoming connections.
  */
 public class RemotePF
 {
     
-    //    static {
-    //        BasicConfigurator.configure(new ConsoleAppender(new PatternLayout("%d [%-15.15t] %-5p %-30.30c{1} - %m%n")));
-    //    }
+    // static {
+    // BasicConfigurator.configure(new ConsoleAppender(new PatternLayout("%d [%-15.15t] %-5p %-30.30c{1} - %m%n")));
+    // }
     
     public static void main(String... args) throws Exception
     {
@@ -25,22 +41,23 @@ public class RemotePF
         client.loadKnownHosts();
         
         client.connect("localhost");
-        try {
+        try
+        {
             
             client.authPublickey(System.getProperty("user.name"));
             
             /*
-             * We make _server_ listen on port 8080, which forwards all connections to us as a
-             * channel, and we further forward all such channels to google.com:80
+             * We make _server_ listen on port 8080, which forwards all connections to us as a channel, and we further
+             * forward all such channels to google.com:80
              */
-            client.getRemotePortForwarder()
-                  .bind(new Forward(8080), //
-                        new SocketForwardingConnectListener(new InetSocketAddress("google.com", 80)));
+            client.getRemotePortForwarder().bind(new Forward(8080), //
+                    new SocketForwardingConnectListener(new InetSocketAddress("google.com", 80)));
             
             // Something to hang on to so forwarding stays
             client.getTransport().join();
             
-        } finally {
+        } finally
+        {
             client.disconnect();
         }
     }

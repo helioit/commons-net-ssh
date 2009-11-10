@@ -25,8 +25,6 @@ import org.apache.commons.net.ssh.util.Constants.KeyType;
 
 /**
  * DSA {@link Signature}
- * 
- * @author <a href="mailto:dev@mina.apache.org">Apache MINA SSHD Project</a>
  */
 public class SignatureDSA extends AbstractSignature
 {
@@ -57,9 +55,11 @@ public class SignatureDSA extends AbstractSignature
     public byte[] sign()
     {
         byte[] sig;
-        try {
+        try
+        {
             sig = signature.sign();
-        } catch (SignatureException e) {
+        } catch (SignatureException e)
+        {
             throw new SSHRuntimeException(e);
         }
         
@@ -111,9 +111,11 @@ public class SignatureDSA extends AbstractSignature
         System.arraycopy(sig, 20, tmp, 6 + tmp[3] + scnd, 20);
         sig = tmp;
         
-        try {
+        try
+        {
             return signature.verify(sig);
-        } catch (SignatureException e) {
+        } catch (SignatureException e)
+        {
             throw new SSHRuntimeException(e);
         }
     }

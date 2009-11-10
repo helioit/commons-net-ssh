@@ -36,8 +36,6 @@ import org.slf4j.LoggerFactory;
 
 /**
  * Represents a PKCS8-encoded key file. This is the format used by OpenSSH and OpenSSL.
- * 
- * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
  */
 public class PKCS8KeyFile implements FileKeyProvider
 {
@@ -99,12 +97,12 @@ public class PKCS8KeyFile implements FileKeyProvider
             return null;
         else
             return new org.bouncycastle.openssl.PasswordFinder()
+            {
+                public char[] getPassword()
                 {
-                    public char[] getPassword()
-                    {
-                        return passphrase = pwdf.reqPassword(resource);
-                    }
-                };
+                    return passphrase = pwdf.reqPassword(resource);
+                }
+            };
     }
     
     protected KeyPair readKeyPair() throws IOException
@@ -113,24 +111,30 @@ public class PKCS8KeyFile implements FileKeyProvider
         org.bouncycastle.openssl.PasswordFinder pFinder = makeBouncyPasswordFinder();
         PEMReader r = null;
         Object o = null;
-        try {
-            for (;;) {
+        try
+        {
+            for (;;)
+            {
                 // while the PasswordFinder tells us we should retry
-                try {
+                try
+                {
                     r = new PEMReader(new InputStreamReader(new FileInputStream(location)), pFinder);
                     o = r.readObject();
-                } catch (IOException e) {
+                } catch (IOException e)
+                {
                     if (e.toString().contains("javax.crypto.BadPaddingException"))
                         // => incorrect password. screen-scraping sucks.
                         if (pwdf.shouldRetry(resource))
                             continue;
                     throw e;
-                } finally {
+                } finally
+                {
                     IOUtils.closeQuietly(r);
                 }
                 break;
             }
-        } finally {
+        } finally
+        {
             PasswordFinder.Util.blankOut(passphrase);
         }
         

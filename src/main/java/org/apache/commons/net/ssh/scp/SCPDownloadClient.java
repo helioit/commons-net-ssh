@@ -31,8 +31,6 @@ import org.apache.commons.net.ssh.util.IOUtils;
 
 /**
  * Support for uploading files over a connected {@link SSHClient} link using SCP.
- * 
- * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
  */
 public class SCPDownloadClient extends SCP
 {
@@ -70,7 +68,7 @@ public class SCPDownloadClient extends SCP
     {
         if (f.exists())
             if (f.isDirectory())
-                f = new File(f, dirname); //  <-- A
+                f = new File(f, dirname); // <-- A
             else
                 throw new SCPException(f + " already exists as a file; remote end is sending directory");
         
@@ -111,9 +109,11 @@ public class SCPDownloadClient extends SCP
     long parseLong(String longString, String valType) throws SCPException
     {
         long val = 0;
-        try {
+        try
+        {
             val = Long.parseLong(longString);
-        } catch (NumberFormatException nfe) {
+        } catch (NumberFormatException nfe)
+        {
             throw new SCPException("Could not parse " + valType + " from `" + longString + "`", nfe);
         }
         return val;
@@ -131,7 +131,8 @@ public class SCPDownloadClient extends SCP
     {
         modeSetter.setPermissions(f, perms);
         
-        if (tMsg != null && modeSetter.shouldPreserveTimes()) {
+        if (tMsg != null && modeSetter.shouldPreserveTimes())
+        {
             String[] tMsgParts = tokenize(tMsg, 4); // e.g. T<mtime> 0 <atime> 0
             modeSetter.setLastModifiedTime(f, parseLong(tMsgParts[0].substring(1), "last modified time"));
             modeSetter.setLastAccessedTime(f, parseLong(tMsgParts[2], "last access time"));
@@ -180,7 +181,7 @@ public class SCPDownloadClient extends SCP
     
     void processDirectory(String dMsg, String tMsg, File f) throws IOException
     {
-        String[] dMsgParts = tokenize(dMsg, 3); // e.g. D0755 0 <dirname> 
+        String[] dMsgParts = tokenize(dMsg, 3); // e.g. D0755 0 <dirname>
         
         long length = parseLong(dMsgParts[1], "dir length");
         if (length != 0)

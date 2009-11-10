@@ -20,8 +20,6 @@ package org.apache.commons.net.ssh;
 
 /**
  * API for classes that are capable of being notified on an error so they can cleanup.
- * 
- * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
  */
 public interface ErrorNotifiable
 {

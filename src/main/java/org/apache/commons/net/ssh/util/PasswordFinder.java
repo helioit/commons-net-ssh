@@ -23,16 +23,12 @@ import java.util.Map;
 
 /**
  * An interface for servicing requests for plaintext passwords.
- * 
- * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
  */
 public interface PasswordFinder
 {
     
     /**
      * A password-protected resource
-     * 
-     * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
      */
     class Resource
     {
@@ -98,8 +94,6 @@ public interface PasswordFinder
     
     /**
      * Static utility methods and factories
-     * 
-     * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
      */
     class Util
     {
@@ -127,36 +121,36 @@ public interface PasswordFinder
                 return null;
             else
                 return new PasswordFinder()
-                    {
-                        public char[] reqPassword(Resource resource)
-                        {
-                            char[] cloned = password.clone();
-                            blankOut(password);
-                            return cloned;
-                        }
-                        
-                        public boolean shouldRetry(Resource resource)
-                        {
-                            return false;
-                        }
-                    };
-        }
-        
-        public static PasswordFinder createResourceBased(final Map<Resource, String> passwordMap)
-        {
-            return new PasswordFinder()
                 {
                     public char[] reqPassword(Resource resource)
                     {
-                        return passwordMap.get(resource).toCharArray();
+                        char[] cloned = password.clone();
+                        blankOut(password);
+                        return cloned;
                     }
                     
                     public boolean shouldRetry(Resource resource)
                     {
                         return false;
                     }
-                    
                 };
+        }
+        
+        public static PasswordFinder createResourceBased(final Map<Resource, String> passwordMap)
+        {
+            return new PasswordFinder()
+            {
+                public char[] reqPassword(Resource resource)
+                {
+                    return passwordMap.get(resource).toCharArray();
+                }
+                
+                public boolean shouldRetry(Resource resource)
+                {
+                    return false;
+                }
+                
+            };
         }
     }
     

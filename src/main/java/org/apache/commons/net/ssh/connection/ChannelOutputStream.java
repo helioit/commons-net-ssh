@@ -27,11 +27,8 @@ import org.apache.commons.net.ssh.util.Buffer;
 import org.apache.commons.net.ssh.util.Constants.Message;
 
 /**
- * {@link OutputStream} for channels. Buffers data upto the remote window's maximum packet size.
- * Data can also be flushed via {@link #flush()} and is also flushed on {@link #close()}.
- * 
- * @author <a href="mailto:dev@mina.apache.org">Apache MINA SSHD Project</a>
- * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
+ * {@link OutputStream} for channels. Buffers data upto the remote window's maximum packet size. Data can also be
+ * flushed via {@link #flush()} and is also flushed on {@link #close()}.
  */
 public class ChannelOutputStream extends OutputStream implements ErrorNotifiable
 {
@@ -55,10 +52,12 @@ public class ChannelOutputStream extends OutputStream implements ErrorNotifiable
     public synchronized void close() throws IOException
     {
         if (!closed)
-            try {
+            try
+            {
                 flush();
                 chan.sendEOF();
-            } finally {
+            } finally
+            {
                 setClosed();
             }
     }
@@ -73,10 +72,12 @@ public class ChannelOutputStream extends OutputStream implements ErrorNotifiable
         
         putRecipientAndLength();
         
-        try {
+        try
+        {
             win.waitAndConsume(bufferLength);
             chan.getTransport().writePacket(buffer);
-        } finally {
+        } finally
+        {
             prepBuffer();
         }
         
@@ -102,9 +103,11 @@ public class ChannelOutputStream extends OutputStream implements ErrorNotifiable
     public synchronized void write(byte[] data, int off, int len) throws IOException
     {
         checkClose();
-        while (len > 0) {
+        while (len > 0)
+        {
             int x = Math.min(len, win.getMaxPacketSize() - bufferLength);
-            if (x <= 0) {
+            if (x <= 0)
+            {
                 flush();
                 continue;
             }
@@ -138,7 +141,7 @@ public class ChannelOutputStream extends OutputStream implements ErrorNotifiable
         buffer.wpos(5);
         buffer.putMessageID(Message.CHANNEL_DATA);
         buffer.putInt(0); // meant to be recipient
-        buffer.putInt(0); // meant to be data length        
+        buffer.putInt(0); // meant to be data length
     }
     
     private void putRecipientAndLength()

@@ -29,8 +29,6 @@ import org.apache.commons.net.ssh.util.IOUtils;
 
 /**
  * {@link Session} implementation.
- * 
- * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
  */
 public class SessionChannel extends AbstractDirectChannel implements Session, Session.Command, Session.Shell,
         Session.Subsystem
@@ -54,9 +52,8 @@ public class SessionChannel extends AbstractDirectChannel implements Session, Se
     public void allocateDefaultPTY() throws ConnectionException, TransportException
     {
         /*
-         * FIXME (maybe?): These modes were originally copied from what SSHD was doing; and then the
-         * echo modes were set to 0 to better serve the PTY example. Not sure what default PTY modes
-         * should be.
+         * FIXME (maybe?): These modes were originally copied from what SSHD was doing; and then the echo modes were set
+         * to 0 to better serve the PTY example. Not sure what default PTY modes should be.
          */
         Map<PTYMode, Integer> modes = new HashMap<PTYMode, Integer>();
         modes.put(PTYMode.ISIG, 1);
@@ -73,13 +70,13 @@ public class SessionChannel extends AbstractDirectChannel implements Session, Se
             throws ConnectionException, TransportException
     {
         sendChannelRequest("pty-req", //
-                           true, // 
-                           new Buffer().putString(term) //
-                                       .putInt(cols) //
-                                       .putInt(rows) //
-                                       .putInt(width) //
-                                       .putInt(height) //
-                                       .putBytes(PTYMode.encode(modes)) //
+                true, // 
+                new Buffer().putString(term) //
+                        .putInt(cols) //
+                        .putInt(rows) //
+                        .putInt(width) //
+                        .putInt(height) //
+                        .putBytes(PTYMode.encode(modes)) //
         ).await(conn.getTimeout()); // wait for reply
     }
     
@@ -91,11 +88,11 @@ public class SessionChannel extends AbstractDirectChannel implements Session, Se
     public void changeWindowDimensions(int cols, int rows, int width, int height) throws TransportException
     {
         sendChannelRequest("pty-req", //
-                           false, //
-                           new Buffer().putInt(cols) //
-                                       .putInt(rows) //
-                                       .putInt(width) //
-                                       .putInt(height));
+                false, //
+                new Buffer().putInt(cols) //
+                        .putInt(rows) //
+                        .putInt(width) //
+                        .putInt(height));
     }
     
     public Command exec(String command) throws ConnectionException, TransportException
@@ -148,13 +145,14 @@ public class SessionChannel extends AbstractDirectChannel implements Session, Se
     public void handleRequest(String req, Buffer buf) throws ConnectionException, TransportException
     {
         if ("xon-xoff".equals(req))
-            canDoFlowControl = buf.getBoolean();
+            canDoFlowControl = buf.readBoolean();
         else if ("exit-status".equals(req))
-            exitStatus = buf.getInt();
-        else if ("exit-signal".equals(req)) {
-            exitSignal = Signal.fromString(buf.getString());
-            wasCoreDumped = buf.getBoolean(); // core dumped
-            exitErrMsg = buf.getString();
+            exitStatus = buf.readInt();
+        else if ("exit-signal".equals(req))
+        {
+            exitSignal = Signal.fromString(buf.readString());
+            wasCoreDumped = buf.readBoolean(); // core dumped
+            exitErrMsg = buf.readString();
             sendClose();
         } else
             super.handleRequest(req, buf);
@@ -164,10 +162,10 @@ public class SessionChannel extends AbstractDirectChannel implements Session, Se
             TransportException
     {
         sendChannelRequest("x11-req", true, //
-                           new Buffer() //
-                                       .putBoolean(false).putString(authProto) //
-                                       .putString(authCookie) //
-                                       .putInt(screen)).await(conn.getTimeout());
+                new Buffer() //
+                        .putBoolean(false).putString(authProto) //
+                        .putString(authCookie) //
+                        .putInt(screen)).await(conn.getTimeout());
     }
     
     public void setEnvVar(String name, String value) throws ConnectionException, TransportException
@@ -186,7 +184,7 @@ public class SessionChannel extends AbstractDirectChannel implements Session, Se
         return this;
     }
     
-    public Subsystem startSubsysytem(String name) throws ConnectionException, TransportException
+    public Subsystem startSubsystem(String name) throws ConnectionException, TransportException
     {
         log.info("Will request `{}` subsystem", name);
         sendChannelRequest("subsystem", true, new Buffer().putString(name)).await(conn.getTimeout());

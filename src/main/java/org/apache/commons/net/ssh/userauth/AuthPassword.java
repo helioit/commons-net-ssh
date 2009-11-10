@@ -27,8 +27,6 @@ import org.apache.commons.net.ssh.util.PasswordFinder.Resource;
 /**
  * Implements the {@code password} authentication method. Password-change request handling is not
  * currently supported.
- * 
- * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
  */
 public class AuthPassword extends AbstractAuthMethod
 {
@@ -47,14 +45,16 @@ public class AuthPassword extends AbstractAuthMethod
         Resource resource = getResource();
         log.info("Requesting password for " + resource);
         char[] password = pwdf.reqPassword(resource);
-        try {
+        try
+        {
             if (password == null)
                 throw new UserAuthException("Was given null password for " + resource);
             else
                 return super.buildReq() // the generic stuff
-                            .putBoolean(false) // no, we are not responding to a CHANGEREQ
-                            .putPassword(password);
-        } finally {
+                        .putBoolean(false) // no, we are not responding to a CHANGEREQ
+                        .putPassword(password);
+        } finally
+        {
             password = null;
         }
     }

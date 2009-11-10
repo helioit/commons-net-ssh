@@ -23,70 +23,80 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
-import java.util.Map;
 
 import org.apache.sshd.server.ShellFactory;
 
-/**
- * TODO Add javadoc
- *
- * @author <a href="mailto:dev@mina.apache.org">Apache MINA SSHD Project</a>
- */
-public class EchoShellFactory implements ShellFactory {
-
-    public Shell createShell() {
+public class EchoShellFactory implements ShellFactory
+{
+    
+    public Shell createShell()
+    {
         return new EchoShell();
     }
-
-    protected static class EchoShell implements Shell, Runnable {
+    
+    protected static class EchoShell implements Shell, Runnable
+    {
         private InputStream in;
         private OutputStream out;
         private OutputStream err;
         private ExitCallback callback;
         private Thread thread;
-
-        public void setInputStream(InputStream in) {
+        
+        public void setInputStream(InputStream in)
+        {
             this.in = in;
         }
-
-        public void setOutputStream(OutputStream out) {
+        
+        public void setOutputStream(OutputStream out)
+        {
             this.out = out;
         }
-
-        public void setErrorStream(OutputStream err) {
+        
+        public void setErrorStream(OutputStream err)
+        {
             this.err = err;
         }
-
-        public void setExitCallback(ExitCallback callback) {
+        
+        public void setExitCallback(ExitCallback callback)
+        {
             this.callback = callback;
         }
-
-        public void start(Environment env) throws IOException {
+        
+        public void start(Environment env) throws IOException
+        {
             thread = new Thread(this, "EchoShell");
             thread.start();
         }
-
-        public void destroy() {
+        
+        public void destroy()
+        {
             thread.interrupt();
         }
-
-        public void run() {
+        
+        public void run()
+        {
             BufferedReader r = new BufferedReader(new InputStreamReader(in));
-            try {
-                for (;;) {
+            try
+            {
+                for (;;)
+                {
                     String s = r.readLine();
-                    if (s == null) {
+                    if (s == null)
+                    {
                         return;
                     }
                     out.write((s + "\n").getBytes());
                     out.flush();
-                    if ("exit".equals(s)) {
+                    if ("exit".equals(s))
+                    {
                         return;
                     }
                 }
-            } catch (Exception e) {
+            } catch (Exception e)
+            {
                 e.printStackTrace();
-            } finally {
+            } finally
+            {
                 callback.onExit(0);
             }
         }

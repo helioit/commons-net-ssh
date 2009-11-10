@@ -24,9 +24,6 @@ import org.slf4j.LoggerFactory;
 
 /**
  * Base class for a window that controls data flow restrictions between local and remote end.
- * 
- * @author <a href="mailto:dev@mina.apache.org">Apache MINA SSHD Project</a>
- * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
  */
 abstract class Window
 {
@@ -42,6 +39,12 @@ abstract class Window
     {
         this.chan = chan;
         log = LoggerFactory.getLogger("<< chan#" + chan.getID() + " / " + (local ? "local" : "remote") + " window >>");
+    }
+    
+    public void init(int initialWinSize, int maxPacketSize)
+    {
+        this.size = initialWinSize;
+        this.maxPacketSize = maxPacketSize;
     }
     
     public synchronized void consume(int dec)
@@ -67,12 +70,6 @@ abstract class Window
     public synchronized int getSize()
     {
         return size;
-    }
-    
-    public void init(int initialWinSize, int maxPacketSize)
-    {
-        this.size = initialWinSize;
-        this.maxPacketSize = maxPacketSize;
     }
     
     @Override

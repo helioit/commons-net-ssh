@@ -18,9 +18,6 @@
  */
 package org.apache.commons.net.ssh.connection;
 
-/**
- * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
- */
 public class OpenFailException extends ConnectionException
 {
     

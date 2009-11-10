@@ -22,8 +22,6 @@ import java.security.SecureRandom;
 
 /**
  * A {@link Random} implementation using the built-in {@link SecureRandom} PRNG.
- * 
- * @author <a href="mailto:dev@mina.apache.org">Apache MINA SSHD Project</a>
  */
 public class JCERandom implements Random
 {
@@ -69,7 +67,8 @@ public class JCERandom implements Random
         if (start == 0 && len == foo.length)
             random.nextBytes(foo);
         else
-            synchronized (this) {
+            synchronized (this)
+            {
                 if (len > tmp.length)
                     tmp = new byte[len];
                 random.nextBytes(tmp);

@@ -24,22 +24,20 @@ import org.apache.commons.net.ssh.util.Constants.DisconnectReason;
 
 /**
  * Connection-layer exception.
- * 
- * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
  */
 public class ConnectionException extends SSHException
 {
     
     public static final FriendlyChainer<ConnectionException> chainer = new FriendlyChainer<ConnectionException>()
+    {
+        public ConnectionException chain(Throwable t)
         {
-            public ConnectionException chain(Throwable t)
-            {
-                if (t instanceof ConnectionException)
-                    return (ConnectionException) t;
-                else
-                    return new ConnectionException(t);
-            }
-        };
+            if (t instanceof ConnectionException)
+                return (ConnectionException) t;
+            else
+                return new ConnectionException(t);
+        }
+    };
     
     public ConnectionException()
     {

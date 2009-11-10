@@ -28,8 +28,6 @@ import org.apache.commons.net.ssh.util.SecurityUtils;
 
 /**
  * An abstract class for {@link Signature} that implements common functionality.
- * 
- * @author <a href="mailto:dev@mina.apache.org">Apache MINA SSHD Project</a>
  */
 public abstract class AbstractSignature implements Signature
 {
@@ -44,13 +42,15 @@ public abstract class AbstractSignature implements Signature
     
     public void init(PublicKey pubkey, PrivateKey prvkey)
     {
-        try {
+        try
+        {
             signature = SecurityUtils.getSignature(algorithm);
             if (pubkey != null)
                 signature.initVerify(pubkey);
             if (prvkey != null)
                 signature.initSign(prvkey);
-        } catch (GeneralSecurityException e) {
+        } catch (GeneralSecurityException e)
+        {
             throw new SSHRuntimeException(e);
         }
     }
@@ -62,16 +62,19 @@ public abstract class AbstractSignature implements Signature
     
     public void update(byte[] foo, int off, int len)
     {
-        try {
+        try
+        {
             signature.update(foo, off, len);
-        } catch (SignatureException e) {
+        } catch (SignatureException e)
+        {
             throw new SSHRuntimeException(e);
         }
     }
     
     protected byte[] extractSig(byte[] sig)
     {
-        if (sig[0] == 0 && sig[1] == 0 && sig[2] == 0) {
+        if (sig[0] == 0 && sig[1] == 0 && sig[2] == 0)
+        {
             int i = 0;
             int j;
             j = sig[i++] << 24 & 0xff000000 //

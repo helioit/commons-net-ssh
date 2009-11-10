@@ -27,8 +27,6 @@ import org.apache.commons.net.ssh.util.Buffer;
 
 /**
  * Handles remote port forwarding.
- * 
- * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
  */
 public class RemotePortForwarder extends AbstractForwardedChannelOpener
 {
@@ -174,11 +172,11 @@ public class RemotePortForwarder extends AbstractForwardedChannelOpener
     }
     
     /**
-     * Request forwarding from the remote host on the specified {@link Forward}. Forwarded
-     * connections will be handled by supplied {@code listener}.
+     * Request forwarding from the remote host on the specified {@link Forward}. Forwarded connections will be handled
+     * by supplied {@code listener}.
      * <p>
-     * If {@code forward} specifies as 0, the returned forward will have the correct port number as
-     * informed by remote host.
+     * If {@code forward} specifies as 0, the returned forward will have the correct port number as informed by remote
+     * host.
      * 
      * @param forward
      *            the {@link Forward} to put in place on remote host
@@ -191,11 +189,11 @@ public class RemotePortForwarder extends AbstractForwardedChannelOpener
     public Forward bind(Forward forward, ConnectListener listener) throws ConnectionException, TransportException
     {
         Buffer reply = conn.sendGlobalRequest(PF_REQ, true, new Buffer() //
-                                                                        .putString(forward.address) //
-                                                                        .putInt(forward.port)) //
-                           .get(conn.getTimeout());
+                .putString(forward.address) //
+                .putInt(forward.port)) //
+                .get(conn.getTimeout());
         if (forward.port == 0)
-            forward.port = reply.getInt();
+            forward.port = reply.readInt();
         log.info("Remote end listening on {}", forward);
         listeners.put(forward, listener);
         return forward;
@@ -211,12 +209,14 @@ public class RemotePortForwarder extends AbstractForwardedChannelOpener
      */
     public void cancel(Forward forward) throws ConnectionException, TransportException
     {
-        try {
+        try
+        {
             conn.sendGlobalRequest(PF_CANCEL, true, new Buffer() //
-                                                                .putString(forward.address) //
-                                                                .putInt(forward.port)) //
-                .get(conn.getTimeout());
-        } finally {
+                    .putString(forward.address) //
+                    .putInt(forward.port)) //
+                    .get(conn.getTimeout());
+        } finally
+        {
             listeners.remove(forward);
         }
     }
@@ -230,14 +230,14 @@ public class RemotePortForwarder extends AbstractForwardedChannelOpener
     }
     
     /**
-     * Internal API. Creates a {@link ForwardedTCPIPChannel} from the {@code CHANNEL_OPEN} request
-     * and calls associated {@code ConnectListener} for that forward in a separate thread.
+     * Internal API. Creates a {@link ForwardedTCPIPChannel} from the {@code CHANNEL_OPEN} request and calls associated
+     * {@code ConnectListener} for that forward in a separate thread.
      */
     public void handleOpen(Buffer buf) throws ConnectionException, TransportException
     {
-        ForwardedTCPIPChannel chan = new ForwardedTCPIPChannel(conn, buf.getInt(), buf.getInt(), buf.getInt(), //
-                                                               new Forward(buf.getString(), buf.getInt()), //
-                                                               buf.getString(), buf.getInt());
+        ForwardedTCPIPChannel chan = new ForwardedTCPIPChannel(conn, buf.readInt(), buf.readInt(), buf.readInt(), //
+                new Forward(buf.readString(), buf.readInt()), //
+                buf.readString(), buf.readInt());
         if (listeners.containsKey(chan.getParentForward()))
             callListener(listeners.get(chan.getParentForward()), chan);
         else

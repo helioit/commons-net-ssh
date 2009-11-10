@@ -20,8 +20,6 @@ package org.apache.commons.net.ssh.cipher;
 
 /**
  * Wrapper for a cryptographic cipher, used either for encryption or decryption.
- * 
- * @author <a href="mailto:dev@mina.apache.org">Apache MINA SSHD Project</a>
  */
 public interface Cipher
 {
@@ -46,8 +44,7 @@ public interface Cipher
     int getIVSize();
     
     /**
-     * Initialize the cipher for encryption or decryption with the given private key and
-     * initialization vector
+     * Initialize the cipher for encryption or decryption with the given private key and initialization vector
      * 
      * @param mode
      * @param key

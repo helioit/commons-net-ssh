@@ -23,8 +23,6 @@ import java.io.IOException;
 
 /**
  * An interface for setting file permissions and times.
- * 
- * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
  */
 public interface ModeSetter
 {

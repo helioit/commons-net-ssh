@@ -10,11 +10,8 @@ import org.apache.commons.net.ssh.transport.TransportException;
 import org.apache.commons.net.ssh.util.Buffer;
 
 /**
- * {@link InputStream} for channels. Can {@link #receive(byte[], int, int) receive} data into its
- * buffer for serving to readers.
- * 
- * @author <a href="mailto:dev@mina.apache.org">Apache MINA SSHD Project</a>
- * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
+ * {@link InputStream} for channels. Can {@link #receive(byte[], int, int) receive} data into its buffer for serving to
+ * readers.
  */
 public class ChannelInputStream extends InputStream implements ErrorNotifiable
 {
@@ -37,7 +34,8 @@ public class ChannelInputStream extends InputStream implements ErrorNotifiable
     @Override
     public int available()
     {
-        synchronized (buf) {
+        synchronized (buf)
+        {
             return buf.available();
         }
     }
@@ -50,8 +48,10 @@ public class ChannelInputStream extends InputStream implements ErrorNotifiable
     
     public void eof()
     {
-        synchronized (buf) {
-            if (!eof) {
+        synchronized (buf)
+        {
+            if (!eof)
+            {
                 eof = true;
                 buf.notifyAll();
             }
@@ -67,7 +67,8 @@ public class ChannelInputStream extends InputStream implements ErrorNotifiable
     @Override
     public int read() throws IOException
     {
-        synchronized (b) {
+        synchronized (b)
+        {
             return read(b, 0, 1) == -1 ? -1 : b[0];
         }
     }
@@ -75,8 +76,10 @@ public class ChannelInputStream extends InputStream implements ErrorNotifiable
     @Override
     public int read(byte[] b, int off, int len) throws IOException
     {
-        synchronized (buf) {
-            for (;;) {
+        synchronized (buf)
+        {
+            for (;;)
+            {
                 if (buf.available() > 0)
                     break;
                 if (eof)
@@ -84,15 +87,17 @@ public class ChannelInputStream extends InputStream implements ErrorNotifiable
                         throw error;
                     else
                         return -1;
-                try {
+                try
+                {
                     buf.wait();
-                } catch (InterruptedException e) {
+                } catch (InterruptedException e)
+                {
                     throw (IOException) new InterruptedIOException().initCause(e);
                 }
             }
             if (len > buf.available())
                 len = buf.available();
-            buf.getRawBytes(b, off, len);
+            buf.readRawBytes(b, off, len);
             if (buf.rpos() > win.getMaxPacketSize() || buf.available() == 0)
                 buf.clear();
         }
@@ -103,13 +108,15 @@ public class ChannelInputStream extends InputStream implements ErrorNotifiable
     
     public void receive(byte[] data, int offset, int len) throws ConnectionException, TransportException
     {
-        synchronized (buf) {
+        synchronized (buf)
+        {
             if (eof)
                 throw new ConnectionException("Getting data on EOF'ed stream");
             buf.putRawBytes(data, offset, len);
             buf.notifyAll();
         }
-        synchronized (win) {
+        synchronized (win)
+        {
             win.consume(len);
             if (chan.getAutoExpand())
                 win.check();

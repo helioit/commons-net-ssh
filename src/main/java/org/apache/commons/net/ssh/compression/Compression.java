@@ -23,8 +23,6 @@ import org.apache.commons.net.ssh.util.Buffer;
 
 /**
  * Interface used to compress the stream of data between the SSH server and clients.
- * 
- * @author <a href="mailto:dev@mina.apache.org">Apache MINA SSHD Project</a>
  */
 public interface Compression
 {
@@ -46,10 +44,9 @@ public interface Compression
     void compress(Buffer buffer) throws TransportException;
     
     /**
-     * Initialize this object to either compress or uncompress data. This method must be called
-     * prior to any calls to either <code>compress</code> or <code>uncompress</code>. Once the
-     * object has been initialized, only one of <code>compress</code> or <code>uncompress</code>
-     * methods can be called.
+     * Initialize this object to either compress or uncompress data. This method must be called prior to any calls to
+     * either <code>compress</code> or <code>uncompress</code>. Once the object has been initialized, only one of
+     * <code>compress</code> or <code>uncompress</code> methods can be called.
      * 
      * @param type
      * @param level
@@ -57,8 +54,8 @@ public interface Compression
     void init(Type type, int level);
     
     /**
-     * Delayed compression is an Open-SSH specific feature which informs both the client and server
-     * to not compress data before the session has been authenticated.
+     * Delayed compression is an Open-SSH specific feature which informs both the client and server to not compress data
+     * before the session has been authenticated.
      * 
      * @return if the compression is delayed after authentication or not
      */

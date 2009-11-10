@@ -34,8 +34,6 @@ import org.apache.commons.net.ssh.util.SecurityUtils;
 
 /**
  * Diffie-Hellman key generator.
- * 
- * @author <a href="mailto:dev@mina.apache.org">Apache MINA SSHD Project</a>
  */
 public class DH
 {
@@ -52,10 +50,12 @@ public class DH
     
     public DH()
     {
-        try {
+        try
+        {
             myKpairGen = SecurityUtils.getKeyPairGenerator("DH");
             myKeyAgree = SecurityUtils.getKeyAgreement("DH");
-        } catch (GeneralSecurityException e) {
+        } catch (GeneralSecurityException e)
+        {
             throw new SSHRuntimeException(e);
         }
         
@@ -63,14 +63,17 @@ public class DH
     
     public byte[] getE()
     {
-        if (e == null) {
+        if (e == null)
+        {
             DHParameterSpec dhSkipParamSpec = new DHParameterSpec(p, g);
             KeyPair myKpair;
-            try {
+            try
+            {
                 myKpairGen.initialize(dhSkipParamSpec);
                 myKpair = myKpairGen.generateKeyPair();
                 myKeyAgree.init(myKpair.getPrivate());
-            } catch (GeneralSecurityException e) {
+            } catch (GeneralSecurityException e)
+            {
                 throw new SSHRuntimeException(e);
             }
             e = ((javax.crypto.interfaces.DHPublicKey) myKpair.getPublic()).getY();
@@ -81,13 +84,16 @@ public class DH
     
     public byte[] getK()
     {
-        if (K == null) {
-            try {
+        if (K == null)
+        {
+            try
+            {
                 KeyFactory myKeyFac = SecurityUtils.getKeyFactory("DH");
                 DHPublicKeySpec keySpec = new DHPublicKeySpec(f, p, g);
                 PublicKey yourPubKey = myKeyFac.generatePublic(keySpec);
                 myKeyAgree.doPhase(yourPubKey, true);
-            } catch (GeneralSecurityException e) {
+            } catch (GeneralSecurityException e)
+            {
                 throw new SSHRuntimeException(e);
             }
             byte[] mySharedSecret = myKeyAgree.generateSecret();

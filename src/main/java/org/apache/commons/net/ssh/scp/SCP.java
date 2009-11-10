@@ -36,8 +36,6 @@ import org.slf4j.LoggerFactory;
 
 /**
  * @see <a href="http://blogs.sun.com/janp/entry/how_the_scp_protocol_works">SCP Protocol</a>
- * 
- * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
  */
 public abstract class SCP
 {
@@ -103,9 +101,11 @@ public abstract class SCP
     public synchronized int copy(String sourcePath, String targetPath) throws IOException
     {
         cleanSlate();
-        try {
+        try
+        {
             startCopy(sourcePath, targetPath);
-        } finally {
+        } finally
+        {
             exit();
         }
         return exitStatus;
@@ -171,11 +171,13 @@ public abstract class SCP
     
     void exit()
     {
-        if (scp != null) {
+        if (scp != null)
+        {
             
             IOUtils.closeQuietly(scp);
             
-            if (scp.getExitStatus() != null) {
+            if (scp.getExitStatus() != null)
+            {
                 exitStatus = scp.getExitStatus();
                 if (scp.getExitStatus() != 0)
                     log.warn("SCP exit status: {}", scp.getExitStatus());
@@ -199,7 +201,8 @@ public abstract class SCP
         StringBuilder sb = new StringBuilder();
         int x;
         while ((x = scp.getInputStream().read()) != LF)
-            if (x == -1) {
+            if (x == -1)
+            {
                 if (errOnEOF)
                     throw new IOException("EOF while reading message");
                 else
@@ -231,11 +234,12 @@ public abstract class SCP
     {
         final byte[] buf = new byte[bufSize];
         long count = 0;
-        int read;
+        int read = 0;
         
         long startTime = System.currentTimeMillis();
         
-        while ((read = in.read(buf, 0, (int) Math.min(bufSize, len - count))) != -1 && count < len) {
+        while (count < len && (read = in.read(buf, 0, (int) Math.min(bufSize, len - count))) != -1)
+        {
             out.write(buf, 0, read);
             count += read;
         }

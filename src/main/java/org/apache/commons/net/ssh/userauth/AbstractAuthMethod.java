@@ -26,8 +26,6 @@ import org.slf4j.LoggerFactory;
 
 /**
  * This abstract class for {@link AuthMethod} implements common or default functionality.
- * 
- * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
  */
 public abstract class AbstractAuthMethod implements AuthMethod
 {
@@ -84,9 +82,9 @@ public abstract class AbstractAuthMethod implements AuthMethod
     protected Buffer buildReq() throws UserAuthException
     {
         return new Buffer(Message.USERAUTH_REQUEST) // SSH_MSG_USERAUTH_REQUEST
-                                                   .putString(params.getUsername()) // username goes first
-                                                   .putString(params.getNextServiceName()) // the service that we'd like on success
-                                                   .putString(name); // name of auth method
+                .putString(params.getUsername()) // username goes first
+                .putString(params.getNextServiceName()) // the service that we'd like on success
+                .putString(name); // name of auth method
         
     }
     

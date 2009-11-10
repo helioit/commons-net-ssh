@@ -26,9 +26,6 @@ import java.io.OutputStream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/**
- * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
- */
 public class Pipe extends Thread
 {
     
@@ -45,20 +42,21 @@ public class Pipe extends Thread
     public static ErrorCallback closeOnErrorCallback(final Closeable closable)
     {
         return new ErrorCallback()
+        {
+            
+            public void hadError(IOException ioe)
             {
-                
-                public void hadError(IOException ioe)
-                {
-                    IOUtils.closeQuietly(closable);
-                }
-            };
+                IOUtils.closeQuietly(closable);
+            }
+        };
     }
     
     public static void pipe(InputStream in, OutputStream out, int bufSize, boolean closeStreamOnEOF) throws IOException
     {
         byte[] buf = new byte[bufSize];
         int len;
-        while ((len = in.read(buf)) != -1) {
+        while ((len = in.read(buf)) != -1)
+        {
             out.write(buf, 0, len);
             out.flush();
         }
@@ -110,11 +108,13 @@ public class Pipe extends Thread
     @Override
     public void run()
     {
-        try {
+        try
+        {
             log.debug("Wil pipe from {} to {}", in, out);
             pipe(in, out, bufSize, closeStreamOnEOF);
             log.debug("EOF on {}", in);
-        } catch (IOException ioe) {
+        } catch (IOException ioe)
+        {
             log.error("In pipe from {} to {}: " + ioe.toString(), in, out);
             if (errCB != null)
                 errCB.hadError(ioe);

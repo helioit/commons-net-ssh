@@ -28,9 +28,6 @@ import org.slf4j.LoggerFactory;
 
 /**
  * Encodes packets into the SSH binary protocol per the current algorithms.
- * 
- * @author <a href="mailto:dev@mina.apache.org">Apache MINA SSHD Project</a>
- * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
  */
 final class Encoder extends Converter
 {
@@ -46,7 +43,8 @@ final class Encoder extends Converter
     
     private Buffer checkHeaderSpace(Buffer buffer)
     {
-        if (buffer.rpos() < 5) {
+        if (buffer.rpos() < 5)
+        {
             log.warn("Performance cost: when sending a packet, ensure that "
                     + "5 bytes are available in front of the buffer");
             Buffer nb = new Buffer(buffer.available() + 5);
@@ -67,7 +65,8 @@ final class Encoder extends Converter
     
     private void putMAC(Buffer buffer, int startOfPacket, int endOfPadding)
     {
-        if (mac != null) {
+        if (mac != null)
+        {
             buffer.wpos(endOfPadding + mac.getBlockSize());
             mac.update(seq);
             mac.update(buffer.array(), startOfPacket, endOfPadding);

@@ -21,18 +21,14 @@ package org.apache.commons.net.ssh.connection;
 import java.io.IOException;
 
 /**
- * A connect listener is just that: it listens for new forwarded channels and can be delegated
- * charge of them.
- * 
- * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
+ * A connect listener is just that: it listens for new forwarded channels and can be delegated charge of them.
  */
 public interface ConnectListener
 {
     
     /**
      * Notify this listener of a new forwarded channel. An implementation should firstly
-     * {@link Channel.Forwarded#confirm() confirm} or {@link Channel.Forwarded#reject() reject} that
-     * channel.
+     * {@link Channel.Forwarded#confirm() confirm} or {@link Channel.Forwarded#reject() reject} that channel.
      * 
      * @param chan
      *            the {@link Channel.Forwarded forwarded channel}

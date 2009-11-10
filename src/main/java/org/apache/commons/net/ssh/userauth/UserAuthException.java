@@ -24,24 +24,22 @@ import org.apache.commons.net.ssh.util.Constants.DisconnectReason;
 
 /**
  * User authentication exception
- * 
- * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
  */
 public class UserAuthException extends SSHException
 {
     
     public static final FriendlyChainer<UserAuthException> chainer = new FriendlyChainer<UserAuthException>()
+    {
+        
+        public UserAuthException chain(Throwable t)
         {
-            
-            public UserAuthException chain(Throwable t)
-            {
-                if (t instanceof UserAuthException)
-                    return (UserAuthException) t;
-                else
-                    return new UserAuthException(t);
-            }
-            
-        };
+            if (t instanceof UserAuthException)
+                return (UserAuthException) t;
+            else
+                return new UserAuthException(t);
+        }
+        
+    };
     
     public UserAuthException()
     {

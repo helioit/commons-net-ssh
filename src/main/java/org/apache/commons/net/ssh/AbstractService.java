@@ -28,8 +28,6 @@ import org.slf4j.LoggerFactory;
 
 /**
  * An abstract class for {@link Service} that implements common or default functionality.
- * 
- * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
  */
 public abstract class AbstractService implements Service
 {
@@ -94,6 +92,11 @@ public abstract class AbstractService implements Service
     public void setTimeout(int timeout)
     {
         this.timeout = timeout;
+    }
+    
+    public void notifyDisconnect() throws SSHException
+    {
+        log.debug("Was notified of disconnect");
     }
     
 }

@@ -33,8 +33,6 @@ import java.util.concurrent.locks.ReentrantLock;
  * true} or {@code false} when set.
  * 
  * @see Future
- * 
- * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
  */
 public class Event<T extends Throwable> extends Future<Boolean, T>
 {

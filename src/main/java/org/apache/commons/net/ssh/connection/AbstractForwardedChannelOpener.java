@@ -9,8 +9,6 @@ import org.slf4j.LoggerFactory;
 
 /**
  * Base class for {@link ForwardedChannelOpener}'s.
- * 
- * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
  */
 public abstract class AbstractForwardedChannelOpener implements ForwardedChannelOpener
 {
@@ -26,7 +24,6 @@ public abstract class AbstractForwardedChannelOpener implements ForwardedChannel
         this.conn = conn;
     }
     
-    // Javadoc in interface
     public String getChannelType()
     {
         return chanType;
@@ -38,29 +35,33 @@ public abstract class AbstractForwardedChannelOpener implements ForwardedChannel
     protected void callListener(final ConnectListener listener, final Channel.Forwarded chan)
     {
         new Thread()
+        {
             {
+                setName("ConnectListener");
+            }
+            
+            @Override
+            public void run()
+            {
+                try
                 {
-                    setName("ConnectListener");
-                }
-                
-                @Override
-                public void run()
+                    listener.gotConnect(chan);
+                } catch (IOException logged)
                 {
-                    try {
-                        listener.gotConnect(chan);
-                    } catch (IOException logged) {
-                        log.warn("In callback to {}: {}", listener, logged);
-                        if (chan.isOpen())
-                            IOUtils.closeQuietly(chan);
-                        else
-                            try {
-                                chan.reject(OpenFailException.Reason.CONNECT_FAILED, "");
-                            } catch (TransportException cantdonthn) {
-                                log.warn("Error rejecting {}: {}", chan, cantdonthn);
-                            }
-                    }
+                    log.warn("In callback to {}: {}", listener, logged);
+                    if (chan.isOpen())
+                        IOUtils.closeQuietly(chan);
+                    else
+                        try
+                        {
+                            chan.reject(OpenFailException.Reason.CONNECT_FAILED, "");
+                        } catch (TransportException cantdonthn)
+                        {
+                            log.warn("Error rejecting {}: {}", chan, cantdonthn);
+                        }
                 }
-            }.start();
+            }
+        }.start();
     }
     
 }

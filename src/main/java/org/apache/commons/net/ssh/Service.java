@@ -18,18 +18,14 @@
  */
 package org.apache.commons.net.ssh;
 
-import org.apache.commons.net.ssh.connection.Connection;
 import org.apache.commons.net.ssh.transport.Transport;
 import org.apache.commons.net.ssh.transport.TransportException;
-import org.apache.commons.net.ssh.userauth.UserAuth;
 
 /**
  * Represents a service running on top of the SSH {@link Transport transport layer}.
  * 
  * @see UserAuth
  * @see Connection
- * 
- * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
  */
 public interface Service extends PacketHandler, ErrorNotifiable
 {
@@ -60,5 +56,7 @@ public interface Service extends PacketHandler, ErrorNotifiable
      *             if there is an error sending the service request
      */
     void request() throws TransportException;
+    
+    void notifyDisconnect() throws SSHException;
     
 }

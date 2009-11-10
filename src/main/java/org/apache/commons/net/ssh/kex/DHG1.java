@@ -21,7 +21,6 @@ package org.apache.commons.net.ssh.kex;
 /**
  * Diffie-Hellman key exchange with SHA-1 and Oakley Group 2 [RFC2409] (1024-bit MODP Group).
  * 
- * @author <a href="mailto:dev@mina.apache.org">Apache MINA SSHD Project</a>
  * @see <a href="http://www.ietf.org/rfc/rfc4253.txt">RFC 4253</a>
  */
 public class DHG1 extends AbstractDHG

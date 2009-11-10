@@ -20,8 +20,6 @@ package org.apache.commons.net.ssh.cipher;
 
 /**
  * {@code 3des-cbc} cipher
- * 
- * @author <a href="mailto:dev@mina.apache.org">Apache MINA SSHD Project</a>
  */
 public class TripleDESCBC extends BaseCipher
 {

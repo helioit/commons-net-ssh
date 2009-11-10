@@ -20,8 +20,6 @@ package org.apache.commons.net.ssh.cipher;
 
 /**
  * {@code aes192-ctr} cipher
- * 
- * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
  */
 public class AES192CTR extends BaseCipher
 {

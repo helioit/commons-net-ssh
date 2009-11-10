@@ -1,6 +1,25 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
 package org.apache.commons.net.ssh.util;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
 
 import java.io.UnsupportedEncodingException;
 import java.math.BigInteger;
@@ -13,9 +32,6 @@ import org.junit.Test;
 
 /**
  * Tests {@link Buffer} functionality
- * 
- * @author rorywinston
- * @author shikhar
  */
 public class BufferTest
 {
@@ -35,30 +51,30 @@ public class BufferTest
     public void testCommand()
     {
         // message identifier
-        assertEquals(handyBuf.putMessageID(Message.IGNORE).getMessageID(), Message.IGNORE);
+        assertEquals(handyBuf.putMessageID(Message.IGNORE).readMessageID(), Message.IGNORE);
     }
     
     @Test
     public void testDataTypes()
     {
         // bool
-        assertEquals(handyBuf.putBoolean(true).getBoolean(), true);
+        assertEquals(handyBuf.putBoolean(true).readBoolean(), true);
         
         // byte
-        assertEquals(handyBuf.putByte((byte) 10).getByte(), (byte) 10);
+        assertEquals(handyBuf.putByte((byte) 10).readByte(), (byte) 10);
         
         // byte array
-        assertArrayEquals(handyBuf.putBytes("some string".getBytes()).getBytes(), "some string".getBytes());
+        assertArrayEquals(handyBuf.putBytes("some string".getBytes()).readBytes(), "some string".getBytes());
         
         // mpint
         BigInteger bi = new BigInteger("1111111111111111111111111111111");
-        assertEquals(handyBuf.putMPInt(bi).getMPInt(), bi);
+        assertEquals(handyBuf.putMPInt(bi).readMPInt(), bi);
         
         // string
-        assertEquals(handyBuf.putString("some string").getString(), "some string");
+        assertEquals(handyBuf.putString("some string").readString(), "some string");
         
         // uint32
-        assertEquals(handyBuf.putInt(0xffffffffL).getLong(), 0xffffffffL);
+        assertEquals(handyBuf.putInt(0xffffffffL).readLong(), 0xffffffffL);
     }
     
     @Test
@@ -66,7 +82,7 @@ public class BufferTest
     {
         char[] pass = "lolcatz".toCharArray();
         // test if put correctly as a string
-        assertEquals(new Buffer().putPassword(pass).getString(), "lolcatz");
+        assertEquals(new Buffer().putPassword(pass).readString(), "lolcatz");
         // test that char[] was blanked out
         assertArrayEquals(pass, "       ".toCharArray());
     }
@@ -78,7 +94,7 @@ public class BufferTest
         assertEquals(0, posBuf.rpos());
         assertEquals(5, posBuf.available());
         // read some bytes
-        byte b = posBuf.getByte();
+        byte b = posBuf.readByte();
         assertEquals(b, (byte) 'H');
         assertEquals(1, posBuf.rpos());
         assertEquals(4, posBuf.available());
@@ -101,9 +117,9 @@ public class BufferTest
     {
         // exhaust the buffer
         for (int i = 0; i < 5; ++i)
-            posBuf.getByte();
+            posBuf.readByte();
         // underflow
-        posBuf.getByte();
+        posBuf.readByte();
     }
     
 }

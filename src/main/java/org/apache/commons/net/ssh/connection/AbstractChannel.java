@@ -39,9 +39,6 @@ import org.slf4j.LoggerFactory;
 
 /**
  * Base class for {@link Channel channels}, implements most of the functionality.
- * 
- * @author <a href="mailto:dev@mina.apache.org">Apache MINA SSHD Project</a>
- * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
  */
 public abstract class AbstractChannel implements Channel
 {
@@ -66,8 +63,7 @@ public abstract class AbstractChannel implements Channel
     /** stdin stream */
     private final ChannelOutputStream out = new ChannelOutputStream(this, rwin);
     
-    private final Queue<Event<ConnectionException>> chanReqResponseEvents =
-            new LinkedList<Event<ConnectionException>>();
+    private final Queue<Event<ConnectionException>> chanReqResponseEvents = new LinkedList<Event<ConnectionException>>();
     
     private final ReentrantLock lock = new ReentrantLock();
     /** Channel open event */
@@ -100,23 +96,6 @@ public abstract class AbstractChannel implements Channel
         
         open = newEvent("open");
         close = newEvent("close");
-    }
-    
-    public void close() throws ConnectionException, TransportException
-    {
-        lock.lock();
-        try {
-            try {
-                sendClose();
-            } catch (TransportException e) {
-                if (!close.hasError())
-                    throw e;
-            }
-            close.await(conn.getTimeout());
-        } finally {
-            lock.unlock();
-            finishOff();
-        }
     }
     
     public boolean getAutoExpand()
@@ -184,11 +163,11 @@ public abstract class AbstractChannel implements Channel
             break;
         
         case CHANNEL_EXTENDED_DATA:
-            gotExtendedData(buf.getInt(), buf);
+            gotExtendedData(buf.readInt(), buf);
             break;
         
         case CHANNEL_WINDOW_ADJUST:
-            gotWindowAdjustment(buf.getInt());
+            gotWindowAdjustment(buf.readInt());
             break;
         
         case CHANNEL_REQUEST:
@@ -228,9 +207,11 @@ public abstract class AbstractChannel implements Channel
     public synchronized boolean isOpen()
     {
         lock.lock(); // it is the lock associated with 'open' and 'close' events
-        try {
+        try
+        {
             return open.isSet() && !close.isSet() && !closeReqd;
-        } finally {
+        } finally
+        {
             lock.unlock();
         }
     }
@@ -241,22 +222,6 @@ public abstract class AbstractChannel implements Channel
         ErrorNotifiable.Util.alertAll(error, open, close, in, out);
         ErrorNotifiable.Util.alertAll(error, chanReqResponseEvents.toArray());
         finishOff();
-    }
-    
-    // synchronized to protect 'closeReqd' and 'eofSent'
-    public synchronized void sendEOF() throws TransportException
-    {
-        try {
-            if (!closeReqd && !eofSent) {
-                log.info("Sending EOF");
-                trans.writePacket(newBuffer(Message.CHANNEL_EOF));
-                if (eofGot)
-                    sendClose();
-            }
-        } finally {
-            eofSent = true;
-            out.setClosed();
-        }
     }
     
     public void setAutoExpand(boolean autoExpand)
@@ -273,45 +238,10 @@ public abstract class AbstractChannel implements Channel
     
     private void gotChannelRequest(Buffer buf) throws ConnectionException, TransportException
     {
-        String reqType = buf.getString();
-        buf.getBoolean(); // We don't care about the 'want-reply' value
+        String reqType = buf.readString();
+        buf.readBoolean(); // We don't care about the 'want-reply' value
         log.info("Got request for `{}`", reqType);
         handleRequest(reqType, buf);
-    }
-    
-    private void gotClose() throws TransportException
-    {
-        log.info("Got close");
-        try {
-            closeAllStreams();
-            sendClose();
-        } finally {
-            finishOff();
-        }
-    }
-    
-    // synchronized to protect 'eofGot'
-    private synchronized void gotEOF() throws TransportException
-    {
-        log.info("Got EOF");
-        eofGot = true;
-        eofInputStreams();
-        if (eofSent)
-            sendClose();
-    }
-    
-    // synchronized for mutex with sendChannelRequest()
-    private synchronized void gotResponse(boolean success) throws ConnectionException
-    {
-        Event<ConnectionException> responseEvent = chanReqResponseEvents.poll();
-        if (responseEvent != null) {
-            if (success)
-                responseEvent.set();
-            else
-                responseEvent.error("Request failed");
-        } else
-            throw new ConnectionException(DisconnectReason.PROTOCOL_ERROR,
-                                          "Received response to channel request when none was requested");
     }
     
     private void gotWindowAdjustment(int howmuch)
@@ -326,24 +256,7 @@ public abstract class AbstractChannel implements Channel
     }
     
     /**
-     * Called when all I/O streams should be closed. Subclasses can override but must call super.
-     */
-    protected void closeAllStreams()
-    {
-        IOUtils.closeQuietly(in, out);
-    }
-    
-    /**
-     * Called when EOF has been received. Subclasses can override but must call super.
-     */
-    protected void eofInputStreams()
-    {
-        in.eof();
-    }
-    
-    /**
-     * Called when this channel's end-of-life has been reached. Subclasses may override but must
-     * call super.
+     * Called when this channel's end-of-life has been reached. Subclasses may override but must call super.
      */
     protected void finishOff()
     {
@@ -374,7 +287,7 @@ public abstract class AbstractChannel implements Channel
     
     protected void receiveInto(Buffer buf, ChannelInputStream stream) throws ConnectionException, TransportException
     {
-        int len = buf.getInt();
+        int len = buf.readInt();
         if (len < 0 || len > getLocalMaxPacketSize())
             throw new ConnectionException(DisconnectReason.PROTOCOL_ERROR, "Bad item length: " + len);
         if (log.isTraceEnabled())
@@ -382,34 +295,126 @@ public abstract class AbstractChannel implements Channel
         stream.receive(buf.array(), buf.rpos(), len);
     }
     
-    // synchronized for mutex with gotResponse
     protected synchronized Event<ConnectionException> sendChannelRequest(String reqType, boolean wantReply,
             Buffer reqSpecific) throws TransportException
     {
         log.info("Sending channel request for `{}`", reqType);
         trans.writePacket(newBuffer(Message.CHANNEL_REQUEST).putString(reqType) //
-                                                            .putBoolean(wantReply) //
-                                                            .putBuffer(reqSpecific));
+                .putBoolean(wantReply) //
+                .putBuffer(reqSpecific));
         
         Event<ConnectionException> responseEvent = null;
-        if (wantReply) {
+        if (wantReply)
+        {
             responseEvent = newEvent("chanreq for " + reqType);
             chanReqResponseEvents.add(responseEvent);
         }
         return responseEvent;
     }
     
-    // synchronized to protect 'closeReqd'
+    private synchronized void gotResponse(boolean success) throws ConnectionException
+    {
+        Event<ConnectionException> responseEvent = chanReqResponseEvents.poll();
+        if (responseEvent != null)
+        {
+            if (success)
+                responseEvent.set();
+            else
+                responseEvent.error("Request failed");
+        } else
+            throw new ConnectionException(DisconnectReason.PROTOCOL_ERROR,
+                    "Received response to channel request when none was requested");
+    }
+    
+    private synchronized void gotEOF() throws TransportException
+    {
+        log.info("Got EOF");
+        eofGot = true;
+        eofInputStreams();
+        if (eofSent)
+            sendClose();
+    }
+    
+    public synchronized void sendEOF() throws TransportException
+    {
+        try
+        {
+            if (!closeReqd && !eofSent)
+            {
+                log.info("Sending EOF");
+                trans.writePacket(newBuffer(Message.CHANNEL_EOF));
+                if (eofGot)
+                    sendClose();
+            }
+        } finally
+        {
+            eofSent = true;
+            out.setClosed();
+        }
+    }
+    
+    public void close() throws ConnectionException, TransportException
+    {
+        lock.lock();
+        try
+        {
+            try
+            {
+                sendClose();
+            } catch (TransportException e)
+            {
+                if (!close.hasError())
+                    throw e;
+            }
+            close.await(conn.getTimeout());
+        } finally
+        {
+            lock.unlock();
+        }
+    }
+    
+    private void gotClose() throws TransportException
+    {
+        log.info("Got close");
+        try
+        {
+            closeAllStreams();
+            sendClose();
+        } finally
+        {
+            finishOff();
+        }
+    }
+    
     protected synchronized void sendClose() throws TransportException
     {
-        try {
-            if (!closeReqd) {
+        try
+        {
+            if (!closeReqd)
+            {
                 log.info("Sending close");
                 trans.writePacket(newBuffer(Message.CHANNEL_CLOSE));
             }
-        } finally {
+        } finally
+        {
             closeReqd = true;
         }
+    }
+    
+    /**
+     * Called when all I/O streams should be closed. Subclasses can override but must call super.
+     */
+    protected void closeAllStreams()
+    {
+        IOUtils.closeQuietly(in, out);
+    }
+    
+    /**
+     * Called when EOF has been received. Subclasses can override but must call super.
+     */
+    protected void eofInputStreams()
+    {
+        in.eof();
     }
     
 }

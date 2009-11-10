@@ -20,14 +20,12 @@ package org.apache.commons.net.ssh.mac;
 
 /**
  * HMAC-MD5 <code>MAC</code>.
- * 
- * @author <a href="mailto:dev@mina.apache.org">Apache MINA SSHD Project</a>
  */
 public class HMACMD5 extends BaseMAC
 {
     
     /**
-     * Named factory for the HMACMD5 <code>Mac</code>
+     * Named factory for the HMACMD5 <code>MAC</code>
      */
     public static class Factory implements org.apache.commons.net.ssh.Factory.Named<MAC>
     {

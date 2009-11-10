@@ -18,11 +18,9 @@
  */
 package org.apache.commons.net.ssh.connection;
 
+
 /**
  * Controls how much data we can send before an adjustment notification from remote end is required.
- * 
- * @author <a href="mailto:dev@mina.apache.org">Apache MINA SSHD Project</a>
- * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
  */
 public class RemoteWindow extends Window
 {
@@ -34,11 +32,14 @@ public class RemoteWindow extends Window
     
     public synchronized void waitAndConsume(int howMuch) throws ConnectionException
     {
-        while (size < howMuch) {
+        while (size < howMuch)
+        {
             log.debug("Waiting, need window space for {} bytes", howMuch);
-            try {
+            try
+            {
                 wait();
-            } catch (InterruptedException ie) {
+            } catch (InterruptedException ie)
+            {
                 throw new ConnectionException(ie);
             }
         }

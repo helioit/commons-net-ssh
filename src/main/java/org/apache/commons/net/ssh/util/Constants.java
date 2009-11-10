@@ -26,9 +26,6 @@ import java.security.interfaces.RSAPublicKey;
 
 /**
  * This interface defines symbolic names for constants.
- * 
- * @author <a href="mailto:dev@mina.apache.org">Apache MINA SSHD Project</a>
- * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
  */
 public interface Constants
 {
@@ -181,9 +178,10 @@ public interface Constants
         
         private final byte b;
         
-        static Message[] commands;
+        private static Message[] commands;
         
-        static {
+        static
+        {
             commands = new Message[256];
             for (Message c : Message.values())
                 if (commands[c.toByte()] == null)

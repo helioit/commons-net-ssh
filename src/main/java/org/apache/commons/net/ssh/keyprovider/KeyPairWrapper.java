@@ -26,8 +26,6 @@ import org.apache.commons.net.ssh.util.Constants.KeyType;
 
 /**
  * A {@link KeyProvider} wrapper around {@link java.security.KeyPair}
- * 
- * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
  */
 public class KeyPairWrapper implements KeyProvider
 {

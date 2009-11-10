@@ -28,10 +28,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * A {@link ConnectListener} that forwards what is received over the channel to a socket and
- * vice-versa.
- * 
- * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
+ * A {@link ConnectListener} that forwards what is received over the channel to a socket and vice-versa.
  */
 public class SocketForwardingConnectListener implements ConnectListener
 {
@@ -63,18 +60,18 @@ public class SocketForwardingConnectListener implements ConnectListener
         ErrorCallback chanCloser = Pipe.closeOnErrorCallback(chan);
         
         new Pipe("soc2chan", sock.getInputStream(), chan.getOutputStream()) //
-                                                                           .bufSize(chan.getRemoteMaxPacketSize()) //
-                                                                           .closeOutputStreamOnEOF(true) //
-                                                                           .errorCallback(chanCloser) //
-                                                                           .daemon(true) //
-                                                                           .start();
+                .bufSize(chan.getRemoteMaxPacketSize()) //
+                .closeOutputStreamOnEOF(true) //
+                .errorCallback(chanCloser) //
+                .daemon(true) //
+                .start();
         
         new Pipe("chan2soc", chan.getInputStream(), sock.getOutputStream()) //
-                                                                           .bufSize(chan.getLocalMaxPacketSize()) //                                                       
-                                                                           .closeOutputStreamOnEOF(true) //
-                                                                           .errorCallback(chanCloser) //
-                                                                           .daemon(true) //
-                                                                           .start();
+                .bufSize(chan.getLocalMaxPacketSize()) //                                                       
+                .closeOutputStreamOnEOF(true) //
+                .errorCallback(chanCloser) //
+                .daemon(true) //
+                .start();
     }
     
 }

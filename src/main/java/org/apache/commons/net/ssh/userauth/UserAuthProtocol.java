@@ -36,8 +36,6 @@ import org.apache.commons.net.ssh.util.Constants.Message;
 
 /**
  * {@link UserAuth} implementation.
- * 
- * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
  */
 public class UserAuthProtocol extends AbstractService implements UserAuth, AuthParams
 {
@@ -46,8 +44,8 @@ public class UserAuthProtocol extends AbstractService implements UserAuth, AuthP
     
     private final Deque<UserAuthException> savedEx = new ArrayDeque<UserAuthException>();
     
-    private final Event<UserAuthException> result =
-            new Event<UserAuthException>("userauth result", UserAuthException.chainer);
+    private final Event<UserAuthException> result = new Event<UserAuthException>("userauth result",
+            UserAuthException.chainer);
     
     private String username;
     private AuthMethod currentMethod;
@@ -75,29 +73,35 @@ public class UserAuthProtocol extends AbstractService implements UserAuth, AuthP
         // Request "ssh-userauth" service (if not already active)
         request();
         
-        if (firstAttempt) { // Assume all allowed
+        if (firstAttempt)
+        { // Assume all allowed
             for (AuthMethod meth : methods)
                 allowed.add(meth.getName());
             firstAttempt = false;
         }
         
-        try {
+        try
+        {
             
             for (AuthMethod meth : methods)
                 
-                if (allowed.contains(meth.getName())) {
+                if (allowed.contains(meth.getName()))
+                {
                     
                     log.info("Trying `{}` auth...", meth.getName());
                     
                     boolean success = false;
-                    try {
+                    try
+                    {
                         success = tryWith(meth);
-                    } catch (UserAuthException e) {
+                    } catch (UserAuthException e)
+                    {
                         // Give other methods a shot
                         saveException(e);
                     }
                     
-                    if (success) {
+                    if (success)
+                    {
                         log.info("`{}` auth successful", meth.getName());
                         return;
                     } else
@@ -108,7 +112,8 @@ public class UserAuthProtocol extends AbstractService implements UserAuth, AuthP
                 else
                     saveException(currentMethod.getName() + " auth not allowed by server");
             
-        } finally {
+        } finally
+        {
             currentMethod = null;
         }
         
@@ -190,17 +195,18 @@ public class UserAuthProtocol extends AbstractService implements UserAuth, AuthP
     
     private void gotBanner(Buffer buf)
     {
-        banner = buf.getString();
+        banner = buf.readString();
     }
     
     private void gotFailure(Buffer buf) throws UserAuthException, TransportException
     {
         allowed.clear();
-        allowed.addAll(Arrays.<String> asList(buf.getString().split(",")));
-        partialSuccess |= buf.getBoolean();
+        allowed.addAll(Arrays.<String> asList(buf.readString().split(",")));
+        partialSuccess |= buf.readBoolean();
         if (allowed.contains(currentMethod.getName()) && currentMethod.shouldRetry())
             currentMethod.request();
-        else {
+        else
+        {
             saveException(currentMethod.getName() + " auth failed");
             result.set(false);
         }
@@ -215,15 +221,18 @@ public class UserAuthProtocol extends AbstractService implements UserAuth, AuthP
     
     private void gotUnknown(Message msg, Buffer buf) throws SSHException
     {
-        if (currentMethod == null || result == null) {
+        if (currentMethod == null || result == null)
+        {
             trans.sendUnimplemented();
             return;
         }
         
         log.debug("Asking {} method to handle {} packet", currentMethod.getName(), msg);
-        try {
+        try
+        {
             currentMethod.handle(msg, buf);
-        } catch (UserAuthException e) {
+        } catch (UserAuthException e)
+        {
             result.error(e);
         }
     }

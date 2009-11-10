@@ -20,8 +20,6 @@ package org.apache.commons.net.ssh.mac;
 
 /**
  * Message Authentication Code for use in SSH. It usually wraps a javax.crypto.Mac class.
- * 
- * @author <a href="mailto:dev@mina.apache.org">Apache MINA SSHD Project</a>
  */
 public interface MAC
 {

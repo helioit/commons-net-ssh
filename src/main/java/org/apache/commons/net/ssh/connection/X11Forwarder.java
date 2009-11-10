@@ -22,10 +22,8 @@ import org.apache.commons.net.ssh.transport.TransportException;
 import org.apache.commons.net.ssh.util.Buffer;
 
 /**
- * Handles forwarded {@code x11} channels. The actual request to forward X11 should be made from the
- * specific {@link Session}.
- * 
- * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
+ * Handles forwarded {@code x11} channels. The actual request to forward X11 should be made from the specific
+ * {@link Session}.
  */
 public class X11Forwarder extends AbstractForwardedChannelOpener
 {
@@ -67,8 +65,8 @@ public class X11Forwarder extends AbstractForwardedChannelOpener
      */
     public void handleOpen(Buffer buf) throws ConnectionException, TransportException
     {
-        callListener(listener, new X11Channel(conn, buf.getInt(), buf.getInt(), buf.getInt(), buf.getString(),
-                                              buf.getInt()));
+        callListener(listener, new X11Channel(conn, buf.readInt(), buf.readInt(), buf.readInt(), buf.readString(), buf
+                .readInt()));
     }
     
     /**

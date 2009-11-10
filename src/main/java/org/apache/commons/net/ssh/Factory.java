@@ -25,9 +25,6 @@ import java.util.List;
  * 
  * @param <T>
  *            the type of object created by this factory
- * 
- * @author <a href="mailto:dev@mina.apache.org">Apache MINA SSHD Project</a>
- * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
  */
 public interface Factory<T>
 {
@@ -102,7 +99,8 @@ public interface Factory<T>
             public static <T> String getNames(List<Named<T>> factories)
             {
                 StringBuffer sb = new StringBuffer();
-                for (Named<T> f : factories) {
+                for (Named<T> f : factories)
+                {
                     if (sb.length() > 0)
                         sb.append(",");
                     sb.append(f.getName());
@@ -124,7 +122,8 @@ public interface Factory<T>
             public static <T> Named<T> remove(List<Named<T>> factories, String name)
             {
                 for (Named<T> f : factories)
-                    if (f.getName().equals(name)) {
+                    if (f.getName().equals(name))
+                    {
                         factories.remove(f);
                         return f;
                     }

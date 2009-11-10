@@ -26,8 +26,6 @@ import org.apache.commons.net.ssh.util.Constants.KeyType;
 
 /**
  * A KeyProvider is a container for a public-private keypair.
- * 
- * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
  */
 public interface KeyProvider
 {

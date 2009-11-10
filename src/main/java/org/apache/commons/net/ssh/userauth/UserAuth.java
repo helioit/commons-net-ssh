@@ -25,8 +25,6 @@ import org.apache.commons.net.ssh.transport.TransportException;
 
 /**
  * User authentication API
- * 
- * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
  */
 public interface UserAuth
 {

@@ -24,8 +24,6 @@ import java.io.IOException;
 /**
  * Default implementation of {@link ModeSetter} that does not set any permissions or preserve mtime
  * and atime.
- * 
- * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
  */
 public class DefaultModeSetter implements ModeSetter
 {

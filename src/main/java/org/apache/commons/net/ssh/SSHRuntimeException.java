@@ -20,8 +20,6 @@ package org.apache.commons.net.ssh;
 
 /**
  * Represents unrecoverable exceptions in the {@code org.apache.commons.net.ssh} package.
- * 
- * @author <a href="mailto:dev@mina.apache.org">Apache MINA SSHD Project</a>
  */
 public class SSHRuntimeException extends RuntimeException
 {

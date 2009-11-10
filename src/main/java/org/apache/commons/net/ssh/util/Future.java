@@ -29,14 +29,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Represents future data of the parameterzed type {@code V} and allows waiting on it. An exception
+ * Represents future data of the parameterized type {@code V} and allows waiting on it. An exception
  * may also be delivered to a waiter, and will be of the parameterized type {@code T}.
  * <p>
  * For atomic operations on a future - e.g. checking checking if a value is set and if it is not
  * then setting it, i.e. Compare-And-Set type operations - the associated lock for the future should
  * be acquired while doing so.
- * 
- * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
  */
 public class Future<V, T extends Throwable> implements ErrorNotifiable
 {
@@ -97,10 +95,12 @@ public class Future<V, T extends Throwable> implements ErrorNotifiable
     public void clear()
     {
         lock();
-        try {
+        try
+        {
             pendingEx = null;
             set(null);
-        } finally {
+        } finally
+        {
             unlock();
         }
     }
@@ -127,10 +127,12 @@ public class Future<V, T extends Throwable> implements ErrorNotifiable
     public void error(Throwable throwable)
     {
         lock();
-        try {
+        try
+        {
             pendingEx = chainer.chain(throwable);
             cond.signalAll();
-        } finally {
+        } finally
+        {
             unlock();
         }
     }
@@ -158,7 +160,8 @@ public class Future<V, T extends Throwable> implements ErrorNotifiable
     public V get(int timeout) throws T
     {
         lock();
-        try {
+        try
+        {
             if (pendingEx != null)
                 throw pendingEx;
             if (val != null)
@@ -169,14 +172,17 @@ public class Future<V, T extends Throwable> implements ErrorNotifiable
                     cond.await();
                 else if (!cond.await(timeout, TimeUnit.SECONDS))
                     throw chainer.chain(new FutureException("Timeout expired"));
-            if (pendingEx != null) {
+            if (pendingEx != null)
+            {
                 log.error("Woke to: {}", pendingEx.toString());
                 throw pendingEx;
             }
             return val;
-        } catch (InterruptedException ie) {
+        } catch (InterruptedException ie)
+        {
             throw chainer.chain(ie);
-        } finally {
+        } finally
+        {
             unlock();
         }
     }
@@ -195,9 +201,11 @@ public class Future<V, T extends Throwable> implements ErrorNotifiable
     public boolean hasError()
     {
         lock();
-        try {
+        try
+        {
             return pendingEx != null;
-        } finally {
+        } finally
+        {
             unlock();
         }
     }
@@ -208,9 +216,11 @@ public class Future<V, T extends Throwable> implements ErrorNotifiable
     public boolean hasWaiters()
     {
         lock();
-        try {
+        try
+        {
             return lock.hasWaiters(cond);
-        } finally {
+        } finally
+        {
             unlock();
         }
     }
@@ -221,9 +231,11 @@ public class Future<V, T extends Throwable> implements ErrorNotifiable
     public boolean isSet()
     {
         lock();
-        try {
+        try
+        {
             return pendingEx == null && val != null;
-        } finally {
+        } finally
+        {
             unlock();
         }
     }
@@ -251,11 +263,13 @@ public class Future<V, T extends Throwable> implements ErrorNotifiable
     public void set(V val)
     {
         lock();
-        try {
+        try
+        {
             log.debug("Setting to `{}`", val);
             this.val = val;
             cond.signalAll();
-        } finally {
+        } finally
+        {
             unlock();
         }
     }

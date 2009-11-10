@@ -29,13 +29,11 @@ import org.apache.commons.net.ssh.util.Buffer;
 import org.apache.commons.net.ssh.util.Constants.KeyType;
 
 /**
- * Represents an OpenSSH identity that consists of a PKCS8-encoded private key file and an
- * unencrypted public key file of the same name with the {@code ".pub"} extension. This allows to
- * delay requesting of the passphrase until the private key is requested.
+ * Represents an OpenSSH identity that consists of a PKCS8-encoded private key file and an unencrypted public key file
+ * of the same name with the {@code ".pub"} extension. This allows to delay requesting of the passphrase until the
+ * private key is requested.
  * 
  * @see PKCS8KeyFile
- * 
- * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
  */
 public class OpenSSHKeyFile extends PKCS8KeyFile
 {
@@ -67,17 +65,20 @@ public class OpenSSHKeyFile extends PKCS8KeyFile
     {
         File f = new File(location + ".pub");
         if (f.exists())
-            try {
+            try
+            {
                 BufferedReader br = new BufferedReader(new FileReader(f));
                 String keydata = br.readLine();
-                if (keydata != null) {
+                if (keydata != null)
+                {
                     String[] parts = keydata.split(" ");
                     assert parts.length >= 2;
                     type = KeyType.fromString(parts[0]);
-                    pubKey = new Buffer(Base64.decode(parts[1])).getPublicKey();
+                    pubKey = new Buffer(Base64.decode(parts[1])).readPublicKey();
                 }
                 br.close();
-            } catch (IOException e) {
+            } catch (IOException e)
+            {
                 // let super provide both public & private key
                 log.warn("Error reading public key file: {}", e.toString());
             }

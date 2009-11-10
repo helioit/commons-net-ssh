@@ -25,7 +25,6 @@ import org.apache.commons.net.ssh.transport.TransportException;
  * An authentication method of the <a href="http://www.ietf.org/rfc/rfc4252.txt">SSH Authentication
  * Protocol</a>.
  * 
- * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
  * @see UserAuth
  */
 public interface AuthMethod extends PacketHandler

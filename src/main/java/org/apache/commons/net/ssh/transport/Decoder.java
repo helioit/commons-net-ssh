@@ -31,9 +31,6 @@ import org.slf4j.LoggerFactory;
 
 /**
  * Decodes packets from the SSH binary protocol per the current algorithms.
- * 
- * @author <a href="mailto:dev@mina.apache.org">Apache MINA SSHD Project</a>
- * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
  */
 final class Decoder extends Converter
 {
@@ -72,9 +69,10 @@ final class Decoder extends Converter
     
     private void checkMAC(final byte[] data) throws TransportException
     {
-        if (mac != null) {
+        if (mac != null)
+        {
             mac.update(seq); // seq num
-            mac.update(data, 0, packetLength + 4); // packetLength+4 = entire packet w/o mac 
+            mac.update(data, 0, packetLength + 4); // packetLength+4 = entire packet w/o mac
             mac.doFinal(macResult, 0); // compute
             // Check against the received MAC
             if (!BufferUtils.equals(macResult, 0, data, packetLength + 4, mac.getBlockSize()))
@@ -107,12 +105,14 @@ final class Decoder extends Converter
                     // Need more data
                     break;
                 
-            } else {
+            } else
+            {
                 
                 assert inputBuffer.rpos() == 4 : "packet length read";
                 
                 need = packetLength + (mac != null ? mac.getBlockSize() : 0) - inputBuffer.available();
-                if (need <= 0) {
+                if (need <= 0)
+                {
                     
                     decryptPayload(inputBuffer.array());
                     
@@ -120,21 +120,23 @@ final class Decoder extends Converter
                     
                     checkMAC(inputBuffer.array());
                     
-                    inputBuffer.wpos(packetLength + 4 - inputBuffer.getByte()); // Exclude the padding & MAC
+                    inputBuffer.wpos(packetLength + 4 - inputBuffer.readByte()); // Exclude the
+                    // padding & MAC
                     
                     Buffer plain = decompressed();
                     
                     if (log.isTraceEnabled())
                         log.trace("Received packet #{}: {}", seq, plain.printHex());
                     
-                    packetHandler.handle(plain.getMessageID(), plain); // process the decoded packet //                    
+                    packetHandler.handle(plain.readMessageID(), plain); // process the decoded
+                    // packet //
                     
                     inputBuffer.clear();
                     packetLength = -1;
                     need = cipherSize;
                     
                 } else
-                    // Need more data                    
+                    // Need more data
                     break;
             }
         
@@ -143,7 +145,8 @@ final class Decoder extends Converter
     
     private Buffer decompressed() throws TransportException
     {
-        if (compression != null && (authed || !compression.isDelayed())) {
+        if (compression != null && (authed || !compression.isDelayed()))
+        {
             uncompressBuffer.clear();
             compression.uncompress(inputBuffer, uncompressBuffer);
             return uncompressBuffer;
@@ -155,9 +158,10 @@ final class Decoder extends Converter
     {
         cipher.update(inputBuffer.array(), 0, cipherSize);
         
-        final int len = inputBuffer.getInt(); // Read packet length
+        final int len = inputBuffer.readInt(); // Read packet length
         
-        if (len < 5 || len > MAX_PACKET_LEN) { // Check packet length validity
+        if (len < 5 || len > MAX_PACKET_LEN)
+        { // Check packet length validity
             log.info("Error decoding packet (invalid length) {}", inputBuffer.printHex());
             throw new TransportException(DisconnectReason.PROTOCOL_ERROR, "invalid packet length: " + len);
         }

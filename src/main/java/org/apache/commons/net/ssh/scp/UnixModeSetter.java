@@ -28,8 +28,6 @@ import java.io.IOException;
 
 /**
  * STUB
- * 
- * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
  */
 public class UnixModeSetter implements ModeSetter
 {

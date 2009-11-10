@@ -20,8 +20,6 @@ package org.apache.commons.net.ssh.cipher;
 
 /**
  * Represents a no-op cipher.
- * 
- * @author <a href="mailto:dev@mina.apache.org">Apache MINA SSHD Project</a>
  */
 public class NoneCipher implements Cipher
 {

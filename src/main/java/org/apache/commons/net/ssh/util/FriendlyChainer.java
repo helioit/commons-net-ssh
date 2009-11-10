@@ -23,21 +23,19 @@ package org.apache.commons.net.ssh.util;
  * 
  * <pre>
  * FriendlyChainer&lt;SomeException&gt; chainer = new FriendlyChainer&lt;SomeException&gt;()
+ * {
+ *     public SomeException chain(Throwable t)
  *     {
- *         public SomeException chain(Throwable t)
- *         {
- *             if (t instanceof SomeException)
- *                 return (SomeException) t;
- *             else
- *                 return new SomeExcepion(t);
- *         }
- *     };
+ *         if (t instanceof SomeException)
+ *             return (SomeException) t;
+ *         else
+ *             return new SomeExcepion(t);
+ *     }
+ * };
  * </pre>
  * 
  * @param <Z>
  *            Throwable type
- * 
- * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
  */
 public interface FriendlyChainer<Z extends Throwable>
 {

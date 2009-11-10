@@ -24,21 +24,19 @@ import java.io.IOException;
 /**
  * Default implementation of {@link ModeGetter} that supplies file permissions as {@code "644"},
  * directory permissions as {@code "755"}, and does not supply mtime and atime.
- * 
- * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
  */
 public class DefaultModeGetter implements ModeGetter
 {
     
     public long getLastAccessTime(File f)
     {
-        //return f.lastModified() / 1000;
+        // return f.lastModified() / 1000;
         return 0;
     }
     
     public long getLastModifiedTime(File f)
     {
-        //return f.lastModified() / 1000;
+        // return f.lastModified() / 1000;
         return 0;
     }
     

@@ -23,8 +23,6 @@ import org.apache.commons.net.ssh.util.Buffer;
 
 /**
  * Implements the {@code hostbased} SSH authentication method.
- * 
- * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
  */
 public class AuthHostbased extends KeyedAuthMethod
 {
@@ -50,7 +48,7 @@ public class AuthHostbased extends KeyedAuthMethod
     {
         Buffer req = putPubKey(super.buildReq());
         req.putString(hostname == null ? params.getTransport().getRemoteHost() : hostname) //
-           .putString(hostuser);
+                .putString(hostuser);
         return putSig(req);
     }
     

@@ -24,9 +24,6 @@ import org.apache.commons.net.ssh.util.Constants.Message;
 
 /**
  * Controls how much data remote end can send before an adjustment notification from us is required.
- * 
- * @author <a href="mailto:dev@mina.apache.org">Apache MINA SSHD Project</a>
- * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
  */
 public class LocalWindow extends Window
 {
@@ -45,13 +42,13 @@ public class LocalWindow extends Window
             growBy(initSize - size);
     }
     
-    //    public synchronized void check(int max) throws TransportException
-    //    {
-    //        int threshold = Math.min(maxPacketSize * 8, max / 4);
-    //        int diff = max - size;
-    //        if (diff > maxPacketSize && (diff > threshold || size < threshold))
-    //            growBy(diff);
-    //    }
+    // public synchronized void check(int max) throws TransportException
+    // {
+    // int threshold = Math.min(maxPacketSize * 8, max / 4);
+    // int diff = max - size;
+    // if (diff > maxPacketSize && (diff > threshold || size < threshold))
+    // growBy(diff);
+    // }
     
     @Override
     public void init(int initialWinSize, int maxPacketSize)
@@ -71,8 +68,8 @@ public class LocalWindow extends Window
     {
         log.info("Sending SSH_MSG_CHANNEL_WINDOW_ADJUST to #{} for {} bytes", chan.getRecipient(), inc);
         chan.getTransport().writePacket(new Buffer(Message.CHANNEL_WINDOW_ADJUST) //
-                                                                                 .putInt(chan.getRecipient()) //
-                                                                                 .putInt(inc));
+                .putInt(chan.getRecipient()) //
+                .putInt(inc));
     }
     
 }

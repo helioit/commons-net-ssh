@@ -24,28 +24,24 @@ import org.apache.commons.net.ssh.util.FriendlyChainer;
 import org.apache.commons.net.ssh.util.Constants.DisconnectReason;
 
 /**
- * Most exceptions in {@code org.apache.commons.net.ssh} are instances of this class. An
- * {@link SSHException} is itself an {@link IOException} and can be caught like that if this level
- * of granularity is not desired.
- * 
- * @author <a href="mailto:dev@mina.apache.org">Apache MINA SSHD Project</a>
- * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
+ * Most exceptions in {@code org.apache.commons.net.ssh} are instances of this class. An {@link SSHException} is itself
+ * an {@link IOException} and can be caught like that if this level of granularity is not desired.
  */
 public class SSHException extends IOException
 {
     
     public static final FriendlyChainer<SSHException> chainer = new FriendlyChainer<SSHException>()
+    {
+        
+        public SSHException chain(Throwable t)
         {
-            
-            public SSHException chain(Throwable t)
-            {
-                if (t instanceof SSHException)
-                    return (SSHException) t;
-                else
-                    return new SSHException(t);
-            }
-            
-        };
+            if (t instanceof SSHException)
+                return (SSHException) t;
+            else
+                return new SSHException(t);
+        }
+        
+    };
     
     private final DisconnectReason reason;
     
@@ -116,9 +112,9 @@ public class SSHException extends IOException
     @Override
     public String toString()
     {
-        String cls = getClass().getName();
-        String code = reason != DisconnectReason.UNKNOWN ? "[" + reason + "] " : "";
-        String msg = getMessage() != null ? getMessage() : "";
+        final String cls = getClass().getName();
+        final String code = reason != DisconnectReason.UNKNOWN ? "[" + reason + "] " : "";
+        final String msg = getMessage() != null ? getMessage() : "";
         return cls + (code.equals("") && msg.equals("") ? "" : ": ") + code + msg;
     }
     

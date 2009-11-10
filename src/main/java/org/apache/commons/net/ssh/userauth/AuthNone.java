@@ -22,8 +22,6 @@ package org.apache.commons.net.ssh.userauth;
  * {@code none} auth. No authentication information is exchanged in the request packet save username
  * and the next service requested. This method generally fails and is typically used to find out the
  * methods allowed by an SSH server (sent as part of the {@code SSH_MSG_USERAUTH_FAILURE} packet)
- * 
- * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
  */
 public class AuthNone extends AbstractAuthMethod
 {

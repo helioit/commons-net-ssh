@@ -28,8 +28,6 @@ import org.apache.commons.net.ssh.util.SecurityUtils;
 
 /**
  * Base class for <code>MAC</code> implementations based on the JCE provider.
- * 
- * @author <a href="mailto:dev@mina.apache.org">Apache MINA SSHD Project</a>
  */
 public class BaseMAC implements MAC
 {
@@ -60,13 +58,16 @@ public class BaseMAC implements MAC
     
     public void doFinal(byte[] buf, int offset)
     {
-        try {
-            if (bsize != defbsize) {
+        try
+        {
+            if (bsize != defbsize)
+            {
                 mac.doFinal(tmp, 0);
                 System.arraycopy(tmp, 0, buf, offset, bsize);
             } else
                 mac.doFinal(buf, offset);
-        } catch (ShortBufferException e) {
+        } catch (ShortBufferException e)
+        {
             throw new SSHRuntimeException(e);
         }
     }
@@ -78,17 +79,20 @@ public class BaseMAC implements MAC
     
     public void init(byte[] key)
     {
-        if (key.length > defbsize) {
+        if (key.length > defbsize)
+        {
             byte[] tmp = new byte[defbsize];
             System.arraycopy(key, 0, tmp, 0, defbsize);
             key = tmp;
         }
         
         SecretKeySpec skey = new SecretKeySpec(key, algorithm);
-        try {
+        try
+        {
             mac = SecurityUtils.getMAC(algorithm);
             mac.init(skey);
-        } catch (GeneralSecurityException e) {
+        } catch (GeneralSecurityException e)
+        {
             throw new SSHRuntimeException(e);
         }
     }

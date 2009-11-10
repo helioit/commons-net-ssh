@@ -24,8 +24,6 @@ import org.apache.commons.net.ssh.util.Constants.Message;
 
 /**
  * Base class for forwarded channels whose open is initiated by the server.
- * 
- * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
  */
 public abstract class AbstractForwardedChannel extends AbstractChannel implements Channel.Forwarded
 {
@@ -45,35 +43,30 @@ public abstract class AbstractForwardedChannel extends AbstractChannel implement
         init(recipient, remoteWinSize, remoteMaxPacketSize);
     }
     
-    // Javadoc in interface
     public void confirm() throws TransportException
     {
         log.info("Confirming `{}` channel #{}", getType(), getID());
         /*
-         * Must ensure channel is attached before confirming, data could start coming in
-         * immediately!
+         * Must ensure channel is attached before confirming, data could start coming in immediately!
          */
         conn.attach(this);
         trans.writePacket(newBuffer(Message.CHANNEL_OPEN_CONFIRMATION) //
-                                                                      .putInt(getID()) //
-                                                                      .putInt(getLocalWinSize()) //
-                                                                      .putInt(getLocalMaxPacketSize()));
+                .putInt(getID()) //
+                .putInt(getLocalWinSize()) //
+                .putInt(getLocalMaxPacketSize()));
         open.set();
     }
     
-    // Javadoc in interface
     public String getOriginatorIP()
     {
         return origIP;
     }
     
-    // Javadoc in interface
     public int getOriginatorPort()
     {
         return origPort;
     }
     
-    // Javadoc in interface
     public void reject(Reason reason, String message) throws TransportException
     {
         log.info("Rejecting `{}` channel: {}", getType(), message);

@@ -24,8 +24,6 @@ import org.apache.commons.net.ssh.util.Constants.DisconnectReason;
 
 /**
  * Transport-layer exception
- * 
- * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
  */
 public class TransportException extends SSHException
 {
@@ -34,15 +32,15 @@ public class TransportException extends SSHException
      * @see {@link FriendlyChainer}
      */
     public static final FriendlyChainer<TransportException> chainer = new FriendlyChainer<TransportException>()
+    {
+        public TransportException chain(Throwable t)
         {
-            public TransportException chain(Throwable t)
-            {
-                if (t instanceof TransportException)
-                    return (TransportException) t;
-                else
-                    return new TransportException(t);
-            }
-        };
+            if (t instanceof TransportException)
+                return (TransportException) t;
+            else
+                return new TransportException(t);
+        }
+    };
     
     public TransportException()
     {

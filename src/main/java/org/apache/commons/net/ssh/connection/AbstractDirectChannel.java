@@ -24,8 +24,6 @@ import org.apache.commons.net.ssh.util.Constants.Message;
 
 /**
  * Base class for direct channels whose open is initated by the client.
- * 
- * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
  */
 public abstract class AbstractDirectChannel extends AbstractChannel implements Channel.Direct
 {
@@ -35,8 +33,7 @@ public abstract class AbstractDirectChannel extends AbstractChannel implements C
         super(name, conn);
         
         /*
-         * We expect to receive channel open confirmation/rejection and want to be able to handle
-         * this packet.
+         * We expect to receive channel open confirmation/rejection and want to be able to handle this packet.
          */
         conn.attach(this);
     }
@@ -49,23 +46,23 @@ public abstract class AbstractDirectChannel extends AbstractChannel implements C
     
     private void gotOpenConfirmation(Buffer buf)
     {
-        init(buf.getInt(), buf.getInt(), buf.getInt());
+        init(buf.readInt(), buf.readInt(), buf.readInt());
         open.set();
     }
     
     private void gotOpenFailure(Buffer buf)
     {
-        open.error(new OpenFailException(getType(), buf.getInt(), buf.getString()));
+        open.error(new OpenFailException(getType(), buf.readInt(), buf.readString()));
         finishOff();
     }
     
     protected Buffer buildOpenReq()
     {
         return new Buffer(Message.CHANNEL_OPEN) //
-                                               .putString(getType()) //
-                                               .putInt(getID()) //
-                                               .putInt(getLocalWinSize()) //
-                                               .putInt(getLocalMaxPacketSize());
+                .putString(getType()) //
+                .putInt(getID()) //
+                .putInt(getLocalWinSize()) //
+                .putInt(getLocalMaxPacketSize());
     }
     
     @Override

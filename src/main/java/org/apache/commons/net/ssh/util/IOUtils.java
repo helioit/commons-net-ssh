@@ -25,10 +25,6 @@ import org.apache.commons.net.ssh.transport.Transport;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/**
- * @author <a href="mailto:dev@mina.apache.org">Apache MINA SSHD Project</a>
- * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
- */
 public class IOUtils
 {
     
@@ -37,19 +33,23 @@ public class IOUtils
     public static void closeQuietly(Closeable... closeables)
     {
         for (Closeable c : closeables)
-            try {
+            try
+            {
                 if (c != null)
                     c.close();
-            } catch (IOException logged) {
+            } catch (IOException logged)
+            {
                 LOG.warn("Error closing {} - {}", c, logged);
             }
     }
     
     public static long writeQuietly(Transport trans, Buffer payload)
     {
-        try {
+        try
+        {
             return trans.writePacket(payload);
-        } catch (IOException logged) {
+        } catch (IOException logged)
+        {
             LOG.warn("Error writing packet to {} - {}", trans, logged);
             return -1;
         }

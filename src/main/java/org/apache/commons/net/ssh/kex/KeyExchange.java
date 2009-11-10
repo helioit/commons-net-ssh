@@ -27,8 +27,6 @@ import org.apache.commons.net.ssh.util.Buffer;
 
 /**
  * Key exchange algorithm.
- * 
- * @author <a href="mailto:dev@mina.apache.org">Apache MINA SSHD Project</a>
  */
 public interface KeyExchange
 {
@@ -79,8 +77,7 @@ public interface KeyExchange
      * 
      * @param buffer
      *            the packet
-     * @return a boolean indicating if the processing is complete or if more packets are to be
-     *         received
+     * @return a boolean indicating if the processing is complete or if more packets are to be received
      * @throws TransportException
      *             if an error occurs
      */

@@ -35,13 +35,14 @@ import org.apache.commons.net.ssh.util.Constants.KeyType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+// TODO: allow modifications to known_hosts e.g. adding entries
+
 /**
  * A {@link HostKeyVerifier} implementation for a {@code known_hosts} file i.e. in the format used
  * by OpenSSH.
  * <p>
  * Hashed hostnames are correctly handled.
  * 
- * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
  * @see <a href="http://nms.lcs.mit.edu/projects/ssh/README.hashed-hosts">Hashed hostnames spec</a>
  */
 public class KnownHosts implements HostKeyVerifier
@@ -49,8 +50,6 @@ public class KnownHosts implements HostKeyVerifier
     
     /**
      * Represents a single line
-     * 
-     * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
      */
     static class Entry
     {
@@ -90,15 +89,18 @@ public class KnownHosts implements HostKeyVerifier
          */
         public boolean appliesTo(String hostname)
         {
-            if (hosts[0].startsWith("|1|")) { // hashed hostname
+            if (hosts[0].startsWith("|1|"))
+            { // hashed hostname
                 String[] splitted = hosts[0].split("\\|");
                 if (splitted.length != 4)
                     return false;
                 byte[] salt, host;
-                try {
+                try
+                {
                     salt = Base64.decode(splitted[2]);
                     host = Base64.decode(splitted[3]);
-                } catch (IOException e) {
+                } catch (IOException e)
+                {
                     throw new SSHRuntimeException(e);
                 }
                 if (salt.length != 20)
@@ -108,7 +110,7 @@ public class KnownHosts implements HostKeyVerifier
                 if (BufferUtils.equals(host, sha1.doFinal(hostname.getBytes())))
                     return true;
             } else
-                // unhashed; possibly comma-delim'ed                
+                // unhashed; possibly comma-delim'ed
                 for (String host : hosts)
                     if (host.equals(hostname))
                         return true;
@@ -124,14 +126,17 @@ public class KnownHosts implements HostKeyVerifier
          */
         public PublicKey getKey()
         {
-            if (key == null) {
+            if (key == null)
+            {
                 byte[] decoded;
-                try {
+                try
+                {
                     decoded = Base64.decode(sKey);
-                } catch (IOException e) {
+                } catch (IOException e)
+                {
                     return null;
                 }
-                key = new Buffer(decoded).getPublicKey();
+                key = new Buffer(decoded).readPublicKey();
             }
             return key;
         }
@@ -169,16 +174,20 @@ public class KnownHosts implements HostKeyVerifier
     {
         BufferedReader br = new BufferedReader(new FileReader(location));
         String line;
-        try {
+        try
+        {
             // Read in the file, storing each line as an entry
             while ((line = br.readLine()) != null)
-                try {
+                try
+                {
                     entries.add(new Entry(line));
-                } catch (SSHException ignore) {
+                } catch (SSHException ignore)
+                {
                     log.debug("Bad line ({}): {} ", ignore.toString(), line);
                     continue;
                 }
-        } finally {
+        } finally
+        {
             IOUtils.closeQuietly(br);
         }
     }
@@ -199,7 +208,8 @@ public class KnownHosts implements HostKeyVerifier
             if (e.getType() == type && e.appliesTo(hostname))
                 if (key.equals(e.getKey()))
                     return true;
-                else {
+                else
+                {
                     log.warn("Host key for `{}` has changed!", hostname);
                     return false;
                 }

@@ -25,14 +25,12 @@ import org.apache.commons.net.ssh.util.Buffer;
 
 /**
  * Various modes for a psuedo-terminal. They are meant to have integer parameters.
- * 
- * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
  */
 public enum PTYMode
 {
     /**
-     * Interrupt character; 255 if none. Similarly for the other characters. Not all of these
-     * characters are supported on all systems.
+     * Interrupt character; 255 if none. Similarly for the other characters. Not all of these characters are supported
+     * on all systems.
      */
     VINTR(1),
     /** The quit character (sends SIGQUIT signal on POSIX systems). */
@@ -100,8 +98,7 @@ public enum PTYMode
     /** Canonicalize input lines. */
     ICANON(51),
     /**
-     * Enable input and output of uppercase characters by preceding their lowercase equivalents with
-     * &quot;\&quot;.
+     * Enable input and output of uppercase characters by preceding their lowercase equivalents with &quot;\&quot;.
      */
     XCASE(52),
     /** Enable echoing. */
@@ -152,7 +149,8 @@ public enum PTYMode
     public static byte[] encode(Map<PTYMode, Integer> modes)
     {
         Buffer buf = new Buffer();
-        for (Entry<PTYMode, Integer> entry : modes.entrySet()) {
+        for (Entry<PTYMode, Integer> entry : modes.entrySet())
+        {
             buf.putByte(entry.getKey().getOpcode());
             buf.putInt(entry.getValue());
         }

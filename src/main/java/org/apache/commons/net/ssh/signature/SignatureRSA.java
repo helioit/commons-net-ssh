@@ -25,8 +25,6 @@ import org.apache.commons.net.ssh.util.Constants.KeyType;
 
 /**
  * RSA {@link Signature}
- * 
- * @author <a href="mailto:dev@mina.apache.org">Apache MINA SSHD Project</a>
  */
 public class SignatureRSA extends AbstractSignature
 {
@@ -56,9 +54,11 @@ public class SignatureRSA extends AbstractSignature
     
     public byte[] sign()
     {
-        try {
+        try
+        {
             return signature.sign();
-        } catch (SignatureException e) {
+        } catch (SignatureException e)
+        {
             throw new SSHRuntimeException(e);
         }
     }
@@ -66,9 +66,11 @@ public class SignatureRSA extends AbstractSignature
     public boolean verify(byte[] sig)
     {
         sig = extractSig(sig);
-        try {
+        try
+        {
             return signature.verify(sig);
-        } catch (SignatureException e) {
+        } catch (SignatureException e)
+        {
             throw new SSHRuntimeException(e);
         }
     }

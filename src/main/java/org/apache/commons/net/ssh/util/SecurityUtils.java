@@ -44,9 +44,6 @@ import org.slf4j.LoggerFactory;
 
 /**
  * Static utility methods relating to security facilities.
- * 
- * @author <a href="mailto:dev@mina.apache.org">Apache MINA SSHD Project</a>
- * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
  */
 public class SecurityUtils
 {
@@ -55,7 +52,8 @@ public class SecurityUtils
     {
         public void run() throws Exception
         {
-            if (java.security.Security.getProvider(BOUNCY_CASTLE) == null) {
+            if (java.security.Security.getProvider(BOUNCY_CASTLE) == null)
+            {
                 LOG.info("Trying to register BouncyCastle as a JCE provider");
                 java.security.Security.addProvider(new BouncyCastleProvider());
                 MessageDigest.getInstance("MD5", BOUNCY_CASTLE);
@@ -79,7 +77,7 @@ public class SecurityUtils
      */
     private static String securityProvider = null;
     
-    // relate to BC registration 
+    // relate to BC registration
     private static Boolean registerBouncyCastle;
     private static boolean registrationDone;
     
@@ -143,9 +141,11 @@ public class SecurityUtils
     public static String getFingerprint(PublicKey key)
     {
         MessageDigest md5 = null;
-        try {
+        try
+        {
             md5 = getMessageDigest("MD5");
-        } catch (GeneralSecurityException e) {
+        } catch (GeneralSecurityException e)
+        {
             throw new SSHRuntimeException(e);
         }
         md5.update(new Buffer().putPublicKey(key).getCompactData());
@@ -311,15 +311,19 @@ public class SecurityUtils
     
     private static void register()
     {
-        if (!registrationDone) {
+        if (!registrationDone)
+        {
             if (securityProvider == null && (registerBouncyCastle == null || registerBouncyCastle))
                 // Use an inner class to avoid a strong dependency on BouncyCastle
-                try {
+                try
+                {
                     new BouncyCastleRegistration().run();
-                } catch (Throwable t) {
+                } catch (Throwable t)
+                {
                     if (registerBouncyCastle == null)
                         LOG.info("BouncyCastle not registered, using the default JCE provider");
-                    else {
+                    else
+                    {
                         LOG.error("Failed to register BouncyCastle as the defaut JCE provider");
                         throw new SSHRuntimeException("Failed to register BouncyCastle as the defaut JCE provider", t);
                     }

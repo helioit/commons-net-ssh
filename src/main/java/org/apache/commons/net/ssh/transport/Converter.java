@@ -37,8 +37,6 @@ import org.apache.commons.net.ssh.mac.MAC;
  *       byte[n2]  random padding; n2 = padding_length
  *       byte[m]   mac (Message Authentication Code - MAC); m = mac_length
  * </pre>
- * 
- * @author <a href="mailto:shikhar@schmizz.net">Shikhar Bhushan</a>
  */
 class Converter
 {
