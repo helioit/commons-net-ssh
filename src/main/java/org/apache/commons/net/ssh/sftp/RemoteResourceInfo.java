@@ -7,11 +7,11 @@ public class RemoteResourceInfo
     private final String longName;
     private final FileAttributes attrs;
     
-    public RemoteResourceInfo(Response res)
+    public RemoteResourceInfo(String name, String longName, FileAttributes attrs)
     {
-        this.name = res.readString();
-        this.longName = res.readString();
-        this.attrs = res.readFileAttributes();
+        this.name = name;
+        this.longName = longName;
+        this.attrs = attrs;
     }
     
     public String getName()

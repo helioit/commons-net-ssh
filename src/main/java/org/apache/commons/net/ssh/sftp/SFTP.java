@@ -31,9 +31,6 @@ import org.apache.commons.net.ssh.connection.ConnectionException;
 import org.apache.commons.net.ssh.connection.Session.Subsystem;
 import org.apache.commons.net.ssh.sftp.Response.StatusCode;
 import org.apache.commons.net.ssh.transport.TransportException;
-import org.apache.log4j.BasicConfigurator;
-import org.apache.log4j.ConsoleAppender;
-import org.apache.log4j.PatternLayout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -111,8 +108,7 @@ public class SFTP
         send(req);
         
         Response res = req.getFuture().get(timeout);
-        res.ensureOK();
-        // got here => can get the file handle
+        res.ensurePacket(PacketType.DATA);
         return new RemoteFile(this, res.readString());
     }
     
@@ -134,18 +130,38 @@ public class SFTP
         send(req);
         
         Response res = req.getFuture().get(timeout);
-        res.ensureOK();
+        res.ensurePacket(PacketType.HANDLE);
         return new RemoteDir(this, res.readString());
     }
     
-    public void makeDirectory(String path, FileAttributes attrs) throws IOException
-    { // TODO
+    public void setAttributes(String path, FileAttributes attrs) throws IOException
+    {
+        Request req = newRequest(PacketType.SETSTAT);
+        req.putString(path);
+        send(req);
+        Response res = req.getFuture().get(timeout);
+        res.ensureStatusOK();
+    }
     
+    public String readLink(String path) throws IOException
+    {
+        Request req = newRequest(PacketType.READLINK);
+        req.putString(path);
+        send(req);
+        return oneName(req.getFuture().get(timeout));
+    }
+    
+    public void makeDirectory(String path, FileAttributes attrs) throws IOException
+    {
+        Request req = newRequest(PacketType.MKDIR);
+        req.putString(path);
+        req.putFileAttributes(attrs);
+        req.getFuture().get(timeout).ensureStatusOK();
     }
     
     public void makeDirectory(String path) throws IOException
-    { // TODO
-    
+    {
+        makeDirectory(path, new FileAttributes());
     }
     
     public void makeSymlink(String linkPath, String targetPath) throws IOException
@@ -153,7 +169,7 @@ public class SFTP
         Request req = newRequest(PacketType.SYMLINK);
         req.putString(linkPath).putString(targetPath);
         send(req);
-        req.getFuture().get(timeout).ensureOK();
+        req.getFuture().get(timeout).ensureStatusOK();
     }
     
     public void remove(String filename) throws IOException
@@ -161,7 +177,7 @@ public class SFTP
         Request req = newRequest(PacketType.REMOVE);
         req.putString(filename);
         send(req);
-        req.getFuture().get(timeout).ensureOK();
+        req.getFuture().get(timeout).ensureStatusOK();
     }
     
     public void removeDir(String path) throws IOException
@@ -172,27 +188,44 @@ public class SFTP
         req.getFuture().get(timeout).ensureStatus(StatusCode.OK);
     }
     
+    public FileAttributes stat(String path) throws IOException
+    {
+        return stat(path, true);
+    }
+    
+    public FileAttributes stat(String path, boolean followSymlinks) throws IOException
+    {
+        Request req = newRequest(followSymlinks ? PacketType.STAT : PacketType.LSTAT);
+        req.putString(path);
+        send(req);
+        Response res = req.getFuture().get(timeout);
+        res.ensurePacket(PacketType.ATTRS);
+        return res.readFileAttributes();
+    }
+    
     public void rename(String oldPath, String newPath) throws IOException
     {
         Request req = newRequest(PacketType.RENAME);
         req.putString(oldPath).putString(newPath);
         send(req);
-        req.getFuture().get(timeout).ensureOK();
+        req.getFuture().get(timeout).ensureStatusOK();
     }
     
     public String getCanonicalizedPath(String path) throws IOException
     {
         Request req = newRequest(PacketType.REALPATH);
         req.putString(path);
-        
         send(req);
-        
-        Response res = req.getFuture().get(timeout);
-        res.ensureOK();
+        return oneName(req.getFuture().get(timeout));
+    }
+    
+    public String oneName(Response res) throws IOException
+    {
+        res.ensurePacket(PacketType.NAME);
         if (res.readInt() == 1)
             return res.readString();
         else
-            throw new SFTPException("Unexpected response in " + res.getType() + " packet");
+            throw new SFTPException("Unexpected data in " + res.getType() + " packet");
     }
     
     public int getOperativeProtocolVersion()
@@ -216,40 +249,4 @@ public class SFTP
         out.flush();
     }
     
-    // everything below this line is temporary :)
-    
-    static
-    {
-        BasicConfigurator.configure(new ConsoleAppender(new PatternLayout("%d [%-15.15t] %-5p %-30.30c{1} - %m%n")));
-    }
-    
-    public static void main(String[] args) throws IOException
-    {
-        SSHClient ssh = new SSHClient();
-        ssh.loadKnownHosts();
-        
-        ssh.connect("localhost");
-        try
-        {
-            
-            ssh.authPublickey(System.getProperty("user.name"));
-            
-            SFTP sftp = new SFTP(ssh);
-            sftp.init();
-            
-            RemoteDir rd = sftp.openDir("Documents");
-            for (RemoteResourceInfo info : rd.scan())
-                System.out.println(info.getName() + " " + info.getAttributes().getPermissions());
-            // RemoteFile rf = sftp.open("ten");
-            // int read;
-            // InputStream rff = rf.getInputStream();
-            // while ((read = rff.read()) != -1)
-            // {
-            // System.out.println(read);
-            // }
-        } finally
-        {
-            ssh.disconnect();
-        }
-    }
 }

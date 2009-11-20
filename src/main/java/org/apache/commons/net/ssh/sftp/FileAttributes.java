@@ -67,6 +67,12 @@ public class FileAttributes
         return flag.isSet(mask);
     }
     
+    public FileAttributes()
+    {
+        size = atime = mtime = uid = gid = mask = 0;
+        mode = new FileMode(0);
+    }
+    
     public FileAttributes(Packet buf)
     {
         mask = buf.readInt();

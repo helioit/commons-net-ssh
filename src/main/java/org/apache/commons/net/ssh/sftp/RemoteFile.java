@@ -45,11 +45,9 @@ public class RemoteFile extends RemoteResource
     public FileAttributes getFileAttributes() throws IOException
     {
         Request req = newRequest(PacketType.FSTAT);
-        
         send(req);
-        
         Response res = req.getFuture().get(timeout);
-        res.ensureOK();
+        res.ensurePacket(PacketType.ATTRS);
         return res.readFileAttributes();
     }
     
@@ -58,11 +56,8 @@ public class RemoteFile extends RemoteResource
         Request req = newRequest(PacketType.READ);
         req.putUINT64(fileOffset);
         req.putInt(len);
-        
         send(req);
-        
         Response res = req.getFuture().get(timeout);
-        
         switch (res.getType())
         {
         case DATA:
@@ -82,11 +77,16 @@ public class RemoteFile extends RemoteResource
         Request req = newRequest(PacketType.WRITE);
         req.putUINT64(fileOffset);
         req.putString(data, off, len);
-        
         send(req);
-        
-        Response res = req.getFuture().get(timeout);
-        res.ensureOK();
+        req.getFuture().get(timeout).ensureStatusOK();
+    }
+    
+    public void setAttributes(FileAttributes attrs) throws IOException
+    {
+        Request req = newRequest(PacketType.FSETSTAT);
+        req.putFileAttributes(attrs);
+        send(req);
+        req.getFuture().get(timeout).ensureStatusOK();
     }
     
 }

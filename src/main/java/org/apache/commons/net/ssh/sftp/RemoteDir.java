@@ -45,7 +45,7 @@ public class RemoteDir extends RemoteResource
             case NAME:
                 final int count = res.readInt();
                 for (int i = 0; i < count; i++)
-                    rfo.add(new RemoteResourceInfo(res));
+                    rfo.add(new RemoteResourceInfo(res.readString(), res.readString(), res.readFileAttributes()));
                 break loop;
             case STATUS:
                 res.ensureStatus(StatusCode.EOF);

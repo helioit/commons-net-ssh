@@ -26,10 +26,8 @@ abstract class RemoteResource
     public void close() throws IOException
     {
         Request req = newRequest(PacketType.CLOSE);
-        
         send(req);
-        
-        req.getFuture().get(sftp.timeout).ensureOK();
+        req.getFuture().get(sftp.timeout).ensureStatusOK();
     }
     
     protected void send(Request req) throws IOException

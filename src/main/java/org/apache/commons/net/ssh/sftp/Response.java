@@ -78,22 +78,28 @@ public class Response extends Packet
     
     public void ensurePacket(PacketType pt) throws SFTPException
     {
-        
+        if (getType() != pt)
+        {
+            if (getType() == PacketType.STATUS)
+                throw new SFTPException(readStatusCode(), readString());
+            else
+                throw new SFTPException("Unexpected packet " + getType());
+        }
     }
     
-    public void ensureOK() throws SFTPException
+    public void ensureStatusOK() throws SFTPException
     {
-        ensureStatus(StatusCode.OK);
+        if (getType() == PacketType.STATUS)
+            ensureStatus(StatusCode.OK);
+        else
+            throw new SFTPException("Unexpected packet " + getType());
     }
     
     public void ensureStatus(StatusCode acceptable) throws SFTPException
     {
-        if (getType() == PacketType.STATUS)
-        {
-            StatusCode sc = readStatusCode();
-            if (sc != acceptable)
-                throw new SFTPException(sc, readString());
-        }
+        StatusCode sc = readStatusCode();
+        if (sc != acceptable)
+            throw new SFTPException(sc, readString());
     }
     
 }
