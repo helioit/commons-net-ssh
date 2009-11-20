@@ -441,7 +441,7 @@ public class Buffer
         return this;
     }
     
-    public long getUINT64()
+    public long readUINT64()
     {
         long uint64 = (readLong() << 32) | readLong();
         if (uint64 < 0)

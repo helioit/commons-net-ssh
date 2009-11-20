@@ -26,7 +26,9 @@ public class RemoteFileOutputStream extends OutputStream
     
     private final RemoteFile rf;
     
-    private long offset;
+    private long fileOffset;
+    
+    private final byte[] b = new byte[1];
     
     public RemoteFileOutputStream(RemoteFile rf)
     {
@@ -34,10 +36,17 @@ public class RemoteFileOutputStream extends OutputStream
     }
     
     @Override
-    public void write(int b) throws IOException
+    public synchronized void write(int w) throws IOException
     {
-        // TODO Auto-generated method stub
-        
+        b[0] = (byte) w;
+        write(b, 0, 1);
+    }
+    
+    @Override
+    public synchronized void write(byte[] buf, int off, int len) throws IOException
+    {
+        rf.write(fileOffset, buf, off, len);
+        fileOffset += len;
     }
     
 }

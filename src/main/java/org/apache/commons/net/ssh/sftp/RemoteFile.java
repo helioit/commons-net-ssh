@@ -24,25 +24,12 @@ import java.io.OutputStream;
 
 import org.apache.commons.net.ssh.sftp.Response.StatusCode;
 
-public class RemoteFile
+public class RemoteFile extends RemoteResource
 {
-    
-    private final SFTP sftp;
-    private final String handle;
     
     public RemoteFile(SFTP sftp, String handle)
     {
-        this.sftp = sftp;
-        this.handle = handle;
-    }
-    
-    public void close() throws IOException
-    {
-        Request req = newRequest(PacketType.CLOSE);
-        
-        sftp.send(req);
-        
-        req.getFuture().get(sftp.timeout).ensureStatus(StatusCode.OK);
+        super(sftp, handle);
     }
     
     public InputStream getInputStream()
@@ -55,15 +42,26 @@ public class RemoteFile
         return new RemoteFileOutputStream(this);
     }
     
+    public FileAttributes getFileAttributes() throws IOException
+    {
+        Request req = newRequest(PacketType.FSTAT);
+        
+        send(req);
+        
+        Response res = req.getFuture().get(timeout);
+        res.ensureOK();
+        return res.readFileAttributes();
+    }
+    
     public int read(long fileOffset, byte[] buf, int offset, int len) throws IOException
     {
         Request req = newRequest(PacketType.READ);
-        req.putUINT64(offset);
+        req.putUINT64(fileOffset);
         req.putInt(len);
         
-        sftp.send(req);
+        send(req);
         
-        Response res = req.getFuture().get(sftp.timeout);
+        Response res = req.getFuture().get(timeout);
         
         switch (res.getType())
         {
@@ -79,34 +77,16 @@ public class RemoteFile
         }
     }
     
-    private Request newRequest(PacketType type)
-    {
-        Request req = sftp.newRequest(type);
-        req.putString(handle);
-        return req;
-    }
-    
-    public FileAttributes getFileAttributes() throws IOException
-    {
-        Request req = newRequest(PacketType.FSTAT);
-        
-        sftp.send(req);
-        
-        Response res = req.getFuture().get(sftp.timeout);
-        res.ensureStatus(StatusCode.OK);
-        return res.readFileAttributes();
-    }
-    
     public void write(long fileOffset, byte[] data, int off, int len) throws IOException
     {
         Request req = newRequest(PacketType.WRITE);
         req.putUINT64(fileOffset);
         req.putString(data, off, len);
         
-        sftp.send(req);
+        send(req);
         
-        Response res = req.getFuture().get(sftp.timeout);
-        res.ensureStatus(StatusCode.OK);
+        Response res = req.getFuture().get(timeout);
+        res.ensureOK();
     }
     
 }

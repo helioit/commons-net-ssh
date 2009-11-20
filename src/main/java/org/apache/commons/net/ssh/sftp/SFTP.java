@@ -64,6 +64,11 @@ public class SFTP
         reader = new PacketReader(sub.getInputStream());
     }
     
+    public Subsystem getSubsystem()
+    {
+        return sub;
+    }
+    
     public void init() throws IOException
     {
         Packet pk = new Packet();
@@ -96,29 +101,29 @@ public class SFTP
         transmit(req);
     }
     
-    public RemoteFile open(String filename, Set<FileMode> modes, FileAttributes fa) throws IOException
+    public RemoteFile open(String filename, Set<OpenMode> modes, FileAttributes fa) throws IOException
     {
         Request req = newRequest(PacketType.OPEN);
         req.putString(filename);
-        req.putInt(FileMode.toMask(modes));
+        req.putInt(OpenMode.toMask(modes));
         req.putFileAttributes(fa);
         
         send(req);
         
-        Response response = req.getFuture().get(timeout);
-        response.ensureStatus(StatusCode.OK);
+        Response res = req.getFuture().get(timeout);
+        res.ensureOK();
         // got here => can get the file handle
-        return new RemoteFile(this, response.readString());
+        return new RemoteFile(this, res.readString());
     }
     
-    public RemoteFile open(String filename, Set<FileMode> modes) throws IOException
+    public RemoteFile open(String filename, Set<OpenMode> modes) throws IOException
     {
         return open(filename, modes, new FileAttributes.Builder().build());
     }
     
     public RemoteFile open(String filename) throws IOException
     {
-        return open(filename, EnumSet.of(FileMode.READ));
+        return open(filename, EnumSet.of(OpenMode.READ));
     }
     
     public RemoteDir openDir(String path) throws IOException
@@ -128,9 +133,66 @@ public class SFTP
         
         send(req);
         
-        Response response = req.getFuture().get(timeout);
-        response.ensureStatus(StatusCode.OK);
-        return new RemoteDir(this, response.readString());
+        Response res = req.getFuture().get(timeout);
+        res.ensureOK();
+        return new RemoteDir(this, res.readString());
+    }
+    
+    public void makeDirectory(String path, FileAttributes attrs) throws IOException
+    { // TODO
+    
+    }
+    
+    public void makeDirectory(String path) throws IOException
+    { // TODO
+    
+    }
+    
+    public void makeSymlink(String linkPath, String targetPath) throws IOException
+    {
+        Request req = newRequest(PacketType.SYMLINK);
+        req.putString(linkPath).putString(targetPath);
+        send(req);
+        req.getFuture().get(timeout).ensureOK();
+    }
+    
+    public void remove(String filename) throws IOException
+    {
+        Request req = newRequest(PacketType.REMOVE);
+        req.putString(filename);
+        send(req);
+        req.getFuture().get(timeout).ensureOK();
+    }
+    
+    public void removeDir(String path) throws IOException
+    {
+        Request req = newRequest(PacketType.RMDIR);
+        req.putString(path);
+        send(req);
+        req.getFuture().get(timeout).ensureStatus(StatusCode.OK);
+    }
+    
+    public void rename(String oldPath, String newPath) throws IOException
+    {
+        Request req = newRequest(PacketType.RENAME);
+        req.putString(oldPath).putString(newPath);
+        send(req);
+        req.getFuture().get(timeout).ensureOK();
+    }
+    
+    public String getCanonicalizedPath(String path) throws IOException
+    {
+        Request req = newRequest(PacketType.REALPATH);
+        req.putString(path);
+        
+        send(req);
+        
+        Response res = req.getFuture().get(timeout);
+        res.ensureOK();
+        if (res.readInt() == 1)
+            return res.readString();
+        else
+            throw new SFTPException("Unexpected response in " + res.getType() + " packet");
     }
     
     public int getOperativeProtocolVersion()
@@ -175,10 +237,19 @@ public class SFTP
             SFTP sftp = new SFTP(ssh);
             sftp.init();
             
+            RemoteDir rd = sftp.openDir("Documents");
+            for (RemoteResourceInfo info : rd.scan())
+                System.out.println(info.getName() + " " + info.getAttributes().getPermissions());
+            // RemoteFile rf = sftp.open("ten");
+            // int read;
+            // InputStream rff = rf.getInputStream();
+            // while ((read = rff.read()) != -1)
+            // {
+            // System.out.println(read);
+            // }
         } finally
         {
             ssh.disconnect();
         }
     }
-    
 }

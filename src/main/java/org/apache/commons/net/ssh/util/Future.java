@@ -20,7 +20,6 @@ package org.apache.commons.net.ssh.util;
 
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Condition;
-import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.commons.net.ssh.ErrorNotifiable;
@@ -29,12 +28,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Represents future data of the parameterized type {@code V} and allows waiting on it. An exception
- * may also be delivered to a waiter, and will be of the parameterized type {@code T}.
+ * Represents future data of the parameterized type {@code V} and allows waiting on it. An exception may also be
+ * delivered to a waiter, and will be of the parameterized type {@code T}.
  * <p>
- * For atomic operations on a future - e.g. checking checking if a value is set and if it is not
- * then setting it, i.e. Compare-And-Set type operations - the associated lock for the future should
- * be acquired while doing so.
+ * For atomic operations on a future - e.g. checking checking if a value is set and if it is not then setting it, i.e.
+ * Compare-And-Set type operations - the associated lock for the future should be acquired while doing so.
  */
 public class Future<V, T extends Throwable> implements ErrorNotifiable
 {
@@ -71,8 +69,7 @@ public class Future<V, T extends Throwable> implements ErrorNotifiable
     }
     
     /**
-     * Creates this future with given {@code name}, exception {@code chainer}, and associated
-     * {@code lock}.
+     * Creates this future with given {@code name}, exception {@code chainer}, and associated {@code lock}.
      * 
      * @param name
      *            name of this future
@@ -106,8 +103,8 @@ public class Future<V, T extends Throwable> implements ErrorNotifiable
     }
     
     /**
-     * Queues error that will be thrown in any waiting thread or any thread that attempts to wait on
-     * this future hereafter.
+     * Queues error that will be thrown in any waiting thread or any thread that attempts to wait on this future
+     * hereafter.
      * 
      * @param message
      *            error message
@@ -118,8 +115,8 @@ public class Future<V, T extends Throwable> implements ErrorNotifiable
     }
     
     /**
-     * Queues error that will be thrown in any waiting thread or any thread that attempts to wait on
-     * this future hereafter.
+     * Queues error that will be thrown in any waiting thread or any thread that attempts to wait on this future
+     * hereafter.
      * 
      * @param throwable
      *            the error
@@ -154,8 +151,7 @@ public class Future<V, T extends Throwable> implements ErrorNotifiable
      * 
      * @return the value
      * @throws T
-     *             in case another thread informs the future of an error meanwhile, or the timeout
-     *             expires
+     *             in case another thread informs the future of an error meanwhile, or the timeout expires
      */
     public V get(int timeout) throws T
     {
@@ -185,14 +181,6 @@ public class Future<V, T extends Throwable> implements ErrorNotifiable
         {
             unlock();
         }
-    }
-    
-    /**
-     * Returns the associated lock object.
-     */
-    public Lock getLock()
-    {
-        return lock;
     }
     
     /**
@@ -241,8 +229,8 @@ public class Future<V, T extends Throwable> implements ErrorNotifiable
     }
     
     /**
-     * Lock using the associated lock. Use as part of a {@code try-finally} construct in conjunction
-     * with {@link #unlock()}.
+     * Lock using the associated lock. Use as part of a {@code try-finally} construct in conjunction with
+     * {@link #unlock()}.
      */
     public void lock()
     {
@@ -275,8 +263,8 @@ public class Future<V, T extends Throwable> implements ErrorNotifiable
     }
     
     /**
-     * Unlock using the associated lock. Use as part of a {@code try-finally} construct in
-     * conjunction with {@link #lock()}.
+     * Unlock using the associated lock. Use as part of a {@code try-finally} construct in conjunction with
+     * {@link #lock()}.
      */
     public void unlock()
     {

@@ -18,16 +18,43 @@
  */
 package org.apache.commons.net.ssh.sftp;
 
-public class RemoteDir
+import java.io.IOException;
+import java.util.LinkedList;
+import java.util.List;
+
+import org.apache.commons.net.ssh.sftp.Response.StatusCode;
+
+public class RemoteDir extends RemoteResource
 {
     
-    private final SFTP sftp;
-    private final String handle;
-    
-    public RemoteDir(SFTP sftp, String handle)
+    RemoteDir(SFTP sftp, String handle)
     {
-        this.sftp = sftp;
-        this.handle = handle;
+        super(sftp, handle);
+    }
+    
+    public List<RemoteResourceInfo> scan() throws IOException
+    {
+        List<RemoteResourceInfo> rfo = new LinkedList<RemoteResourceInfo>();
+        loop: for (;;)
+        {
+            Request req = newRequest(PacketType.READDIR);
+            send(req);
+            Response res = req.getFuture().get(timeout);
+            switch (res.getType())
+            {
+            case NAME:
+                final int count = res.readInt();
+                for (int i = 0; i < count; i++)
+                    rfo.add(new RemoteResourceInfo(res));
+                break loop;
+            case STATUS:
+                res.ensureStatus(StatusCode.EOF);
+                break loop;
+            default:
+                throw new SFTPException("Unexpected packet: " + res.getType());
+            }
+        }
+        return rfo;
     }
     
 }

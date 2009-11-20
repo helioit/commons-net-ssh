@@ -76,6 +76,16 @@ public class Response extends Packet
         return StatusCode.fromInt(readInt());
     }
     
+    public void ensurePacket(PacketType pt) throws SFTPException
+    {
+        
+    }
+    
+    public void ensureOK() throws SFTPException
+    {
+        ensureStatus(StatusCode.OK);
+    }
+    
     public void ensureStatus(StatusCode acceptable) throws SFTPException
     {
         if (getType() == PacketType.STATUS)

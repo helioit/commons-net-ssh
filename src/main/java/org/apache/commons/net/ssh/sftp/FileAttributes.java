@@ -18,8 +18,10 @@
  */
 package org.apache.commons.net.ssh.sftp;
 
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 import java.util.Map.Entry;
 
 import org.apache.commons.net.ssh.util.Buffer;
@@ -53,9 +55,9 @@ public class FileAttributes
     
     private final int mask;
     private final long size;
-    private final long uid;
-    private final long gid;
-    private final long perms;
+    private final int uid;
+    private final int gid;
+    private final FileMode mode;
     private final long atime;
     private final long mtime;
     private final Map<String, String> ext = new HashMap<String, String>();
@@ -69,19 +71,19 @@ public class FileAttributes
     {
         mask = buf.readInt();
         
-        size = isSet(Flag.SIZE) ? buf.getUINT64() : 0;
+        size = isSet(Flag.SIZE) ? buf.readUINT64() : 0;
         
         if (isSet(Flag.UIDGID))
         {
-            uid = buf.readLong();
-            gid = buf.readLong();
+            uid = buf.readInt();
+            gid = buf.readInt();
         } else
         {
             uid = 0;
             gid = 0;
         }
         
-        perms = isSet(Flag.PERMISSIONS) ? buf.readInt() : 0;
+        mode = new FileMode(isSet(Flag.PERMISSIONS) ? buf.readInt() : 0);
         
         if (isSet(Flag.ACMODTIME))
         {
@@ -101,14 +103,14 @@ public class FileAttributes
         }
     }
     
-    private FileAttributes(int mask, long size, long uid, long gid, long perms, long atime, long mtime,
+    private FileAttributes(int mask, long size, int uid, int gid, FileMode mode, long atime, long mtime,
             Map<String, String> ext)
     {
         this.mask = mask;
         this.size = size;
         this.uid = uid;
         this.gid = gid;
-        this.perms = perms;
+        this.mode = mode;
         this.atime = atime;
         this.mtime = mtime;
         this.ext.putAll(ext);
@@ -119,19 +121,29 @@ public class FileAttributes
         return size;
     }
     
-    public long getUID()
+    public int getUID()
     {
         return uid;
     }
     
-    public long getGID()
+    public int getGID()
     {
         return gid;
     }
     
-    public long getPermissions()
+    public FileMode getMode()
     {
-        return perms;
+        return mode;
+    }
+    
+    public Set<FileMode.Permission> getPermissions()
+    {
+        return mode.getPermissions();
+    }
+    
+    public FileMode.Type getType()
+    {
+        return mode.getType();
     }
     
     public long getAtime()
@@ -161,7 +173,7 @@ public class FileAttributes
             buf.putInt(gid);
         }
         if (isSet(Flag.PERMISSIONS))
-            buf.putInt(perms);
+            buf.putInt(mode.getMask());
         if (isSet(Flag.ACMODTIME))
         {
             buf.putInt(atime);
@@ -186,9 +198,9 @@ public class FileAttributes
         private long size;
         private long atime;
         private long mtime;
-        private long perms;
-        private long uid;
-        private long gid;
+        private Set<FileMode.Permission> perms = EnumSet.allOf(FileMode.Permission.class);
+        private int uid;
+        private int gid;
         private final Map<String, String> ext = new HashMap<String, String>();
         
         public Builder withSize(long size)
@@ -198,7 +210,7 @@ public class FileAttributes
             return this;
         }
         
-        public Builder withAtime(long atime, long mtime)
+        public Builder withAtimeMtime(long atime, long mtime)
         {
             mask = Flag.ACMODTIME.setAndGet(mask);
             this.atime = atime;
@@ -206,7 +218,7 @@ public class FileAttributes
             return this;
         }
         
-        public Builder withUIDGID(long uid, long gid)
+        public Builder withUIDGID(int uid, int gid)
         {
             mask = Flag.UIDGID.setAndGet(mask);
             this.uid = uid;
@@ -214,11 +226,16 @@ public class FileAttributes
             return this;
         }
         
-        public Builder withPermissions(long perms)
+        public Builder withPermissions(Set<FileMode.Permission> perms)
         {
             mask = Flag.PERMISSIONS.setAndGet(mask);
             this.perms = perms;
             return this;
+        }
+        
+        public Builder withPermissions(int perms)
+        {
+            return withPermissions(FileMode.Permission.fromMask(perms));
         }
         
         public Builder withExtended(String type, String data)
@@ -237,7 +254,7 @@ public class FileAttributes
         
         public FileAttributes build()
         {
-            return new FileAttributes(mask, size, uid, gid, perms, atime, mtime, ext);
+            return new FileAttributes(mask, size, uid, gid, FileMode.fromPermissions(perms), atime, mtime, ext);
         }
         
     }
