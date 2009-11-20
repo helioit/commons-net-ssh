@@ -19,7 +19,6 @@
 package examples.ssh;
 
 import org.apache.commons.net.ssh.SSHClient;
-import org.apache.commons.net.ssh.scp.SCPDownloadClient;
 
 /**
  * This example demonstrates downloading of a file over SCP from the SSH server.
@@ -40,7 +39,7 @@ public class SCPDownload
         try
         {
             ssh.authPublickey(System.getProperty("user.name"));
-            new SCPDownloadClient(ssh).copy("ten", "/tmp");
+            ssh.download("ten", "/tmp");
         } finally
         {
             ssh.disconnect();

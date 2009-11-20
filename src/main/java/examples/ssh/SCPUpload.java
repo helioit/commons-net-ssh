@@ -19,7 +19,6 @@
 package examples.ssh;
 
 import org.apache.commons.net.ssh.SSHClient;
-import org.apache.commons.net.ssh.scp.SCPUploadClient;
 
 /**
  * This example demonstrates uploading of a file over SCP to the SSH server.
@@ -41,10 +40,10 @@ public class SCPUpload
             ssh.authPublickey(System.getProperty("user.name"));
             
             // Compression = significant speedup for large file transfers on fast links
-            // present here to demo renegotiation - could have just put this before connect()
+            // present here to demo algorithm renegotiation - could have just put this before connect()
             ssh.useCompression();
             
-            new SCPUploadClient(ssh).copy("/tmp/ten", ".");
+            ssh.upload("/tmp/ten", ".");
             
         } finally
         {
