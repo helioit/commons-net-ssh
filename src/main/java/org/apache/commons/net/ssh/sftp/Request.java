@@ -23,6 +23,7 @@ import org.apache.commons.net.ssh.util.Future;
 public class Request extends Packet
 {
     
+    private final PacketType type;
     private final long reqID;
     private final Future<Response, SFTPException> future;
     
@@ -30,19 +31,31 @@ public class Request extends Packet
     {
         super();
         this.reqID = reqID;
+        this.type = type;
         future = new Future<Response, SFTPException>("sftp / " + reqID, SFTPException.chainer);
         putByte(type.toByte());
         putInt(reqID);
     }
     
-    public long readRequestID()
+    public long getRequestID()
     {
         return reqID;
+    }
+    
+    public PacketType getType()
+    {
+        return type;
     }
     
     public Future<Response, SFTPException> getFuture()
     {
         return future;
+    }
+    
+    @Override
+    public String toString()
+    {
+        return "Request{" + reqID + ";" + type + "}";
     }
     
 }

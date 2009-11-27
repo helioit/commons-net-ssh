@@ -24,7 +24,6 @@ import java.net.Socket;
 import java.net.SocketAddress;
 
 import org.apache.commons.net.ssh.util.Buffer;
-import org.apache.commons.net.ssh.util.Event;
 import org.apache.commons.net.ssh.util.Pipe;
 import org.apache.commons.net.ssh.util.Pipe.ErrorCallback;
 import org.slf4j.Logger;
@@ -52,14 +51,12 @@ public class LocalPortForwarder
             
             new Pipe("chan2soc", getInputStream(), sock.getOutputStream()) //
                     .bufSize(getLocalMaxPacketSize()) //
-                    .closeOutputStreamOnEOF(true) //
                     .errorCallback(chanCloser) //
                     .daemon(true) //
                     .start();
             
             new Pipe("soc2chan", sock.getInputStream(), getOutputStream()) //
                     .bufSize(getRemoteMaxPacketSize()) //
-                    .closeOutputStreamOnEOF(true) //
                     .errorCallback(chanCloser) //
                     .daemon(true) //
                     .start();
@@ -81,54 +78,13 @@ public class LocalPortForwarder
     private final Logger log = LoggerFactory.getLogger(getClass());
     
     private final Connection conn;
-    private final Event<ConnectionException> close = new Event<ConnectionException>("pfd close",
-            ConnectionException.chainer);
     private final ServerSocket ss;
     private final String host;
     private final int port;
     
-    private final Thread listener = new Thread()
-    {
-        {
-            setName("pfd"); // "port forwarding daemon"
-            setDaemon(true);
-        }
-        
-        @Override
-        public void run()
-        {
-            log.info("Listening on {}", ss.getLocalSocketAddress());
-            while (!Thread.currentThread().isInterrupted())
-            {
-                Socket sock;
-                try
-                {
-                    sock = ss.accept();
-                    log.info("Got connection from {}", sock.getRemoteSocketAddress());
-                } catch (IOException e)
-                {
-                    if (!Thread.currentThread().isInterrupted())
-                        close.error(e);
-                    break;
-                }
-                try
-                {
-                    DirectTCPIPChannel chan = new DirectTCPIPChannel(conn, sock);
-                    chan.open();
-                    chan.start();
-                } catch (IOException justLog)
-                {
-                    log.error("While initializing direct-tcpip channel from {}: {}", sock.getRemoteSocketAddress(),
-                            justLog.toString());
-                }
-            }
-            close.set();
-        }
-    };
-    
     /**
      * Create a local port forwarder with specified binding ({@code listeningAddr}. It does not, however, start
-     * listening unless {@link #startListening() explicitly told to}.
+     * listening unless {@link #listen() explicitly told to}.
      * 
      * @param conn
      *            {@link Connection} implementation
@@ -158,24 +114,19 @@ public class LocalPortForwarder
     }
     
     /**
-     * Spawns a daemon thread for listening for incoming connections and forwarding to remote host as a channel.
+     * Start listening for incoming connections and forward to remote host as a channel.
      */
-    public void startListening()
+    public void listen() throws IOException
     {
-        listener.start();
-    }
-    
-    /**
-     * Stop this port forwarding.
-     */
-    public void stopListening()
-    {
-        listener.interrupt();
-        try
+        log.info("Listening on {}", ss.getLocalSocketAddress());
+        Socket sock;
+        while (true)
         {
-            ss.close(); // in case it is blocked on accept (as it will be...)
-        } catch (IOException ignore)
-        {
+            sock = ss.accept();
+            log.info("Got connection from {}", sock.getRemoteSocketAddress());
+            DirectTCPIPChannel chan = new DirectTCPIPChannel(conn, sock);
+            chan.open();
+            chan.start();
         }
     }
     

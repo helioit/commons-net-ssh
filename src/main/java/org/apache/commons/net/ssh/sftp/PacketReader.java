@@ -111,7 +111,7 @@ public class PacketReader extends Thread
     
     public void expectResponseTo(Request req)
     {
-        futures.put(req.readRequestID(), req.getFuture());
+        futures.put(req.getRequestID(), req.getFuture());
     }
     
 }

@@ -24,9 +24,8 @@ import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
-import java.util.Map.Entry;
 
-import org.apache.commons.net.ssh.SSHClient;
+import org.apache.commons.net.ssh.SessionFactory;
 import org.apache.commons.net.ssh.connection.ConnectionException;
 import org.apache.commons.net.ssh.connection.Session.Subsystem;
 import org.apache.commons.net.ssh.sftp.Response.StatusCode;
@@ -54,7 +53,7 @@ public class SFTP
     
     private final Map<String, String> serverExtensions = new HashMap<String, String>();
     
-    public SFTP(SSHClient ssh) throws ConnectionException, TransportException
+    public SFTP(SessionFactory ssh) throws ConnectionException, TransportException
     {
         sub = ssh.startSession().startSubsystem("sftp");
         out = sub.getOutputStream();
@@ -66,7 +65,7 @@ public class SFTP
         return sub;
     }
     
-    public void init() throws IOException
+    public SFTP init() throws IOException
     {
         Packet pk = new Packet();
         pk.putByte(PacketType.INIT.toByte());
@@ -85,36 +84,56 @@ public class SFTP
         while (response.available() > 0)
             serverExtensions.put(response.readString(), response.readString());
         
-        for (Entry<String, String> ext : serverExtensions.entrySet())
-            System.out.println(ext.getKey() + ": " + ext.getValue());
-        
         // Start reader thread
         reader.start();
+        return this;
+    }
+    
+    public int getOperativeProtocolVersion()
+    {
+        return negotiatedVersion;
+    }
+    
+    public synchronized Request newRequest(PacketType type)
+    {
+        return new Request(type, reqID = reqID + 1 & 0xffffffffL);
+    }
+    
+    private void transmit(Packet payload) throws IOException
+    {
+        final int len = payload.available();
+        out.write((byte) (len >> 24));
+        out.write((byte) (len >> 16));
+        out.write((byte) (len >> 8));
+        out.write((byte) (len));
+        out.write(payload.array(), 0, len);
+        out.flush();
     }
     
     public void send(Request req) throws IOException
     {
         reader.expectResponseTo(req);
+        log.debug("Sending {}", req);
         transmit(req);
     }
     
-    public RemoteFile open(String filename, Set<OpenMode> modes, FileAttributes fa) throws IOException
+    public RemoteFile open(String path, Set<OpenMode> modes, FileAttributes fa) throws IOException
     {
         Request req = newRequest(PacketType.OPEN);
-        req.putString(filename);
+        req.putString(path);
         req.putInt(OpenMode.toMask(modes));
         req.putFileAttributes(fa);
         
         send(req);
         
         Response res = req.getFuture().get(timeout);
-        res.ensurePacket(PacketType.DATA);
-        return new RemoteFile(this, res.readString());
+        res.ensurePacket(PacketType.HANDLE);
+        return new RemoteFile(this, path, res.readString());
     }
     
     public RemoteFile open(String filename, Set<OpenMode> modes) throws IOException
     {
-        return open(filename, modes, new FileAttributes.Builder().build());
+        return open(filename, modes, new FileAttributes());
     }
     
     public RemoteFile open(String filename) throws IOException
@@ -131,13 +150,14 @@ public class SFTP
         
         Response res = req.getFuture().get(timeout);
         res.ensurePacket(PacketType.HANDLE);
-        return new RemoteDir(this, res.readString());
+        return new RemoteDir(this, path, res.readString());
     }
     
     public void setAttributes(String path, FileAttributes attrs) throws IOException
     {
         Request req = newRequest(PacketType.SETSTAT);
         req.putString(path);
+        req.putFileAttributes(attrs);
         send(req);
         Response res = req.getFuture().get(timeout);
         res.ensureStatusOK();
@@ -148,26 +168,27 @@ public class SFTP
         Request req = newRequest(PacketType.READLINK);
         req.putString(path);
         send(req);
-        return oneName(req.getFuture().get(timeout));
+        return readSingleName(req.getFuture().get(timeout));
     }
     
-    public void makeDirectory(String path, FileAttributes attrs) throws IOException
+    public void makeDir(String path, FileAttributes attrs) throws IOException
     {
         Request req = newRequest(PacketType.MKDIR);
         req.putString(path);
         req.putFileAttributes(attrs);
+        send(req);
         req.getFuture().get(timeout).ensureStatusOK();
     }
     
-    public void makeDirectory(String path) throws IOException
+    public void makeDir(String path) throws IOException
     {
-        makeDirectory(path, new FileAttributes());
+        makeDir(path, new FileAttributes());
     }
     
-    public void makeSymlink(String linkPath, String targetPath) throws IOException
+    public void symlink(String linkpath, String targetpath) throws IOException
     {
         Request req = newRequest(PacketType.SYMLINK);
-        req.putString(linkPath).putString(targetPath);
+        req.putString(linkpath).putString(targetpath);
         send(req);
         req.getFuture().get(timeout).ensureStatusOK();
     }
@@ -188,19 +209,24 @@ public class SFTP
         req.getFuture().get(timeout).ensureStatus(StatusCode.OK);
     }
     
-    public FileAttributes stat(String path) throws IOException
+    private FileAttributes stat(PacketType pt, String path) throws IOException
     {
-        return stat(path, true);
-    }
-    
-    public FileAttributes stat(String path, boolean followSymlinks) throws IOException
-    {
-        Request req = newRequest(followSymlinks ? PacketType.STAT : PacketType.LSTAT);
+        Request req = newRequest(pt);
         req.putString(path);
         send(req);
         Response res = req.getFuture().get(timeout);
         res.ensurePacket(PacketType.ATTRS);
         return res.readFileAttributes();
+    }
+    
+    public FileAttributes stat(String path) throws IOException
+    {
+        return stat(PacketType.STAT, path);
+    }
+    
+    public FileAttributes lstat(String path) throws IOException
+    {
+        return stat(PacketType.LSTAT, path);
     }
     
     public void rename(String oldPath, String newPath) throws IOException
@@ -211,42 +237,21 @@ public class SFTP
         req.getFuture().get(timeout).ensureStatusOK();
     }
     
-    public String getCanonicalizedPath(String path) throws IOException
+    public String canonicalize(String path) throws IOException
     {
         Request req = newRequest(PacketType.REALPATH);
         req.putString(path);
         send(req);
-        return oneName(req.getFuture().get(timeout));
+        return readSingleName(req.getFuture().get(timeout));
     }
     
-    public String oneName(Response res) throws IOException
+    private static String readSingleName(Response res) throws IOException
     {
         res.ensurePacket(PacketType.NAME);
         if (res.readInt() == 1)
             return res.readString();
         else
             throw new SFTPException("Unexpected data in " + res.getType() + " packet");
-    }
-    
-    public int getOperativeProtocolVersion()
-    {
-        return negotiatedVersion;
-    }
-    
-    public synchronized Request newRequest(PacketType type)
-    {
-        return new Request(type, reqID + 1 & 0xffffffffL);
-    }
-    
-    public void transmit(Packet payload) throws IOException
-    {
-        final int len = payload.available();
-        out.write((byte) (len << 24 & 0xff000000));
-        out.write((byte) (len << 16 & 0x00ff0000));
-        out.write((byte) (len << 8 & 0x0000ff00));
-        out.write((byte) (len & 0x000000ff));
-        out.write(payload.array(), 0, len);
-        out.flush();
     }
     
 }

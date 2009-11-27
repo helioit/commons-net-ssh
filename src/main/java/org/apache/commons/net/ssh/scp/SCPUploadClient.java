@@ -26,6 +26,7 @@ import java.io.InputStream;
 import java.util.LinkedList;
 import java.util.List;
 
+import org.apache.commons.net.ssh.SessionFactory;
 import org.apache.commons.net.ssh.SSHClient;
 import org.apache.commons.net.ssh.connection.ConnectionException;
 import org.apache.commons.net.ssh.transport.TransportException;
@@ -40,12 +41,12 @@ public class SCPUploadClient extends SCP
     private final ModeGetter modeGetter;
     private FileFilter fileFilter;
     
-    public SCPUploadClient(SSHClient host)
+    public SCPUploadClient(SessionFactory host)
     {
         this(host, null);
     }
     
-    public SCPUploadClient(SSHClient host, ModeGetter modeGetter)
+    public SCPUploadClient(SessionFactory host, ModeGetter modeGetter)
     {
         super(host);
         this.modeGetter = modeGetter == null ? new DefaultModeGetter() : modeGetter;
@@ -86,21 +87,20 @@ public class SCPUploadClient extends SCP
     
     void process(File f) throws IOException
     {
-        if (modeGetter.shouldPreserveTimes())
-            sendMessage("T" + modeGetter.getLastModifiedTime(f) + " 0 " + modeGetter.getLastAccessTime(f) + " 0");
-        
         if (f.isDirectory())
             sendDirectory(f);
-        else if (f.isFile()) // i.e. a regular file not a socket or pipe or smthn
+        else if (f.isFile())
             sendFile(f);
         else
-            throw new IOException(f + " is not a regular file or directory.");
+            throw new IOException(f + " is not a regular file or directory");
     }
     
     void sendDirectory(File f) throws IOException
     {
         log.info("Entering directory `{}`", f.getName());
-        sendMessage("D0" + modeGetter.getPermissions(f) + " 0 " + f.getName());
+        if (modeGetter.shouldPreserveTimes())
+            sendMessage("T" + modeGetter.getLastModifiedTime(f) + " 0 " + modeGetter.getLastAccessTime(f) + " 0");
+        sendMessage("D" + modeGetter.getPermissions(f) + " 0 " + f.getName());
         
         for (File child : getChildren(f))
             process(child);
@@ -112,8 +112,10 @@ public class SCPUploadClient extends SCP
     void sendFile(File f) throws IOException
     {
         log.info("Sending `{}`...", f.getName());
+        if (modeGetter.shouldPreserveTimes())
+            sendMessage("T" + modeGetter.getLastModifiedTime(f) + " 0 " + modeGetter.getLastAccessTime(f) + " 0");
         InputStream src = new FileInputStream(f);
-        sendMessage("C0" + modeGetter.getPermissions(f) + " " + f.length() + " " + f.getName());
+        sendMessage("C" + modeGetter.getPermissions(f) + " " + f.length() + " " + f.getName());
         transfer(src, scp.getOutputStream(), scp.getRemoteMaxPacketSize(), f.length());
         signal("Transfer done");
         check("Remote agrees transfer done");

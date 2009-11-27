@@ -48,4 +48,10 @@ public class RemoteFileInputStream extends InputStream
         return read;
     }
     
+    // @Override
+    // public void close() throws IOException
+    // {
+    // rf.close();
+    // }
+    
 }

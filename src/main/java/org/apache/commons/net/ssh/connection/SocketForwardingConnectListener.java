@@ -61,14 +61,12 @@ public class SocketForwardingConnectListener implements ConnectListener
         
         new Pipe("soc2chan", sock.getInputStream(), chan.getOutputStream()) //
                 .bufSize(chan.getRemoteMaxPacketSize()) //
-                .closeOutputStreamOnEOF(true) //
                 .errorCallback(chanCloser) //
                 .daemon(true) //
                 .start();
         
         new Pipe("chan2soc", chan.getInputStream(), sock.getOutputStream()) //
-                .bufSize(chan.getLocalMaxPacketSize()) //                                                       
-                .closeOutputStreamOnEOF(true) //
+                .bufSize(chan.getLocalMaxPacketSize()) //
                 .errorCallback(chanCloser) //
                 .daemon(true) //
                 .start();

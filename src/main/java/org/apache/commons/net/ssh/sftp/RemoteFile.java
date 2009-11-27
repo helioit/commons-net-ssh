@@ -27,9 +27,9 @@ import org.apache.commons.net.ssh.sftp.Response.StatusCode;
 public class RemoteFile extends RemoteResource
 {
     
-    public RemoteFile(SFTP sftp, String handle)
+    public RemoteFile(SFTP sftp, String path, String handle)
     {
-        super(sftp, handle);
+        super(sftp, path, handle);
     }
     
     public InputStream getInputStream()
@@ -45,8 +45,8 @@ public class RemoteFile extends RemoteResource
     public FileAttributes getFileAttributes() throws IOException
     {
         Request req = newRequest(PacketType.FSTAT);
-        send(req);
-        Response res = req.getFuture().get(timeout);
+        sftp.send(req);
+        Response res = req.getFuture().get(sftp.timeout);
         res.ensurePacket(PacketType.ATTRS);
         return res.readFileAttributes();
     }
@@ -56,8 +56,8 @@ public class RemoteFile extends RemoteResource
         Request req = newRequest(PacketType.READ);
         req.putUINT64(fileOffset);
         req.putInt(len);
-        send(req);
-        Response res = req.getFuture().get(timeout);
+        sftp.send(req);
+        Response res = req.getFuture().get(sftp.timeout);
         switch (res.getType())
         {
         case DATA:
@@ -76,17 +76,30 @@ public class RemoteFile extends RemoteResource
     {
         Request req = newRequest(PacketType.WRITE);
         req.putUINT64(fileOffset);
-        req.putString(data, off, len);
-        send(req);
-        req.getFuture().get(timeout).ensureStatusOK();
+        req.putInt(len - off);
+        req.putRawBytes(data, off, len);
+        // req.putString(data, off, len);
+        sftp.send(req);
+        req.getFuture().get(sftp.timeout).ensureStatusOK();
     }
     
     public void setAttributes(FileAttributes attrs) throws IOException
     {
         Request req = newRequest(PacketType.FSETSTAT);
         req.putFileAttributes(attrs);
-        send(req);
-        req.getFuture().get(timeout).ensureStatusOK();
+        sftp.send(req);
+        req.getFuture().get(sftp.timeout).ensureStatusOK();
+    }
+    
+    public int getOutgoingPacketOverhead()
+    {
+        return 1 + // packet type
+                4 + // request id
+                4 + // handle length
+                handle.length() + // handle
+                8 + // file offset
+                4 + // data length
+                4; // packet length
     }
     
 }

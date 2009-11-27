@@ -80,7 +80,6 @@ public class ChannelOutputStream extends OutputStream implements ErrorNotifiable
         {
             prepBuffer();
         }
-        
     }
     
     public synchronized void notifyError(SSHException error)

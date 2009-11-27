@@ -110,8 +110,7 @@ public class Buffer
     }
     
     /**
-     * Constructs new buffer for the specified SSH packet and reserves the needed space (5 bytes)
-     * for the packet header.
+     * Constructs new buffer for the specified SSH packet and reserves the needed space (5 bytes) for the packet header.
      * 
      * @param cmd
      *            the SSH command
@@ -316,6 +315,7 @@ public class Buffer
             s = new String(data, rpos, len, "UTF-8");
         } catch (UnsupportedEncodingException e)
         {
+            throw new SSHRuntimeException(e);
         }
         rpos += len;
         return s;
@@ -436,8 +436,14 @@ public class Buffer
     {
         if (uint64 < 0)
             throw new BufferException("Invalid value: " + uint64);
-        putInt((uint64 & 0xffffffff00000000L) >>> 31);
-        putInt(uint64 & 0x00000000ffffffffL);
+        data[wpos++] = (byte) (uint64 >> 56);
+        data[wpos++] = (byte) (uint64 >> 48);
+        data[wpos++] = (byte) (uint64 >> 40);
+        data[wpos++] = (byte) (uint64 >> 32);
+        data[wpos++] = (byte) (uint64 >> 24);
+        data[wpos++] = (byte) (uint64 >> 16);
+        data[wpos++] = (byte) (uint64 >> 8);
+        data[wpos++] = (byte) uint64;
         return this;
     }
     
@@ -496,8 +502,8 @@ public class Buffer
     /**
      * Writes a char-array as an SSH string and then blanks it out.
      * 
-     * This is useful when a plaintext password needs to be sent. If {@code passwd} is {@code null},
-     * an empty string is written.
+     * This is useful when a plaintext password needs to be sent. If {@code passwd} is {@code null}, an empty string is
+     * written.
      * 
      * @param passwd
      *            (null-ok) the password as a character array
@@ -545,7 +551,7 @@ public class Buffer
     
     public Buffer putRawBytes(byte[] d, int off, int len)
     {
-        ensureCapacity(len);
+        ensureCapacity(len - off);
         System.arraycopy(d, off, data, wpos, len);
         wpos += len;
         return this;
@@ -571,7 +577,13 @@ public class Buffer
     
     public Buffer putString(String string)
     {
-        return putString(string.getBytes());
+        try
+        {
+            return putString(string.getBytes("UTF-8"));
+        } catch (UnsupportedEncodingException e)
+        {
+            throw new SSHRuntimeException(e);
+        }
     }
     
     public int rpos()

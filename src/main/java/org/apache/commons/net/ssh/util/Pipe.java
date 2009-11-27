@@ -43,7 +43,6 @@ public class Pipe extends Thread
     {
         return new ErrorCallback()
         {
-            
             public void hadError(IOException ioe)
             {
                 IOUtils.closeQuietly(closable);
@@ -51,24 +50,28 @@ public class Pipe extends Thread
         };
     }
     
-    public static void pipe(InputStream in, OutputStream out, int bufSize, boolean closeStreamOnEOF) throws IOException
+    public static void pipe(InputStream in, OutputStream out, int bufSize, boolean dontFlushEveryWrite)
+            throws IOException
     {
         byte[] buf = new byte[bufSize];
         int len;
         while ((len = in.read(buf)) != -1)
         {
             out.write(buf, 0, len);
-            out.flush();
+            if (!dontFlushEveryWrite)
+                out.flush();
         }
-        if (closeStreamOnEOF)
-            out.close();
+        if (dontFlushEveryWrite)
+            out.flush();
+        in.close();
+        out.close();
     }
     
     private final Logger log;
     private final InputStream in;
     private final OutputStream out;
     private int bufSize = 1;
-    private boolean closeStreamOnEOF;
+    private boolean dontFlushEveryWrite;
     
     private ErrorCallback errCB;
     
@@ -87,9 +90,9 @@ public class Pipe extends Thread
         return this;
     }
     
-    public Pipe closeOutputStreamOnEOF(boolean choice)
+    public Pipe dontFlushEveryWrite(boolean choice)
     {
-        closeStreamOnEOF = choice;
+        dontFlushEveryWrite = choice;
         return this;
     }
     
@@ -111,7 +114,7 @@ public class Pipe extends Thread
         try
         {
             log.debug("Wil pipe from {} to {}", in, out);
-            pipe(in, out, bufSize, closeStreamOnEOF);
+            pipe(in, out, bufSize, dontFlushEveryWrite);
             log.debug("EOF on {}", in);
         } catch (IOException ioe)
         {

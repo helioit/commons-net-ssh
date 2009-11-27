@@ -22,8 +22,8 @@ import java.io.File;
 import java.io.IOException;
 
 /**
- * Default implementation of {@link ModeGetter} that supplies file permissions as {@code "644"},
- * directory permissions as {@code "755"}, and does not supply mtime and atime.
+ * Default implementation of {@link ModeGetter} that supplies file permissions as {@code "0644"}, directory permissions
+ * as {@code "0755"}, and does not supply mtime and atime.
  */
 public class DefaultModeGetter implements ModeGetter
 {
@@ -43,11 +43,15 @@ public class DefaultModeGetter implements ModeGetter
     public String getPermissions(File f) throws IOException
     {
         if (f.isDirectory())
-            return "755";
-        else if (f.isFile())
-            return "644";
-        else
+        {
+            return "0755";
+        } else if (f.isFile())
+        {
+            return "0644";
+        } else
+        {
             throw new IOException("Unsupported file type: " + f);
+        }
     }
     
     public boolean shouldPreserveTimes()

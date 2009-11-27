@@ -195,8 +195,8 @@ public interface Session extends Channel
      * Subsystem API.
      */
     interface Subsystem extends Channel
-    { // there isn't really any subsystem-specific API, or is
-        // there...
+    {
+        Integer getExitStatus();
     }
     
     /**

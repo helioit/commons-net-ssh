@@ -18,7 +18,7 @@
  */
 package org.apache.commons.net.ssh.sftp;
 
-import java.util.EnumSet;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
@@ -58,6 +58,11 @@ public class FileMode
                 if (t.val == mask)
                     return t;
             return UNKNOWN;
+        }
+        
+        public static int toMask(Type t)
+        {
+            return t.val;
         }
         
     }
@@ -118,7 +123,7 @@ public class FileMode
             for (Permission p : Permission.values())
                 if ((mask & p.val) == p.val)
                     perms.add(p);
-            return EnumSet.copyOf(perms);
+            return new HashSet<Permission>(perms);
         }
         
         public static int toMask(Set<Permission> perms)
@@ -142,6 +147,11 @@ public class FileMode
         this.perms = Permission.fromMask(getPermissionsMask());
     }
     
+    public FileMode(FileMode.Type type, Set<Permission> perms)
+    {
+        this(Type.toMask(type) | Permission.toMask(perms));
+    }
+    
     public int getMask()
     {
         return mask;
@@ -149,12 +159,12 @@ public class FileMode
     
     public int getTypeMask()
     {
-        return mask & 0777000;
+        return mask & 0770000;
     }
     
     public int getPermissionsMask()
     {
-        return mask & 0000777;
+        return mask & 0007777;
     }
     
     public Type getType()
@@ -167,9 +177,10 @@ public class FileMode
         return perms;
     }
     
-    public static FileMode fromPermissions(Set<Permission> perms)
+    @Override
+    public String toString()
     {
-        return new FileMode(Permission.toMask(perms));
+        return "[mask=" + Integer.toOctalString(mask) + "]";
     }
     
 }

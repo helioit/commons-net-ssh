@@ -24,9 +24,11 @@ import java.io.IOException;
 import java.util.LinkedList;
 import java.util.List;
 
+import org.apache.commons.net.ssh.SessionFactory;
 import org.apache.commons.net.ssh.SSHClient;
 import org.apache.commons.net.ssh.connection.ConnectionException;
 import org.apache.commons.net.ssh.transport.TransportException;
+import org.apache.commons.net.ssh.util.FileTransferUtil;
 import org.apache.commons.net.ssh.util.IOUtils;
 
 /**
@@ -39,12 +41,12 @@ public class SCPDownloadClient extends SCP
     
     private boolean recursive = true;
     
-    public SCPDownloadClient(SSHClient host)
+    public SCPDownloadClient(SessionFactory host)
     {
         this(host, null);
     }
     
-    public SCPDownloadClient(SSHClient host, ModeSetter modeSetter)
+    public SCPDownloadClient(SessionFactory host, ModeSetter modeSetter)
     {
         super(host);
         this.modeSetter = modeSetter == null ? new DefaultModeSetter() : modeSetter;
@@ -62,35 +64,6 @@ public class SCPDownloadClient extends SCP
     public void setRecursive(boolean recursive)
     {
         this.recursive = recursive;
-    }
-    
-    File getTargetDirectory(File f, String dirname) throws SCPException
-    {
-        if (f.exists())
-            if (f.isDirectory())
-                f = new File(f, dirname); // <-- A
-            else
-                throw new SCPException(f + " already exists as a file; remote end is sending directory");
-        
-        // else <-- B
-        
-        if (!f.exists()) // could be from A or B
-            if (!f.mkdir())
-                throw new SCPException("Failed to create directory " + f);
-        
-        return f;
-    }
-    
-    File getTargetFile(File f, String filename) throws IOException
-    {
-        if (f.isDirectory())
-            f = new File(f, filename);
-        
-        if (!f.exists())
-            if (!f.createNewFile())
-                throw new SCPException("Could not create: " + f);
-        
-        return f;
     }
     
     void init(String source) throws ConnectionException, TransportException
@@ -187,7 +160,7 @@ public class SCPDownloadClient extends SCP
         if (length != 0)
             throw new IOException("Remote SCP command sent strange directory length: " + length);
         
-        f = getTargetDirectory(f, dMsgParts[2]);
+        f = FileTransferUtil.getTargetDirectory(f, dMsgParts[2]);
         prepare(f, parsePermissions(dMsgParts[0]), tMsg);
         
         signal("ACK: D");
@@ -204,7 +177,7 @@ public class SCPDownloadClient extends SCP
         
         long length = parseLong(cMsgParts[1], "length");
         
-        f = getTargetFile(f, cMsgParts[2]);
+        f = FileTransferUtil.getTargetFile(f, cMsgParts[2]);
         prepare(f, parsePermissions(cMsgParts[0]), tMsg);
         
         FileOutputStream fos = new FileOutputStream(f);

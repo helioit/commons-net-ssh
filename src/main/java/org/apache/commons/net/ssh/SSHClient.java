@@ -71,6 +71,7 @@ import org.apache.commons.net.ssh.random.JCERandom;
 import org.apache.commons.net.ssh.random.SingletonRandomFactory;
 import org.apache.commons.net.ssh.scp.SCPDownloadClient;
 import org.apache.commons.net.ssh.scp.SCPUploadClient;
+import org.apache.commons.net.ssh.sftp.SFTPClient;
 import org.apache.commons.net.ssh.signature.SignatureDSA;
 import org.apache.commons.net.ssh.signature.SignatureRSA;
 import org.apache.commons.net.ssh.transport.Transport;
@@ -127,7 +128,7 @@ import org.slf4j.LoggerFactory;
  * Where a password or passphrase is required, if you're extra-paranoid use the {@code char[]} based methods. The
  * {@code char[]} will be blanked out after use.
  */
-public class SSHClient extends SocketClient
+public class SSHClient extends SocketClient implements SessionFactory
 {
     
     /** Default port for SSH */
@@ -250,14 +251,24 @@ public class SSHClient extends SocketClient
         this.conn = new ConnectionProtocol(trans);
     }
     
-    public void upload(String source, String target) throws IOException
+    public void scpUpload(String source, String target) throws IOException
     {
         new SCPUploadClient(this).copy(source, target);
     }
     
-    public void download(String source, String target) throws IOException
+    public void scpDownload(String source, String target) throws IOException
     {
         new SCPDownloadClient(this).copy(source, target);
+    }
+    
+    public void sftpUpload(String source, String target) throws IOException
+    {
+        startSFTP().put(source, target);
+    }
+    
+    public void sftpDownload(String source, String target) throws IOException
+    {
+        startSFTP().get(source, target);
     }
     
     /**
@@ -751,6 +762,12 @@ public class SSHClient extends SocketClient
         sess.open();
         assert sess.isOpen();
         return sess;
+    }
+    
+    public SFTPClient startSFTP() throws IOException
+    {
+        assert isConnected() && isAuthenticated();
+        return new SFTPClient(this);
     }
     
     /**

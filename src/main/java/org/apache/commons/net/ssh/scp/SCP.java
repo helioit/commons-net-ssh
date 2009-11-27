@@ -25,7 +25,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Queue;
 
-import org.apache.commons.net.ssh.SSHClient;
+import org.apache.commons.net.ssh.SessionFactory;
 import org.apache.commons.net.ssh.SSHException;
 import org.apache.commons.net.ssh.connection.ConnectionException;
 import org.apache.commons.net.ssh.connection.Session.Command;
@@ -86,14 +86,14 @@ public abstract class SCP
     
     protected final Logger log = LoggerFactory.getLogger(getClass());
     
-    protected final SSHClient host;
+    protected final SessionFactory host;
     
     protected final Queue<String> warnings = new LinkedList<String>();
     protected int exitStatus;
     
     protected Command scp;
     
-    protected SCP(SSHClient host)
+    protected SCP(SessionFactory host)
     {
         this.host = host;
     }
@@ -230,7 +230,7 @@ public abstract class SCP
     
     abstract void startCopy(String sourcePath, String targetPath) throws IOException;
     
-    void transfer(InputStream in, OutputStream out, int bufSize, long len) throws IOException
+    public void transfer(InputStream in, OutputStream out, int bufSize, long len) throws IOException
     {
         final byte[] buf = new byte[bufSize];
         long count = 0;

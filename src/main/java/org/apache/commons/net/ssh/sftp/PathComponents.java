@@ -18,67 +18,38 @@
  */
 package org.apache.commons.net.ssh.sftp;
 
-
-public class RemoteResourceInfo
+class PathComponents
 {
+    private final String parent;
+    private final String name;
+    private final String path;
     
-    private final PathComponents comps;
-    private final FileAttributes attrs;
-    
-    public RemoteResourceInfo(String parent, String name, FileAttributes attrs)
+    public PathComponents(String parent, String name)
     {
-        this.comps = new PathComponents(parent, name);
-        this.attrs = attrs;
+        this.parent = parent;
+        this.name = name;
+        this.path = RemotePathUtil.adjustForParent(parent, name);
     }
     
     public String getParent()
     {
-        return comps.getParent();
-    }
-    
-    public String getPath()
-    {
-        return comps.getPath();
+        return parent;
     }
     
     public String getName()
     {
-        return comps.getName();
+        return name;
     }
     
-    public FileAttributes getAttributes()
+    public String getPath()
     {
-        return attrs;
-    }
-    
-    public boolean isType(FileMode.Type type)
-    {
-        return attrs.getType() == type;
-    }
-    
-    public boolean isRegularFile()
-    {
-        return isType(FileMode.Type.REGULAR);
-    }
-    
-    public boolean isDirectory()
-    {
-        return isType(FileMode.Type.DIRECTORY);
-    }
-    
-    public boolean isSymlink()
-    {
-        return isType(FileMode.Type.SYMKLINK);
+        return path;
     }
     
     @Override
     public String toString()
     {
-        return "[" + attrs.getType() + "] " + getPath();
+        return "[parent=" + parent + "; name=" + name + "; path=" + path + "]";
     }
-    
-    // public boolean equals(Object other) {
-    // // TODO
-    // }
     
 }

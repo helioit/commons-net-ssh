@@ -27,25 +27,37 @@ import org.apache.commons.net.ssh.sftp.Response.StatusCode;
 public class RemoteDir extends RemoteResource
 {
     
-    RemoteDir(SFTP sftp, String handle)
+    RemoteDir(SFTP sftp, String path, String handle)
     {
-        super(sftp, handle);
+        super(sftp, path, handle);
     }
     
     public List<RemoteResourceInfo> scan() throws IOException
     {
-        List<RemoteResourceInfo> rfo = new LinkedList<RemoteResourceInfo>();
+        return scan(null);
+    }
+    
+    public List<RemoteResourceInfo> scan(RemoteResourceFilter filter) throws IOException
+    {
+        List<RemoteResourceInfo> rri = new LinkedList<RemoteResourceInfo>();
         loop: for (;;)
         {
             Request req = newRequest(PacketType.READDIR);
-            send(req);
-            Response res = req.getFuture().get(timeout);
+            sftp.send(req);
+            Response res = req.getFuture().get(sftp.timeout);
             switch (res.getType())
             {
             case NAME:
                 final int count = res.readInt();
                 for (int i = 0; i < count; i++)
-                    rfo.add(new RemoteResourceInfo(res.readString(), res.readString(), res.readFileAttributes()));
+                {
+                    final String name = res.readString();
+                    res.readString(); // long name - IGNORED - shdve never been in the protocol
+                    final FileAttributes attrs = res.readFileAttributes();
+                    RemoteResourceInfo inf = new RemoteResourceInfo(path, name, attrs);
+                    if (!(name.equals(".") || name.equals("..")) && (filter == null || filter.accept(inf)))
+                        rri.add(inf);
+                }
                 break loop;
             case STATUS:
                 res.ensureStatus(StatusCode.EOF);
@@ -54,7 +66,7 @@ public class RemoteDir extends RemoteResource
                 throw new SFTPException("Unexpected packet: " + res.getType());
             }
         }
-        return rfo;
+        return rri;
     }
     
 }

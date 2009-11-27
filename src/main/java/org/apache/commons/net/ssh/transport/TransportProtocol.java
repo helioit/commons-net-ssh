@@ -89,7 +89,7 @@ public final class TransportProtocol implements Transport
     
     private void die(Exception ex)
     {
-        close.lock(); // CAS-type operation on close
+        close.lock();
         try
         {
             if (!close.isSet())
@@ -100,8 +100,8 @@ public final class TransportProtocol implements Transport
                 SSHException causeOfDeath = SSHException.chainer.chain(ex);
                 
                 ErrorNotifiable.Util.alertAll(causeOfDeath, close, serviceAccept, kexer);
-                service.notifyError(causeOfDeath);
-                service = nullService;
+                getService().notifyError(causeOfDeath);
+                setService(nullService);
                 
                 { // Perhaps can send disconnect packet to server
                     final boolean didNotReceiveDisconnect = msg != Message.DISCONNECT;
@@ -209,7 +209,7 @@ public final class TransportProtocol implements Transport
      * <p>
      * It should be called from a loop like {@code String id; while ((id = readIdentification) == null) ; }
      * <p>
-     * This is not effcient but is only done once.
+     * This is not efficient but is only done once.
      * 
      * @param buffer
      * @return
@@ -311,7 +311,6 @@ public final class TransportProtocol implements Transport
         return authed;
     }
     
-    // synchronized in case concurrent update in setService()
     public synchronized Service getService()
     {
         return service;
@@ -324,7 +323,6 @@ public final class TransportProtocol implements Transport
         decoder.setAuthenticated();
     }
     
-    // synchronized for atomic update of `service`
     public synchronized void setService(Service service)
     {
         if (service == null)
@@ -334,13 +332,19 @@ public final class TransportProtocol implements Transport
         this.service = service;
     }
     
-    // synchronized for mutual exclusion
-    public synchronized void reqService(Service service) throws TransportException
+    public void reqService(Service service) throws TransportException
     {
-        serviceAccept.clear();
-        sendServiceRequest(service.getName());
-        serviceAccept.await(timeout);
-        setService(service);
+        serviceAccept.lock();
+        try
+        {
+            serviceAccept.clear();
+            sendServiceRequest(service.getName());
+            serviceAccept.await(timeout);
+            setService(service);
+        } finally
+        {
+            serviceAccept.unlock();
+        }
     }
     
     /**
@@ -528,10 +532,17 @@ public final class TransportProtocol implements Transport
     
     private void gotServiceAccept() throws TransportException
     {
-        if (!serviceAccept.hasWaiters())
-            throw new TransportException(DisconnectReason.PROTOCOL_ERROR,
-                    "Got a service accept notification when none was awaited");
-        serviceAccept.set();
+        serviceAccept.lock();
+        try
+        {
+            if (!serviceAccept.hasWaiters())
+                throw new TransportException(DisconnectReason.PROTOCOL_ERROR,
+                        "Got a service accept notification when none was awaited");
+            serviceAccept.set();
+        } finally
+        {
+            serviceAccept.unlock();
+        }
     }
     
     /**

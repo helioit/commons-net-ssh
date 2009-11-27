@@ -18,20 +18,32 @@
  */
 package org.apache.commons.net.ssh.sftp;
 
+import java.io.Closeable;
 import java.io.IOException;
 
-abstract class RemoteResource
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+abstract class RemoteResource implements Closeable
 {
     
-    private final SFTP sftp;
-    private final String handle;
-    protected final int timeout;
+    protected final SFTP sftp;
+    protected final String path;
+    protected final String handle;
     
-    protected RemoteResource(SFTP sftp, String handle)
+    /** Logger */
+    protected final Logger log = LoggerFactory.getLogger(getClass());
+    
+    protected RemoteResource(SFTP sftp, String path, String handle)
     {
         this.sftp = sftp;
+        this.path = path;
         this.handle = handle;
-        this.timeout = sftp.timeout;
+    }
+    
+    public String getPath()
+    {
+        return path;
     }
     
     protected Request newRequest(PacketType type)
@@ -44,13 +56,15 @@ abstract class RemoteResource
     public void close() throws IOException
     {
         Request req = newRequest(PacketType.CLOSE);
-        send(req);
+        log.info("Closing {}", this);
+        sftp.send(req);
         req.getFuture().get(sftp.timeout).ensureStatusOK();
     }
     
-    protected void send(Request req) throws IOException
+    @Override
+    public String toString()
     {
-        sftp.send(req);
+        return "RemoteResource{" + path + "}";
     }
     
 }
