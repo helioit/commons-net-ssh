@@ -23,7 +23,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.Map.Entry;
 
-import org.apache.commons.net.ssh.util.Buffer;
+import org.apache.commons.net.ssh.util.Buffer.PlainBuffer;
 
 public class FileAttributes
 {
@@ -72,7 +72,7 @@ public class FileAttributes
         mode = new FileMode(0);
     }
     
-    public FileAttributes(Packet buf)
+    public FileAttributes(SFTPPacket<? extends SFTPPacket<?>> buf)
     {
         mask = buf.readInt();
         
@@ -166,9 +166,9 @@ public class FileAttributes
         return ext.get(type);
     }
     
-    public Buffer toBuffer()
+    public byte[] toBytes()
     {
-        Buffer buf = new Buffer();
+        PlainBuffer buf = new PlainBuffer();
         buf.putInt(mask);
         
         if (isSet(Flag.SIZE))
@@ -198,7 +198,7 @@ public class FileAttributes
                 buf.putString(entry.getValue());
             }
         }
-        return buf;
+        return buf.getCompactData();
     }
     
     @Override

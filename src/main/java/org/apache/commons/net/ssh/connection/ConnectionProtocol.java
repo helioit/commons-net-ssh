@@ -27,11 +27,12 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.commons.net.ssh.AbstractService;
 import org.apache.commons.net.ssh.ErrorNotifiable;
 import org.apache.commons.net.ssh.SSHException;
+import org.apache.commons.net.ssh.SSHPacket;
 import org.apache.commons.net.ssh.connection.OpenFailException.Reason;
 import org.apache.commons.net.ssh.transport.Transport;
 import org.apache.commons.net.ssh.transport.TransportException;
-import org.apache.commons.net.ssh.util.Buffer;
 import org.apache.commons.net.ssh.util.Future;
+import org.apache.commons.net.ssh.util.Buffer.PlainBuffer;
 import org.apache.commons.net.ssh.util.Constants.DisconnectReason;
 import org.apache.commons.net.ssh.util.Constants.Message;
 
@@ -47,7 +48,7 @@ public class ConnectionProtocol extends AbstractService implements Connection
     
     private final Map<String, ForwardedChannelOpener> openers = new ConcurrentHashMap<String, ForwardedChannelOpener>();
     
-    private final Queue<Future<Buffer, ConnectionException>> globalReqFutures = new LinkedList<Future<Buffer, ConnectionException>>();
+    private final Queue<Future<SSHPacket, ConnectionException>> globalReqFutures = new LinkedList<Future<SSHPacket, ConnectionException>>();
     
     private int windowSize = 2048 * 1024;
     private int maxPacketSize = 32 * 1024;
@@ -99,7 +100,7 @@ public class ConnectionProtocol extends AbstractService implements Connection
         openers.remove(opener.getChannelType());
     }
     
-    private Channel getChannel(Buffer buffer) throws ConnectionException
+    private Channel getChannel(SSHPacket buffer) throws ConnectionException
     {
         int recipient = buffer.readInt();
         Channel channel = get(recipient);
@@ -114,7 +115,7 @@ public class ConnectionProtocol extends AbstractService implements Connection
     }
     
     @Override
-    public void handle(Message msg, Buffer buf) throws SSHException
+    public void handle(Message msg, SSHPacket buf) throws SSHException
     {
         if (msg.in(91, 100))
             getChannel(buf).handle(msg, buf);
@@ -183,28 +184,28 @@ public class ConnectionProtocol extends AbstractService implements Connection
     }
     
     // synchronized for mutex with gotResponse()
-    public synchronized Future<Buffer, ConnectionException> sendGlobalRequest(String name, boolean wantReply,
-            Buffer specifics) throws TransportException
+    public synchronized Future<SSHPacket, ConnectionException> sendGlobalRequest(String name, boolean wantReply,
+            PlainBuffer specifics) throws TransportException
     {
         log.info("Making global request for `{}`", name);
-        trans.writePacket(new Buffer(Message.GLOBAL_REQUEST) //
+        trans.writePacket(new SSHPacket(Message.GLOBAL_REQUEST) //
                 .putString(name) //
                 .putBoolean(wantReply) //
                 .putBuffer(specifics)); //
         
-        Future<Buffer, ConnectionException> future = null;
+        Future<SSHPacket, ConnectionException> future = null;
         if (wantReply)
         {
-            future = new Future<Buffer, ConnectionException>("global req for " + name, ConnectionException.chainer);
+            future = new Future<SSHPacket, ConnectionException>("global req for " + name, ConnectionException.chainer);
             globalReqFutures.add(future);
         }
         return future;
     }
     
     // synchronized for mutex with sendGlobalReq()
-    private synchronized void gotGlobalReqResponse(Buffer response) throws ConnectionException
+    private synchronized void gotGlobalReqResponse(SSHPacket response) throws ConnectionException
     {
-        Future<Buffer, ConnectionException> gr = globalReqFutures.poll();
+        Future<SSHPacket, ConnectionException> gr = globalReqFutures.poll();
         if (gr == null)
             throw new ConnectionException(DisconnectReason.PROTOCOL_ERROR,
                     "Got a global request response when none was requested");
@@ -214,7 +215,7 @@ public class ConnectionProtocol extends AbstractService implements Connection
             gr.set(response);
     }
     
-    private void gotChannelOpen(Buffer buf) throws ConnectionException, TransportException
+    private void gotChannelOpen(SSHPacket buf) throws ConnectionException, TransportException
     {
         String type = buf.readString();
         log.debug("Received CHANNEL_OPEN for `{}` channel", type);
@@ -229,7 +230,7 @@ public class ConnectionProtocol extends AbstractService implements Connection
     
     public void sendOpenFailure(int recipient, Reason reason, String message) throws TransportException
     {
-        trans.writePacket(new Buffer(Message.CHANNEL_OPEN_FAILURE) //
+        trans.writePacket(new SSHPacket(Message.CHANNEL_OPEN_FAILURE) //
                 .putInt(recipient) //
                 .putInt(reason.getCode()) //
                 .putString(message));

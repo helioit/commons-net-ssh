@@ -18,7 +18,6 @@
  */
 package org.apache.commons.net.ssh;
 
-import org.apache.commons.net.ssh.util.Buffer;
 import org.apache.commons.net.ssh.util.Constants.Message;
 
 /**
@@ -34,9 +33,9 @@ public interface PacketHandler
      * @param msg
      *            the SSH {@link Message message identifier}
      * @param buf
-     *            {@link Buffer} containing rest of the request
+     *            {@link SSHPacket} containing rest of the request
      * @throws SSHException
      *             if there is a non-recoverable error
      */
-    void handle(Message msg, Buffer buf) throws SSHException;
+    void handle(Message msg, SSHPacket buf) throws SSHException;
 }

@@ -23,7 +23,7 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketAddress;
 
-import org.apache.commons.net.ssh.util.Buffer;
+import org.apache.commons.net.ssh.SSHPacket;
 import org.apache.commons.net.ssh.util.Pipe;
 import org.apache.commons.net.ssh.util.Pipe.ErrorCallback;
 import org.slf4j.Logger;
@@ -64,7 +64,7 @@ public class LocalPortForwarder
         }
         
         @Override
-        protected Buffer buildOpenReq()
+        protected SSHPacket buildOpenReq()
         {
             return super.buildOpenReq() //
                     .putString(host) //

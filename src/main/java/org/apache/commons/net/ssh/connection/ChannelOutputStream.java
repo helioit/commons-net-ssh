@@ -23,7 +23,7 @@ import java.io.OutputStream;
 
 import org.apache.commons.net.ssh.ErrorNotifiable;
 import org.apache.commons.net.ssh.SSHException;
-import org.apache.commons.net.ssh.util.Buffer;
+import org.apache.commons.net.ssh.SSHPacket;
 import org.apache.commons.net.ssh.util.Constants.Message;
 
 /**
@@ -35,7 +35,7 @@ public class ChannelOutputStream extends OutputStream implements ErrorNotifiable
     
     private final Channel chan;
     private final RemoteWindow win;
-    private final Buffer buffer = new Buffer();
+    private final SSHPacket buffer = new SSHPacket();
     private final byte[] b = new byte[1];
     private int bufferLength;
     private boolean closed;
@@ -93,12 +93,6 @@ public class ChannelOutputStream extends OutputStream implements ErrorNotifiable
     }
     
     @Override
-    public String toString()
-    {
-        return "< ChannelOutputStream for Channel #" + chan.getID() + " >";
-    }
-    
-    @Override
     public synchronized void write(byte[] data, int off, int len) throws IOException
     {
         checkClose();
@@ -150,6 +144,12 @@ public class ChannelOutputStream extends OutputStream implements ErrorNotifiable
         buffer.putInt(chan.getRecipient());
         buffer.putInt(bufferLength);
         buffer.wpos(origPos);
+    }
+    
+    @Override
+    public String toString()
+    {
+        return "< ChannelOutputStream for Channel #" + chan.getID() + " >";
     }
     
 }

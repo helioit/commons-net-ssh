@@ -1,21 +1,3 @@
-/*
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- *
- *   http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- */
 package org.apache.commons.net.ssh.util;
 
 import java.io.UnsupportedEncodingException;
@@ -29,17 +11,31 @@ import java.security.spec.DSAPublicKeySpec;
 import java.security.spec.RSAPublicKeySpec;
 import java.util.Arrays;
 
+import org.apache.commons.net.ssh.SSHPacket;
 import org.apache.commons.net.ssh.SSHRuntimeException;
 import org.apache.commons.net.ssh.util.Constants.KeyType;
-import org.apache.commons.net.ssh.util.Constants.Message;
 
-/**
- * Provides support for reading and writing SSH binary data types.
- * 
- * Has convenient mappings from Java to SSH primitives.
- */
-public class Buffer
+public class Buffer<T extends Buffer<T>>
 {
+    
+    public static class PlainBuffer extends Buffer<PlainBuffer>
+    {
+        
+        public PlainBuffer()
+        {
+            super();
+        }
+        
+        public PlainBuffer(byte[] b)
+        {
+            super(b);
+        }
+        
+        public PlainBuffer(int size)
+        {
+            super(size);
+        }
+    }
     
     public static class BufferException extends SSHRuntimeException
     {
@@ -54,7 +50,7 @@ public class Buffer
      */
     public static final int DEFAULT_SIZE = 256;
     
-    private static int getNextPowerOf2(int i)
+    protected static int getNextPowerOf2(int i)
     {
         int j = 1;
         while (j < i)
@@ -62,10 +58,9 @@ public class Buffer
         return j;
     }
     
-    private byte[] data;
-    
-    private int rpos;
-    private int wpos;
+    protected byte[] data;
+    protected int rpos;
+    protected int wpos;
     
     /**
      * @see {@link #DEFAULT_SIZE}
@@ -75,7 +70,7 @@ public class Buffer
         this(DEFAULT_SIZE);
     }
     
-    public Buffer(Buffer from)
+    public Buffer(Buffer<T> from)
     {
         data = new byte[(wpos = from.wpos - from.rpos)];
         System.arraycopy(from.data, from.rpos, data, 0, wpos);
@@ -109,19 +104,6 @@ public class Buffer
         this(new byte[getNextPowerOf2(size)], false);
     }
     
-    /**
-     * Constructs new buffer for the specified SSH packet and reserves the needed space (5 bytes) for the packet header.
-     * 
-     * @param cmd
-     *            the SSH command
-     */
-    public Buffer(Message msg)
-    {
-        this();
-        rpos = wpos = 5;
-        data[wpos++] = msg.toByte();
-    }
-    
     public byte[] array()
     {
         return data;
@@ -141,8 +123,46 @@ public class Buffer
         wpos = 0;
     }
     
+    public int rpos()
+    {
+        return rpos;
+    }
+    
+    public void rpos(int rpos)
+    {
+        this.rpos = rpos;
+    }
+    
+    public int wpos()
+    {
+        return wpos;
+    }
+    
+    public void wpos(int wpos)
+    {
+        ensureCapacity(wpos - this.wpos);
+        this.wpos = wpos;
+    }
+    
+    protected void ensureAvailable(int a)
+    {
+        if (available() < a)
+            throw new BufferException("Underflow");
+    }
+    
+    public void ensureCapacity(int capacity)
+    {
+        if (data.length - wpos < capacity)
+        {
+            int cw = wpos + capacity;
+            byte[] tmp = new byte[getNextPowerOf2(cw)];
+            System.arraycopy(data, 0, tmp, 0, data.length);
+            data = tmp;
+        }
+    }
+    
     /**
-     * Compact this {@link Buffer}
+     * Compact this {@link SSHPacket}
      */
     public void compact()
     {
@@ -151,6 +171,18 @@ public class Buffer
             System.arraycopy(data, rpos, data, 0, wpos - rpos);
         wpos -= rpos;
         rpos = 0;
+    }
+    
+    public byte[] getCompactData()
+    {
+        int len = available();
+        if (len > 0)
+        {
+            byte[] b = new byte[len];
+            System.arraycopy(data, rpos, b, 0, len);
+            return b;
+        } else
+            return new byte[0];
     }
     
     /**
@@ -164,6 +196,18 @@ public class Buffer
     }
     
     /**
+     * Puts an SSH boolean value
+     * 
+     * @param b
+     *            the value
+     * @return this
+     */
+    public T putBoolean(boolean b)
+    {
+        return putByte(b ? (byte) 1 : (byte) 0);
+    }
+    
+    /**
      * Read a byte from the buffer
      * 
      * @return the byte read
@@ -172,6 +216,20 @@ public class Buffer
     {
         ensureAvailable(1);
         return data[rpos++];
+    }
+    
+    /**
+     * Writes a single byte into this buffer
+     * 
+     * @param b
+     * @return this
+     */
+    @SuppressWarnings("unchecked")
+    public T putByte(byte b)
+    {
+        ensureCapacity(1);
+        data[wpos++] = b;
+        return (T) this;
     }
     
     /**
@@ -189,16 +247,78 @@ public class Buffer
         return b;
     }
     
-    public byte[] getCompactData()
+    /**
+     * Writes Java byte-array as an SSH byte-array
+     * 
+     * @param b
+     *            Java byte-array
+     * @return this
+     */
+    public T putBytes(byte[] b)
     {
-        int len = available();
-        if (len > 0)
+        return putBytes(b, 0, b.length);
+    }
+    
+    /**
+     * Writes Java byte-array as an SSH byte-array
+     * 
+     * @param b
+     *            Java byte-array
+     * @param off
+     *            offset
+     * @param len
+     *            length
+     * @return this
+     */
+    public T putBytes(byte[] b, int off, int len)
+    {
+        return putInt(len - off).putRawBytes(b, off, len);
+    }
+    
+    public void readRawBytes(byte[] buf)
+    {
+        readRawBytes(buf, 0, buf.length);
+    }
+    
+    public void readRawBytes(byte[] buf, int off, int len)
+    {
+        ensureAvailable(len);
+        System.arraycopy(data, rpos, buf, off, len);
+        rpos += len;
+    }
+    
+    public T putRawBytes(byte[] d)
+    {
+        return putRawBytes(d, 0, d.length);
+    }
+    
+    @SuppressWarnings("unchecked")
+    public T putRawBytes(byte[] d, int off, int len)
+    {
+        ensureCapacity(len);
+        System.arraycopy(d, off, data, wpos, len);
+        wpos += len;
+        return (T) this;
+    }
+    
+    /**
+     * Copies the contents of provided buffer into this buffer
+     * 
+     * @param buffer
+     *            the {@code Buffer} to copy
+     * @return this
+     */
+    @SuppressWarnings("unchecked")
+    public T putBuffer(Buffer<? extends Buffer<?>> buffer)
+    {
+        if (buffer != null)
         {
-            byte[] b = new byte[len];
-            System.arraycopy(data, rpos, b, 0, len);
-            return b;
-        } else
-            return new byte[0];
+            int r = buffer.available();
+            ensureCapacity(r);
+            System.arraycopy(buffer.data, buffer.rpos, data, wpos, r);
+            wpos += r;
+        }
+        return (T) this;
     }
     
     public int readInt()
@@ -217,17 +337,22 @@ public class Buffer
     }
     
     /**
-     * Reads an SSH byte and returns it as {@link Constants.Message}
+     * Writes a uint32 integer
      * 
-     * @return the message identifier
+     * @param uint32
+     * @return this
      */
-    public Message readMessageID()
+    @SuppressWarnings("unchecked")
+    public T putInt(long uint32)
     {
-        byte b = readByte();
-        Message cmd = Message.fromByte(b);
-        if (cmd == null)
-            throw new BufferException("Unknown command code: " + b);
-        return cmd;
+        ensureCapacity(4);
+        if (uint32 < 0 || uint32 > 0xffffffffL)
+            throw new BufferException("Invalid value: " + uint32);
+        data[wpos++] = (byte) (uint32 >> 24);
+        data[wpos++] = (byte) (uint32 >> 16);
+        data[wpos++] = (byte) (uint32 >> 8);
+        data[wpos++] = (byte) uint32;
+        return (T) this;
     }
     
     /**
@@ -241,13 +366,141 @@ public class Buffer
     }
     
     /**
+     * Writes an SSH multiple-precision integer from a {@code BigInteger}
      * 
-     * 
-     * @return
+     * @param bi
+     *            {@code BigInteger} to write
+     * @return this
      */
+    public T putMPInt(BigInteger bi)
+    {
+        return putMPInt(bi.toByteArray());
+    }
+    
+    /**
+     * Writes an SSH multiple-precision integer from a Java byte-array
+     * 
+     * @param foo
+     *            byte-array
+     * @return this
+     */
+    public T putMPInt(byte[] foo)
+    {
+        int i = foo.length;
+        if ((foo[0] & 0x80) != 0)
+        {
+            i++;
+            putInt(i);
+            putByte((byte) 0);
+        } else
+            putInt(i);
+        return putRawBytes(foo);
+    }
+    
     public byte[] readMPIntAsBytes()
     {
         return readBytes();
+    }
+    
+    public long readUINT64()
+    {
+        long uint64 = (readLong() << 32) + (readLong() & 0xffffffffL);
+        if (uint64 < 0)
+            throw new BufferException("Cannot handle values > Long.MAX_VALUE");
+        return uint64;
+    }
+    
+    @SuppressWarnings("unchecked")
+    public T putUINT64(long uint64)
+    {
+        if (uint64 < 0)
+            throw new BufferException("Invalid value: " + uint64);
+        data[wpos++] = (byte) (uint64 >> 56);
+        data[wpos++] = (byte) (uint64 >> 48);
+        data[wpos++] = (byte) (uint64 >> 40);
+        data[wpos++] = (byte) (uint64 >> 32);
+        data[wpos++] = (byte) (uint64 >> 24);
+        data[wpos++] = (byte) (uint64 >> 16);
+        data[wpos++] = (byte) (uint64 >> 8);
+        data[wpos++] = (byte) uint64;
+        return (T) this;
+    }
+    
+    /**
+     * Reads an SSH string
+     * 
+     * @return the string as a Java {@code String}
+     */
+    public String readString()
+    {
+        int len = readInt();
+        if (len < 0 || len > 32768)
+            throw new BufferException("Bad item length: " + len);
+        ensureAvailable(len);
+        String s = null;
+        try
+        {
+            s = new String(data, rpos, len, "UTF-8");
+        } catch (UnsupportedEncodingException e)
+        {
+            throw new SSHRuntimeException(e);
+        }
+        rpos += len;
+        return s;
+    }
+    
+    /**
+     * Reads an SSH string
+     * 
+     * @return the string as a byte-array
+     */
+    public byte[] readStringAsBytes()
+    {
+        return readBytes();
+    }
+    
+    public T putString(byte[] str)
+    {
+        return putBytes(str);
+    }
+    
+    public T putString(byte[] str, int offset, int len)
+    {
+        return putBytes(str, offset, len);
+    }
+    
+    public T putString(String string)
+    {
+        try
+        {
+            return putString(string.getBytes("UTF-8"));
+        } catch (UnsupportedEncodingException e)
+        {
+            throw new SSHRuntimeException(e);
+        }
+    }
+    
+    /**
+     * Writes a char-array as an SSH string and then blanks it out.
+     * 
+     * This is useful when a plaintext password needs to be sent. If {@code passwd} is {@code null}, an empty string is
+     * written.
+     * 
+     * @param passwd
+     *            (null-ok) the password as a character array
+     * @return this
+     */
+    @SuppressWarnings("unchecked")
+    public T putPassword(char[] passwd)
+    {
+        if (passwd == null)
+            return putString("");
+        putInt(passwd.length);
+        ensureCapacity(passwd.length);
+        for (char c : passwd)
+            data[wpos++] = (byte) c;
+        Arrays.fill(passwd, ' ');
+        return (T) this;
     }
     
     public PublicKey readPublicKey()
@@ -285,243 +538,8 @@ public class Buffer
         return key;
     }
     
-    public Buffer readRawBytes(byte[] buf)
-    {
-        return readRawBytes(buf, 0, buf.length);
-    }
-    
-    public Buffer readRawBytes(byte[] buf, int off, int len)
-    {
-        ensureAvailable(len);
-        System.arraycopy(data, rpos, buf, off, len);
-        rpos += len;
-        return this;
-    }
-    
-    /**
-     * Reads an SSH string
-     * 
-     * @return the string as a Java {@code String}
-     */
-    public String readString()
-    {
-        int len = readInt();
-        if (len < 0 || len > 32768)
-            throw new BufferException("Bad item length: " + len);
-        ensureAvailable(len);
-        String s = null;
-        try
-        {
-            s = new String(data, rpos, len, "UTF-8");
-        } catch (UnsupportedEncodingException e)
-        {
-            throw new SSHRuntimeException(e);
-        }
-        rpos += len;
-        return s;
-    }
-    
-    /**
-     * Reads an SSH string
-     * 
-     * @return the string as a byte-array
-     */
-    public byte[] readStringAsBytes()
-    {
-        return readBytes();
-    }
-    
-    /**
-     * Gives a readable snapshot of the buffer in hex. This is useful for debugging.
-     * 
-     * @return snapshot of the buffer as a hex string with each octet delimited by a space
-     */
-    public String printHex()
-    {
-        return BufferUtils.printHex(array(), rpos(), available());
-    }
-    
-    /**
-     * Puts an SSH boolean value
-     * 
-     * @param b
-     *            the value
-     * @return this
-     */
-    public Buffer putBoolean(boolean b)
-    {
-        return putByte(b ? (byte) 1 : (byte) 0);
-    }
-    
-    /**
-     * Copies the contents of provided buffer into this buffer
-     * 
-     * @param buffer
-     *            the {@code Buffer} to copy
-     * @return this
-     */
-    public Buffer putBuffer(Buffer buffer)
-    {
-        if (buffer != null)
-        {
-            int r = buffer.available();
-            ensureCapacity(r);
-            System.arraycopy(buffer.data, buffer.rpos, data, wpos, r);
-            wpos += r;
-        }
-        return this;
-    }
-    
-    /**
-     * Writes a single byte into this buffer
-     * 
-     * @param b
-     * @return this
-     */
-    public Buffer putByte(byte b)
-    {
-        ensureCapacity(1);
-        data[wpos++] = b;
-        return this;
-    }
-    
-    /**
-     * Writes Java byte-array as an SSH byte-array
-     * 
-     * @param b
-     *            Java byte-array
-     * @return this
-     */
-    public Buffer putBytes(byte[] b)
-    {
-        return putBytes(b, 0, b.length);
-    }
-    
-    /**
-     * Writes Java byte-array as an SSH byte-array
-     * 
-     * @param b
-     *            Java byte-array
-     * @param off
-     *            offset
-     * @param len
-     *            length
-     * @return this
-     */
-    public Buffer putBytes(byte[] b, int off, int len)
-    {
-        putInt(len - off);
-        return putRawBytes(b, off, len);
-    }
-    
-    /**
-     * Writes a uint32 integer
-     * 
-     * @param uint32
-     * @return this
-     */
-    public Buffer putInt(long uint32)
-    {
-        ensureCapacity(4);
-        if (uint32 < 0 || uint32 > 0xffffffffL)
-            throw new BufferException("Invalid value: " + uint32);
-        data[wpos++] = (byte) (uint32 >> 24);
-        data[wpos++] = (byte) (uint32 >> 16);
-        data[wpos++] = (byte) (uint32 >> 8);
-        data[wpos++] = (byte) uint32;
-        return this;
-    }
-    
-    public Buffer putUINT64(long uint64)
-    {
-        if (uint64 < 0)
-            throw new BufferException("Invalid value: " + uint64);
-        data[wpos++] = (byte) (uint64 >> 56);
-        data[wpos++] = (byte) (uint64 >> 48);
-        data[wpos++] = (byte) (uint64 >> 40);
-        data[wpos++] = (byte) (uint64 >> 32);
-        data[wpos++] = (byte) (uint64 >> 24);
-        data[wpos++] = (byte) (uint64 >> 16);
-        data[wpos++] = (byte) (uint64 >> 8);
-        data[wpos++] = (byte) uint64;
-        return this;
-    }
-    
-    public long readUINT64()
-    {
-        long uint64 = (readLong() << 32) | readLong();
-        if (uint64 < 0)
-            throw new BufferException("Cannot handle values > Long.MAX_VALUE");
-        return uint64;
-    }
-    
-    /**
-     * Writes a byte indicating the SSH message identifier
-     * 
-     * @param msg
-     *            the identifier as a {@link Constants.Message} type
-     * @return this
-     */
-    public Buffer putMessageID(Message msg)
-    {
-        return putByte(msg.toByte());
-    }
-    
-    /**
-     * Writes an SSH multiple-precision integer from a {@code BigInteger}
-     * 
-     * @param bi
-     *            {@code BigInteger} to write
-     * @return this
-     */
-    public Buffer putMPInt(BigInteger bi)
-    {
-        return putMPInt(bi.toByteArray());
-    }
-    
-    /**
-     * Writes an SSH multiple-precision integer from a Java byte-array
-     * 
-     * @param foo
-     *            byte-array
-     * @return this
-     */
-    public Buffer putMPInt(byte[] foo)
-    {
-        int i = foo.length;
-        if ((foo[0] & 0x80) != 0)
-        {
-            i++;
-            putInt(i);
-            putByte((byte) 0);
-        } else
-            putInt(i);
-        return putRawBytes(foo);
-    }
-    
-    /**
-     * Writes a char-array as an SSH string and then blanks it out.
-     * 
-     * This is useful when a plaintext password needs to be sent. If {@code passwd} is {@code null}, an empty string is
-     * written.
-     * 
-     * @param passwd
-     *            (null-ok) the password as a character array
-     * @return this
-     */
-    public Buffer putPassword(char[] passwd)
-    {
-        if (passwd == null)
-            return putString("");
-        putInt(passwd.length);
-        ensureCapacity(passwd.length);
-        for (char c : passwd)
-            data[wpos++] = (byte) c;
-        Arrays.fill(passwd, ' ');
-        return this;
-    }
-    
-    public Buffer putPublicKey(PublicKey key)
+    @SuppressWarnings("unchecked")
+    public T putPublicKey(PublicKey key)
     {
         KeyType type = KeyType.fromKey(key);
         switch (type)
@@ -541,93 +559,31 @@ public class Buffer
         default:
             assert false;
         }
-        return this;
+        return (T) this;
     }
     
-    public Buffer putRawBytes(byte[] d)
+    public T putSignature(String sigFormat, byte[] sigData)
     {
-        return putRawBytes(d, 0, d.length);
-    }
-    
-    public Buffer putRawBytes(byte[] d, int off, int len)
-    {
-        ensureCapacity(len - off);
-        System.arraycopy(d, off, data, wpos, len);
-        wpos += len;
-        return this;
-    }
-    
-    public Buffer putSignature(String sigFormat, byte[] sigData)
-    {
-        return putString(new Buffer() // signature blob as string
+        return putString(new Buffer<T>() // signature blob as string
                 .putString(sigFormat) // sig format identifier
                 .putBytes(sigData) // sig as byte array
                 .getCompactData());
     }
     
-    public Buffer putString(byte[] str)
+    /**
+     * Gives a readable snapshot of the buffer in hex. This is useful for debugging.
+     * 
+     * @return snapshot of the buffer as a hex string with each octet delimited by a space
+     */
+    public String printHex()
     {
-        return putBytes(str);
-    }
-    
-    public Buffer putString(byte[] str, int offset, int len)
-    {
-        return putBytes(str, offset, len);
-    }
-    
-    public Buffer putString(String string)
-    {
-        try
-        {
-            return putString(string.getBytes("UTF-8"));
-        } catch (UnsupportedEncodingException e)
-        {
-            throw new SSHRuntimeException(e);
-        }
-    }
-    
-    public int rpos()
-    {
-        return rpos;
-    }
-    
-    public void rpos(int rpos)
-    {
-        this.rpos = rpos;
+        return BufferUtils.printHex(array(), rpos(), available());
     }
     
     @Override
     public String toString()
     {
         return "Buffer [rpos=" + rpos + ", wpos=" + wpos + ", size=" + data.length + "]";
-    }
-    
-    public int wpos()
-    {
-        return wpos;
-    }
-    
-    public void wpos(int wpos)
-    {
-        ensureCapacity(wpos - this.wpos);
-        this.wpos = wpos;
-    }
-    
-    private void ensureAvailable(int a)
-    {
-        if (available() < a)
-            throw new BufferException("Underflow");
-    }
-    
-    public void ensureCapacity(int capacity)
-    {
-        if (data.length - wpos < capacity)
-        {
-            int cw = wpos + capacity;
-            byte[] tmp = new byte[getNextPowerOf2(cw)];
-            System.arraycopy(data, 0, tmp, 0, data.length);
-            data = tmp;
-        }
     }
     
 }

@@ -27,14 +27,14 @@ import org.slf4j.LoggerFactory;
 abstract class RemoteResource implements Closeable
 {
     
-    protected final SFTP sftp;
-    protected final String path;
-    protected final String handle;
-    
     /** Logger */
     protected final Logger log = LoggerFactory.getLogger(getClass());
     
-    protected RemoteResource(SFTP sftp, String path, String handle)
+    protected final SFTPEngine sftp;
+    protected final String path;
+    protected final String handle;
+    
+    protected RemoteResource(SFTPEngine sftp, String path, String handle)
     {
         this.sftp = sftp;
         this.path = path;
@@ -48,17 +48,13 @@ abstract class RemoteResource implements Closeable
     
     protected Request newRequest(PacketType type)
     {
-        Request req = sftp.newRequest(type);
-        req.putString(handle);
-        return req;
+        return sftp.newRequest(type).putString(handle);
     }
     
     public void close() throws IOException
     {
-        Request req = newRequest(PacketType.CLOSE);
-        log.info("Closing {}", this);
-        sftp.send(req);
-        req.getFuture().get(sftp.timeout).ensureStatusOK();
+        log.info("Closing `{}`", this);
+        sftp.make(newRequest(PacketType.CLOSE)).ensureStatusOK();
     }
     
     @Override

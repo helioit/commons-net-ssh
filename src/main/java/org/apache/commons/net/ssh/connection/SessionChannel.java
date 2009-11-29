@@ -23,9 +23,10 @@ import java.io.InputStream;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.apache.commons.net.ssh.SSHPacket;
 import org.apache.commons.net.ssh.transport.TransportException;
-import org.apache.commons.net.ssh.util.Buffer;
 import org.apache.commons.net.ssh.util.IOUtils;
+import org.apache.commons.net.ssh.util.Buffer.PlainBuffer;
 
 /**
  * {@link Session} implementation.
@@ -71,7 +72,7 @@ public class SessionChannel extends AbstractDirectChannel implements Session, Se
     {
         sendChannelRequest("pty-req", //
                 true, // 
-                new Buffer().putString(term) //
+                new PlainBuffer().putString(term) //
                         .putInt(cols) //
                         .putInt(rows) //
                         .putInt(width) //
@@ -89,7 +90,7 @@ public class SessionChannel extends AbstractDirectChannel implements Session, Se
     {
         sendChannelRequest("pty-req", //
                 false, //
-                new Buffer().putInt(cols) //
+                new PlainBuffer().putInt(cols) //
                         .putInt(rows) //
                         .putInt(width) //
                         .putInt(height));
@@ -98,7 +99,7 @@ public class SessionChannel extends AbstractDirectChannel implements Session, Se
     public Command exec(String command) throws ConnectionException, TransportException
     {
         log.info("Will request to exec `{}`", command);
-        sendChannelRequest("exec", true, new Buffer().putString(command)).await(conn.getTimeout());
+        sendChannelRequest("exec", true, new PlainBuffer().putString(command)).await(conn.getTimeout());
         return this;
     }
     
@@ -142,7 +143,7 @@ public class SessionChannel extends AbstractDirectChannel implements Session, Se
     }
     
     @Override
-    public void handleRequest(String req, Buffer buf) throws ConnectionException, TransportException
+    public void handleRequest(String req, SSHPacket buf) throws ConnectionException, TransportException
     {
         if ("xon-xoff".equals(req))
             canDoFlowControl = buf.readBoolean();
@@ -162,7 +163,7 @@ public class SessionChannel extends AbstractDirectChannel implements Session, Se
             TransportException
     {
         sendChannelRequest("x11-req", true, //
-                new Buffer() //
+                new PlainBuffer() //
                         .putBoolean(false).putString(authProto) //
                         .putString(authCookie) //
                         .putInt(screen)).await(conn.getTimeout());
@@ -170,12 +171,12 @@ public class SessionChannel extends AbstractDirectChannel implements Session, Se
     
     public void setEnvVar(String name, String value) throws ConnectionException, TransportException
     {
-        sendChannelRequest("env", true, new Buffer().putString(name).putString(value)).await(conn.getTimeout());
+        sendChannelRequest("env", true, new PlainBuffer().putString(name).putString(value)).await(conn.getTimeout());
     }
     
     public void signal(Signal sig) throws TransportException
     {
-        sendChannelRequest("signal", false, new Buffer().putString(sig.toString()));
+        sendChannelRequest("signal", false, new PlainBuffer().putString(sig.toString()));
     }
     
     public Shell startShell() throws ConnectionException, TransportException
@@ -187,7 +188,7 @@ public class SessionChannel extends AbstractDirectChannel implements Session, Se
     public Subsystem startSubsystem(String name) throws ConnectionException, TransportException
     {
         log.info("Will request `{}` subsystem", name);
-        sendChannelRequest("subsystem", true, new Buffer().putString(name)).await(conn.getTimeout());
+        sendChannelRequest("subsystem", true, new PlainBuffer().putString(name)).await(conn.getTimeout());
         return this;
     }
     
@@ -211,7 +212,7 @@ public class SessionChannel extends AbstractDirectChannel implements Session, Se
     }
     
     @Override
-    protected void gotExtendedData(int dataTypeCode, Buffer buf) throws ConnectionException, TransportException
+    protected void gotExtendedData(int dataTypeCode, SSHPacket buf) throws ConnectionException, TransportException
     {
         if (dataTypeCode == 1)
             receiveInto(buf, err);

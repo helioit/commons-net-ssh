@@ -31,7 +31,7 @@ public class SFTPException extends SSHException
         
         public SFTPException chain(Throwable t)
         {
-            if (t instanceof SSHException)
+            if (t instanceof SFTPException)
                 return (SFTPException) t;
             else
                 return new SFTPException(t);

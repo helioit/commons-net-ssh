@@ -26,24 +26,35 @@ public class RemoteFileOutputStream extends OutputStream
     
     private final RemoteFile rf;
     
-    private long fileOffset;
-    
     private final byte[] b = new byte[1];
+    
+    private long fileOffset;
     
     public RemoteFileOutputStream(RemoteFile rf)
     {
         this.rf = rf;
     }
     
+    public RemoteFileOutputStream(RemoteFile rf, long fileOffset)
+    {
+        this(rf);
+        this.fileOffset = fileOffset;
+    }
+    
+    public void seek(long fileOffset)
+    {
+        this.fileOffset = fileOffset;
+    }
+    
     @Override
-    public synchronized void write(int w) throws IOException
+    public void write(int w) throws IOException
     {
         b[0] = (byte) w;
         write(b, 0, 1);
     }
     
     @Override
-    public synchronized void write(byte[] buf, int off, int len) throws IOException
+    public void write(byte[] buf, int off, int len) throws IOException
     {
         rf.write(fileOffset, buf, off, len);
         fileOffset += len;

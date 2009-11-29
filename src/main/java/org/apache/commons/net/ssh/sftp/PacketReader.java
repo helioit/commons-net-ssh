@@ -35,8 +35,7 @@ public class PacketReader extends Thread
     
     private final InputStream in;
     private final Map<Long, Future<Response, SFTPException>> futures = new ConcurrentHashMap<Long, Future<Response, SFTPException>>();
-    
-    final Packet packet = new Packet();
+    private final SFTPPacket<Response> packet = new SFTPPacket<Response>();
     private final byte[] lenBuf = new byte[4];
     
     public PacketReader(InputStream in)
@@ -57,22 +56,19 @@ public class PacketReader extends Thread
     
     private int getPacketLength() throws IOException
     {
-        
         readIntoBuffer(lenBuf, 0, lenBuf.length);
         
         return (int) (lenBuf[0] << 24 & 0xff000000L | lenBuf[1] << 16 & 0x00ff0000L | lenBuf[2] << 8 & 0x0000ff00L | lenBuf[3] & 0x000000ffL);
     }
     
-    public Packet readPacket() throws IOException
+    public SFTPPacket<Response> readPacket() throws IOException
     {
-        
         int len = getPacketLength();
         
         packet.rpos(0);
         packet.wpos(0);
         
         packet.ensureCapacity(len);
-        
         readIntoBuffer(packet.array(), 0, len);
         
         packet.wpos(len);
@@ -100,7 +96,7 @@ public class PacketReader extends Thread
     public void handle() throws SFTPException
     {
         Response resp = new Response(packet);
-        Future<Response, SFTPException> future = futures.get(resp.getRequestID());
+        Future<Response, SFTPException> future = futures.remove(resp.getRequestID());
         log.debug("Received {} packet", resp.getType());
         if (future == null)
             throw new SFTPException("Received [" + resp.readType() + "] response for request-id " + resp.getRequestID()

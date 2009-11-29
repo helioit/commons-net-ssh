@@ -482,7 +482,6 @@ public class SSHClient extends SocketClient implements SessionFactory
     {
         assert isConnected();
         trans.disconnect();
-        assert !trans.isRunning();
         super.disconnect();
         assert !isConnected();
     }

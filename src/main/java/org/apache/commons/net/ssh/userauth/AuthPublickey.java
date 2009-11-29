@@ -20,9 +20,9 @@ package org.apache.commons.net.ssh.userauth;
 
 import java.io.IOException;
 
+import org.apache.commons.net.ssh.SSHPacket;
 import org.apache.commons.net.ssh.keyprovider.KeyProvider;
 import org.apache.commons.net.ssh.transport.TransportException;
-import org.apache.commons.net.ssh.util.Buffer;
 import org.apache.commons.net.ssh.util.Constants.Message;
 
 /**
@@ -48,7 +48,7 @@ public class AuthPublickey extends KeyedAuthMethod
      * Internal use.
      */
     @Override
-    public void handle(Message cmd, Buffer buf) throws UserAuthException, TransportException
+    public void handle(Message cmd, SSHPacket buf) throws UserAuthException, TransportException
     {
         if (cmd == Message.USERAUTH_60)
             sendSignedReq();
@@ -61,10 +61,10 @@ public class AuthPublickey extends KeyedAuthMethod
      * 
      * @param signed
      *            whether the request packet will contain signature
-     * @return the {@link Buffer} containing the request packet
+     * @return the {@link SSHPacket} containing the request packet
      * @throws UserAuthException
      */
-    private Buffer buildReq(boolean signed) throws UserAuthException
+    private SSHPacket buildReq(boolean signed) throws UserAuthException
     {
         try
         {
@@ -92,7 +92,7 @@ public class AuthPublickey extends KeyedAuthMethod
      * Builds a feeler request (sans signature).
      */
     @Override
-    protected Buffer buildReq() throws UserAuthException
+    protected SSHPacket buildReq() throws UserAuthException
     {
         return buildReq(false);
     }

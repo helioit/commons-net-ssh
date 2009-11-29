@@ -27,26 +27,28 @@ import org.apache.commons.net.ssh.sftp.Response.StatusCode;
 public class RemoteDir extends RemoteResource
 {
     
-    RemoteDir(SFTP sftp, String path, String handle)
+    RemoteDir(SFTPEngine sftp, String path, String handle)
     {
         super(sftp, path, handle);
     }
     
-    public List<RemoteResourceInfo> scan() throws IOException
+    public boolean accepted(RemoteResourceInfo r, RemoteResourceFilter... filters) throws IOException
     {
-        return scan(null);
+        for (RemoteResourceFilter filter : filters)
+            if (!filter.accept(r))
+                return false;
+        return true;
     }
     
-    public List<RemoteResourceInfo> scan(RemoteResourceFilter filter) throws IOException
+    public List<RemoteResourceInfo> scan(RemoteResourceFilter... filters) throws IOException
     {
         List<RemoteResourceInfo> rri = new LinkedList<RemoteResourceInfo>();
         loop: for (;;)
         {
-            Request req = newRequest(PacketType.READDIR);
-            sftp.send(req);
-            Response res = req.getFuture().get(sftp.timeout);
+            Response res = sftp.make(newRequest(PacketType.READDIR));
             switch (res.getType())
             {
+            
             case NAME:
                 final int count = res.readInt();
                 for (int i = 0; i < count; i++)
@@ -55,13 +57,15 @@ public class RemoteDir extends RemoteResource
                     res.readString(); // long name - IGNORED - shdve never been in the protocol
                     final FileAttributes attrs = res.readFileAttributes();
                     RemoteResourceInfo inf = new RemoteResourceInfo(path, name, attrs);
-                    if (!(name.equals(".") || name.equals("..")) && (filter == null || filter.accept(inf)))
+                    if (!(name.equals(".") || name.equals("..")) && accepted(inf, filters))
                         rri.add(inf);
                 }
                 break loop;
+            
             case STATUS:
                 res.ensureStatus(StatusCode.EOF);
                 break loop;
+            
             default:
                 throw new SFTPException("Unexpected packet: " + res.getType());
             }

@@ -18,8 +18,8 @@
  */
 package org.apache.commons.net.ssh.userauth;
 
+import org.apache.commons.net.ssh.SSHPacket;
 import org.apache.commons.net.ssh.keyprovider.KeyProvider;
-import org.apache.commons.net.ssh.util.Buffer;
 
 /**
  * Implements the {@code hostbased} SSH authentication method.
@@ -44,9 +44,9 @@ public class AuthHostbased extends KeyedAuthMethod
     }
     
     @Override
-    protected Buffer buildReq() throws UserAuthException
+    protected SSHPacket buildReq() throws UserAuthException
     {
-        Buffer req = putPubKey(super.buildReq());
+        SSHPacket req = putPubKey(super.buildReq());
         req.putString(hostname == null ? params.getTransport().getRemoteHost() : hostname) //
                 .putString(hostuser);
         return putSig(req);

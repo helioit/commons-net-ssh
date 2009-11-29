@@ -18,11 +18,11 @@
  */
 package org.apache.commons.net.ssh.transport;
 
+import org.apache.commons.net.ssh.SSHPacket;
 import org.apache.commons.net.ssh.cipher.Cipher;
 import org.apache.commons.net.ssh.compression.Compression;
 import org.apache.commons.net.ssh.mac.MAC;
 import org.apache.commons.net.ssh.random.Random;
-import org.apache.commons.net.ssh.util.Buffer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -41,13 +41,13 @@ final class Encoder extends Converter
         this.prng = prng;
     }
     
-    private Buffer checkHeaderSpace(Buffer buffer)
+    private SSHPacket checkHeaderSpace(SSHPacket buffer)
     {
         if (buffer.rpos() < 5)
         {
             log.warn("Performance cost: when sending a packet, ensure that "
                     + "5 bytes are available in front of the buffer");
-            Buffer nb = new Buffer(buffer.available() + 5);
+            SSHPacket nb = new SSHPacket(buffer.available() + 5);
             nb.rpos(5);
             nb.wpos(5);
             nb.putBuffer(buffer);
@@ -56,14 +56,14 @@ final class Encoder extends Converter
         return buffer;
     }
     
-    private void compress(Buffer buffer) throws TransportException
+    private void compress(SSHPacket buffer) throws TransportException
     {
         // Compress the packet if needed
         if (compression != null && (authed || !compression.isDelayed()))
             compression.compress(buffer);
     }
     
-    private void putMAC(Buffer buffer, int startOfPacket, int endOfPadding)
+    private void putMAC(SSHPacket buffer, int startOfPacket, int endOfPadding)
     {
         if (mac != null)
         {
@@ -82,7 +82,7 @@ final class Encoder extends Converter
      * @return the sequence no. of encoded packet
      * @throws TransportException
      */
-    long encode(Buffer buffer) throws TransportException
+    long encode(SSHPacket buffer) throws TransportException
     {
         buffer = checkHeaderSpace(buffer);
         

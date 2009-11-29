@@ -26,10 +26,10 @@ import java.util.Set;
 
 import org.apache.commons.net.ssh.AbstractService;
 import org.apache.commons.net.ssh.SSHException;
+import org.apache.commons.net.ssh.SSHPacket;
 import org.apache.commons.net.ssh.Service;
 import org.apache.commons.net.ssh.transport.Transport;
 import org.apache.commons.net.ssh.transport.TransportException;
-import org.apache.commons.net.ssh.util.Buffer;
 import org.apache.commons.net.ssh.util.Event;
 import org.apache.commons.net.ssh.util.Constants.DisconnectReason;
 import org.apache.commons.net.ssh.util.Constants.Message;
@@ -153,7 +153,7 @@ public class UserAuthProtocol extends AbstractService implements UserAuth, AuthP
     }
     
     @Override
-    public void handle(Message msg, Buffer buf) throws SSHException
+    public void handle(Message msg, SSHPacket buf) throws SSHException
     {
         if (!msg.in(50, 80)) // ssh-userauth packets have message numbers between 50-80
             throw new TransportException(DisconnectReason.PROTOCOL_ERROR);
@@ -193,12 +193,12 @@ public class UserAuthProtocol extends AbstractService implements UserAuth, AuthP
         banner = null;
     }
     
-    private void gotBanner(Buffer buf)
+    private void gotBanner(SSHPacket buf)
     {
         banner = buf.readString();
     }
     
-    private void gotFailure(Buffer buf) throws UserAuthException, TransportException
+    private void gotFailure(SSHPacket buf) throws UserAuthException, TransportException
     {
         allowed.clear();
         allowed.addAll(Arrays.<String> asList(buf.readString().split(",")));
@@ -219,7 +219,7 @@ public class UserAuthProtocol extends AbstractService implements UserAuth, AuthP
         result.set(true);
     }
     
-    private void gotUnknown(Message msg, Buffer buf) throws SSHException
+    private void gotUnknown(Message msg, SSHPacket buf) throws SSHException
     {
         if (currentMethod == null || result == null)
         {

@@ -20,17 +20,23 @@ package org.apache.commons.net.ssh.sftp;
 
 import org.apache.commons.net.ssh.util.Buffer;
 
-public class Packet extends Buffer
+public class SFTPPacket<T extends SFTPPacket<T>> extends Buffer<T>
 {
     
-    public Packet()
+    public SFTPPacket()
     {
         super();
     }
     
-    public Packet(Packet pk)
+    public SFTPPacket(Buffer<T> buf)
     {
-        super(pk);
+        super(buf);
+    }
+    
+    public SFTPPacket(PacketType pt)
+    {
+        super();
+        putByte(pt.toByte());
     }
     
     public FileAttributes readFileAttributes()
@@ -38,19 +44,19 @@ public class Packet extends Buffer
         return new FileAttributes(this);
     }
     
-    public Packet putFileAttributes(FileAttributes fa)
-    {
-        return (Packet) putBuffer(fa.toBuffer());
-    }
-    
     public PacketType readType()
     {
         return PacketType.fromByte(readByte());
     }
     
-    public Packet putType(PacketType type)
+    public T putFileAttributes(FileAttributes fa)
     {
-        return (Packet) putByte(type.toByte());
+        return putRawBytes(fa.toBytes());
+    }
+    
+    public T putType(PacketType type)
+    {
+        return putByte(type.toByte());
     }
     
 }

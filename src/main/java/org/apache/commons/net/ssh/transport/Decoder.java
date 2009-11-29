@@ -20,10 +20,10 @@ package org.apache.commons.net.ssh.transport;
 
 import org.apache.commons.net.ssh.PacketHandler;
 import org.apache.commons.net.ssh.SSHException;
+import org.apache.commons.net.ssh.SSHPacket;
 import org.apache.commons.net.ssh.cipher.Cipher;
 import org.apache.commons.net.ssh.compression.Compression;
 import org.apache.commons.net.ssh.mac.MAC;
-import org.apache.commons.net.ssh.util.Buffer;
 import org.apache.commons.net.ssh.util.BufferUtils;
 import org.apache.commons.net.ssh.util.Constants.DisconnectReason;
 import org.slf4j.Logger;
@@ -42,9 +42,9 @@ final class Decoder extends Converter
     /** What we pass decoded packets to */
     private final PacketHandler packetHandler;
     /** Buffer where as-yet undecoded data lives */
-    private final Buffer inputBuffer = new Buffer();
+    private final SSHPacket inputBuffer = new SSHPacket();
     /** Used in case compression is active to store the uncompressed data */
-    private final Buffer uncompressBuffer = new Buffer();
+    private final SSHPacket uncompressBuffer = new SSHPacket();
     /** MAC result is stored here */
     private byte[] macResult;
     
@@ -52,8 +52,8 @@ final class Decoder extends Converter
     private int packetLength = -1;
     
     /**
-     * How many bytes do we need, before a call to decode() can succeed at decoding at least packet
-     * length, OR the whole packet?
+     * How many bytes do we need, before a call to decode() can succeed at decoding at least packet length, OR the whole
+     * packet?
      */
     private int needed = 8;
     
@@ -81,8 +81,8 @@ final class Decoder extends Converter
     }
     
     /**
-     * Returns advised number of bytes that should be made available in decoderBuffer before the
-     * method should be called again.
+     * Returns advised number of bytes that should be made available in decoderBuffer before the method should be called
+     * again.
      * 
      * @return number of bytes needed before further decoding possible
      */
@@ -123,7 +123,7 @@ final class Decoder extends Converter
                     inputBuffer.wpos(packetLength + 4 - inputBuffer.readByte()); // Exclude the
                     // padding & MAC
                     
-                    Buffer plain = decompressed();
+                    SSHPacket plain = decompressed();
                     
                     if (log.isTraceEnabled())
                         log.trace("Received packet #{}: {}", seq, plain.printHex());
@@ -143,7 +143,7 @@ final class Decoder extends Converter
         return need;
     }
     
-    private Buffer decompressed() throws TransportException
+    private SSHPacket decompressed() throws TransportException
     {
         if (compression != null && (authed || !compression.isDelayed()))
         {
@@ -175,13 +175,11 @@ final class Decoder extends Converter
     }
     
     /**
-     * Adds {@code len} bytes from {@code b} to the decoder buffer. When a packet has been
-     * successfully decoded, hooks in to {@link PacketHandler#handle} of the {@link PacketHandler}
-     * this decoder was initialized with.
+     * Adds {@code len} bytes from {@code b} to the decoder buffer. When a packet has been successfully decoded, hooks
+     * in to {@link PacketHandler#handle} of the {@link PacketHandler} this decoder was initialized with.
      * <p>
-     * Returns the number of bytes expected in the next call in order to decode the packet length,
-     * and if the packet length has already been decoded; to decode the payload. This number is
-     * accurate and should be taken to heart.
+     * Returns the number of bytes expected in the next call in order to decode the packet length, and if the packet
+     * length has already been decoded; to decode the payload. This number is accurate and should be taken to heart.
      */
     int received(byte[] b, int len) throws SSHException
     {

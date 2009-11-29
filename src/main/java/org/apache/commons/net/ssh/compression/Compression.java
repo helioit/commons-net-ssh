@@ -18,8 +18,8 @@
  */
 package org.apache.commons.net.ssh.compression;
 
+import org.apache.commons.net.ssh.SSHPacket;
 import org.apache.commons.net.ssh.transport.TransportException;
-import org.apache.commons.net.ssh.util.Buffer;
 
 /**
  * Interface used to compress the stream of data between the SSH server and clients.
@@ -41,7 +41,7 @@ public interface Compression
      * @param buffer
      *            the buffer containing the data to compress s
      */
-    void compress(Buffer buffer) throws TransportException;
+    void compress(SSHPacket buffer) throws TransportException;
     
     /**
      * Initialize this object to either compress or uncompress data. This method must be called prior to any calls to
@@ -69,6 +69,6 @@ public interface Compression
      * @param to
      *            the buffer receiving the uncompressed data
      */
-    void uncompress(Buffer from, Buffer to) throws TransportException;
+    void uncompress(SSHPacket from, SSHPacket to) throws TransportException;
     
 }

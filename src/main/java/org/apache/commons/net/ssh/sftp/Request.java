@@ -20,7 +20,7 @@ package org.apache.commons.net.ssh.sftp;
 
 import org.apache.commons.net.ssh.util.Future;
 
-public class Request extends Packet
+public class Request extends SFTPPacket<Request>
 {
     
     private final PacketType type;
@@ -50,6 +50,23 @@ public class Request extends Packet
     public Future<Response, SFTPException> getFuture()
     {
         return future;
+    }
+    
+    public Response getResponse(int timeout) throws SFTPException
+    {
+        return future.get(timeout);
+    }
+    
+    @Override
+    public Request putFileAttributes(FileAttributes fa)
+    {
+        return putRawBytes(fa.toBytes());
+    }
+    
+    @Override
+    public Request putType(PacketType type)
+    {
+        return putByte(type.toByte());
     }
     
     @Override

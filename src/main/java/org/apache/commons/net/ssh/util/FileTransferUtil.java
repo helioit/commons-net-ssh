@@ -9,9 +9,11 @@ public class FileTransferUtil
     public static File getTargetDirectory(File f, String dirname) throws IOException
     {
         if (f.exists())
-            if (f.isDirectory() && !f.getName().equals(dirname))
-                f = new File(f, dirname);
-            else
+            if (f.isDirectory())
+            {
+                if (!f.getName().equals(dirname))
+                    f = new File(f, dirname);
+            } else
                 throw new IOException(f + " - already exists as a file; directory required");
         
         if (!f.exists() && !f.mkdir())

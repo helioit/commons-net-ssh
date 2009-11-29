@@ -24,8 +24,8 @@ import java.io.IOException;
 import java.util.LinkedList;
 import java.util.List;
 
-import org.apache.commons.net.ssh.SessionFactory;
 import org.apache.commons.net.ssh.SSHClient;
+import org.apache.commons.net.ssh.SessionFactory;
 import org.apache.commons.net.ssh.connection.ConnectionException;
 import org.apache.commons.net.ssh.transport.TransportException;
 import org.apache.commons.net.ssh.util.FileTransferUtil;
@@ -34,7 +34,7 @@ import org.apache.commons.net.ssh.util.IOUtils;
 /**
  * Support for uploading files over a connected {@link SSHClient} link using SCP.
  */
-public class SCPDownloadClient extends SCP
+public class SCPDownloadClient extends SCPEngine
 {
     
     private final ModeSetter modeSetter;
@@ -201,7 +201,7 @@ public class SCPDownloadClient extends SCP
         while ((msg = readMessage(false)) != null);
     }
     
-    String[] tokenize(String msg, int numPartsExpected) throws IOException
+    private String[] tokenize(String msg, int numPartsExpected) throws IOException
     {
         String[] parts = msg.split(" ");
         if (parts.length != numPartsExpected)

@@ -20,13 +20,13 @@ package org.apache.commons.net.ssh.sftp;
 
 import java.io.IOException;
 
-class RemotePathUtil
+class PathUtil
 {
     
-    private final SFTP sftp;
+    private final SFTPEngine sftp;
     private String dotDir;
     
-    public RemotePathUtil(SFTP sftp)
+    public PathUtil(SFTPEngine sftp)
     {
         this.sftp = sftp;
     }
@@ -44,26 +44,26 @@ class RemotePathUtil
         if (path.isEmpty())
             return getComponents(canon("."));
         
-        final int ls = path.lastIndexOf("/");
+        final int lastSlash = path.lastIndexOf("/");
         
-        if (ls == -1)
+        if (lastSlash == -1)
             if (path.equals(".") || path.equals(".."))
                 return getComponents(canon(path));
             else
                 return new PathComponents(canon("."), path);
         
-        final String name = path.substring(ls + 1);
+        final String name = path.substring(lastSlash + 1);
         
         if (name.equals(".") || name.equals(".."))
             return getComponents(canon(path));
         else
         {
-            final String parent = path.substring(0, ls);
+            final String parent = path.substring(0, lastSlash);
             return new PathComponents(parent, name);
         }
     }
     
-    public static String adjustForParent(String parent, String path)
+    static String adjustForParent(String parent, String path)
     {
         return (path.startsWith("/")) ? path // Absolute path
                 : (parent + (parent.endsWith("/") ? "" : "/") + path); // Relative path

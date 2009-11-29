@@ -19,54 +19,58 @@
 package org.apache.commons.net.ssh.sftp;
 
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 
 import org.apache.commons.net.ssh.sftp.Response.StatusCode;
 
 public class RemoteFile extends RemoteResource
 {
     
-    public RemoteFile(SFTP sftp, String path, String handle)
+    public RemoteFile(SFTPEngine sftp, String path, String handle)
     {
         super(sftp, path, handle);
     }
     
-    public InputStream getInputStream()
+    public RemoteFileInputStream getInputStream()
     {
         return new RemoteFileInputStream(this);
     }
     
-    public OutputStream getOutputStream()
+    public RemoteFileOutputStream getOutputStream()
     {
         return new RemoteFileOutputStream(this);
     }
     
-    public FileAttributes getFileAttributes() throws IOException
+    public FileAttributes getAttributes() throws IOException
     {
-        Request req = newRequest(PacketType.FSTAT);
-        sftp.send(req);
-        Response res = req.getFuture().get(sftp.timeout);
-        res.ensurePacket(PacketType.ATTRS);
-        return res.readFileAttributes();
+        return sftp.make(newRequest(PacketType.FSTAT)) //
+                .ensurePacketTypeIs(PacketType.ATTRS) //
+                .readFileAttributes();
     }
     
-    public int read(long fileOffset, byte[] buf, int offset, int len) throws IOException
+    public long length() throws IOException
     {
-        Request req = newRequest(PacketType.READ);
-        req.putUINT64(fileOffset);
-        req.putInt(len);
-        sftp.send(req);
-        Response res = req.getFuture().get(sftp.timeout);
+        return getAttributes().getSize();
+    }
+    
+    public void setLength(long len) throws IOException
+    {
+        setAttributes(new FileAttributes.Builder().withSize(len).build());
+    }
+    
+    public int read(long fileOffset, byte[] to, int offset, int len) throws IOException
+    {
+        Response res = sftp.make(newRequest(PacketType.READ).putUINT64(fileOffset).putInt(len));
         switch (res.getType())
         {
         case DATA:
             int recvLen = res.readInt();
-            System.arraycopy(res.array(), res.rpos(), buf, offset, recvLen);
+            System.arraycopy(res.array(), res.rpos(), to, offset, recvLen);
             return recvLen;
+            
         case STATUS:
             res.ensureStatus(StatusCode.EOF);
             return -1;
+            
         default:
             throw new SFTPException("Unexpected packet: " + res.getType());
         }
@@ -74,21 +78,17 @@ public class RemoteFile extends RemoteResource
     
     public void write(long fileOffset, byte[] data, int off, int len) throws IOException
     {
-        Request req = newRequest(PacketType.WRITE);
-        req.putUINT64(fileOffset);
-        req.putInt(len - off);
-        req.putRawBytes(data, off, len);
-        // req.putString(data, off, len);
-        sftp.send(req);
-        req.getFuture().get(sftp.timeout).ensureStatusOK();
+        sftp.make( //
+                newRequest(PacketType.WRITE) //
+                        .putUINT64(fileOffset) //
+                        .putInt(len - off) //
+                        .putRawBytes(data, off, len) //
+                ).ensureStatusOK();
     }
     
     public void setAttributes(FileAttributes attrs) throws IOException
     {
-        Request req = newRequest(PacketType.FSETSTAT);
-        req.putFileAttributes(attrs);
-        sftp.send(req);
-        req.getFuture().get(sftp.timeout).ensureStatusOK();
+        sftp.make(newRequest(PacketType.FSETSTAT).putFileAttributes(attrs)).ensureStatusOK();
     }
     
     public int getOutgoingPacketOverhead()

@@ -25,7 +25,7 @@ import java.io.IOException;
 import java.security.PublicKey;
 
 import org.apache.commons.net.ssh.util.Base64;
-import org.apache.commons.net.ssh.util.Buffer;
+import org.apache.commons.net.ssh.util.Buffer.PlainBuffer;
 import org.apache.commons.net.ssh.util.Constants.KeyType;
 
 /**
@@ -74,7 +74,7 @@ public class OpenSSHKeyFile extends PKCS8KeyFile
                     String[] parts = keydata.split(" ");
                     assert parts.length >= 2;
                     type = KeyType.fromString(parts[0]);
-                    pubKey = new Buffer(Base64.decode(parts[1])).readPublicKey();
+                    pubKey = new PlainBuffer(Base64.decode(parts[1])).readPublicKey();
                 }
                 br.close();
             } catch (IOException e)

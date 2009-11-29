@@ -14,13 +14,13 @@ public class StatefulSFTPClient extends SFTPClient
     public StatefulSFTPClient(SessionFactory ssh) throws IOException
     {
         super(ssh);
-        this.cwd = getSFTP().canonicalize(".");
+        this.cwd = getSFTPEngine().canonicalize(".");
         log.info("Start dir = " + cwd);
     }
     
     private synchronized String cwdify(String path)
     {
-        return RemotePathUtil.adjustForParent(cwd, path);
+        return PathUtil.adjustForParent(cwd, path);
     }
     
     public synchronized void cd(String dirname) throws IOException
@@ -53,7 +53,7 @@ public class StatefulSFTPClient extends SFTPClient
     @Override
     public List<RemoteResourceInfo> ls(String path, RemoteResourceFilter filter) throws IOException
     {
-        RemoteDir dir = getSFTP().openDir(path);
+        RemoteDir dir = getSFTPEngine().openDir(path);
         try
         {
             return dir.scan(filter);

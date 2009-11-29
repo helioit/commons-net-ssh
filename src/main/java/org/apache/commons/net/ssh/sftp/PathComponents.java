@@ -28,7 +28,7 @@ class PathComponents
     {
         this.parent = parent;
         this.name = name;
-        this.path = RemotePathUtil.adjustForParent(parent, name);
+        this.path = PathUtil.adjustForParent(parent, name);
     }
     
     public String getParent()

@@ -33,6 +33,17 @@ public class RemoteFileInputStream extends InputStream
         this.rf = rf;
     }
     
+    public RemoteFileInputStream(RemoteFile rf, int fileOffset)
+    {
+        this(rf);
+        this.fileOffset = fileOffset;
+    }
+    
+    public void seek(long fileOffset)
+    {
+        this.fileOffset = fileOffset;
+    }
+    
     @Override
     public int read() throws IOException
     {
@@ -40,18 +51,12 @@ public class RemoteFileInputStream extends InputStream
     }
     
     @Override
-    public synchronized int read(byte[] into, int off, int len) throws IOException
+    public int read(byte[] into, int off, int len) throws IOException
     {
         int read = rf.read(fileOffset, into, off, len);
         if (read != -1)
             fileOffset += read;
         return read;
     }
-    
-    // @Override
-    // public void close() throws IOException
-    // {
-    // rf.close();
-    // }
     
 }

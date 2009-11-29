@@ -18,8 +18,8 @@
  */
 package org.apache.commons.net.ssh.connection;
 
+import org.apache.commons.net.ssh.SSHPacket;
 import org.apache.commons.net.ssh.transport.TransportException;
-import org.apache.commons.net.ssh.util.Buffer;
 import org.apache.commons.net.ssh.util.Constants.Message;
 
 /**
@@ -44,21 +44,21 @@ public abstract class AbstractDirectChannel extends AbstractChannel implements C
         open.await(conn.getTimeout());
     }
     
-    private void gotOpenConfirmation(Buffer buf)
+    private void gotOpenConfirmation(SSHPacket buf)
     {
         init(buf.readInt(), buf.readInt(), buf.readInt());
         open.set();
     }
     
-    private void gotOpenFailure(Buffer buf)
+    private void gotOpenFailure(SSHPacket buf)
     {
         open.error(new OpenFailException(getType(), buf.readInt(), buf.readString()));
         finishOff();
     }
     
-    protected Buffer buildOpenReq()
+    protected SSHPacket buildOpenReq()
     {
-        return new Buffer(Message.CHANNEL_OPEN) //
+        return new SSHPacket(Message.CHANNEL_OPEN) //
                 .putString(getType()) //
                 .putInt(getID()) //
                 .putInt(getLocalWinSize()) //
@@ -66,7 +66,7 @@ public abstract class AbstractDirectChannel extends AbstractChannel implements C
     }
     
     @Override
-    protected void gotUnknown(Message cmd, Buffer buf) throws ConnectionException, TransportException
+    protected void gotUnknown(Message cmd, SSHPacket buf) throws ConnectionException, TransportException
     {
         switch (cmd)
         {

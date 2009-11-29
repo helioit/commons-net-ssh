@@ -20,10 +20,10 @@ package org.apache.commons.net.ssh.kex;
 
 import java.security.PublicKey;
 
+import org.apache.commons.net.ssh.SSHPacket;
 import org.apache.commons.net.ssh.digest.Digest;
 import org.apache.commons.net.ssh.transport.Transport;
 import org.apache.commons.net.ssh.transport.TransportException;
-import org.apache.commons.net.ssh.util.Buffer;
 
 /**
  * Key exchange algorithm.
@@ -81,6 +81,6 @@ public interface KeyExchange
      * @throws TransportException
      *             if an error occurs
      */
-    boolean next(Buffer buffer) throws TransportException;
+    boolean next(SSHPacket buffer) throws TransportException;
     
 }

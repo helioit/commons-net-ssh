@@ -29,6 +29,8 @@ import org.slf4j.LoggerFactory;
 public class Pipe extends Thread
 {
     
+    private static final Logger LOG = LoggerFactory.getLogger(Pipe.class);
+    
     public interface EOFCallback
     {
         void hadEOF();
@@ -50,19 +52,34 @@ public class Pipe extends Thread
         };
     }
     
+    public static void pipe(InputStream in, OutputStream out, int bufSize) throws IOException
+    {
+        pipe(in, out, bufSize, true);
+    }
+    
     public static void pipe(InputStream in, OutputStream out, int bufSize, boolean dontFlushEveryWrite)
             throws IOException
     {
         byte[] buf = new byte[bufSize];
         int len;
+        long count = 0;
+        
+        final long startTime = System.currentTimeMillis();
+        
         while ((len = in.read(buf)) != -1)
         {
             out.write(buf, 0, len);
+            count += len;
             if (!dontFlushEveryWrite)
                 out.flush();
         }
         if (dontFlushEveryWrite)
             out.flush();
+        
+        final float sizeKiB = count / 1024;
+        final double timeSeconds = (System.currentTimeMillis() - startTime) / 1000.0;
+        LOG.info(sizeKiB + " KiB transferred  in {} seconds ({} KiB/s)", timeSeconds, (sizeKiB / timeSeconds));
+        
         in.close();
         out.close();
     }

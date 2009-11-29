@@ -15,18 +15,23 @@ public class SFTPClient
     /** Logger */
     protected final Logger log = LoggerFactory.getLogger(getClass());
     
-    private final SFTP sftp;
-    private final FileTransfer xfer;
+    private final SFTPEngine sftp;
+    private final FileTransferHandler xfer;
     
     public SFTPClient(SessionFactory ssh) throws IOException
     {
-        this.sftp = new SFTP(ssh).init();
-        this.xfer = new FileTransfer(sftp);
+        this.sftp = new SFTPEngine(ssh).init();
+        this.xfer = new FileTransferHandler(sftp);
     }
     
-    public SFTP getSFTP()
+    public SFTPEngine getSFTPEngine()
     {
         return sftp;
+    }
+    
+    public FileTransferHandler getFileTansferHandler()
+    {
+        return xfer;
     }
     
     public List<RemoteResourceInfo> ls(String path) throws IOException
@@ -179,12 +184,12 @@ public class SFTPClient
     
     public void get(String source, String dest) throws IOException
     {
-        xfer.get(source, dest);
+        xfer.download(source, dest);
     }
     
     public void put(String source, String dest) throws IOException
     {
-        xfer.put(source, dest);
+        xfer.upload(source, dest);
     }
     
 }

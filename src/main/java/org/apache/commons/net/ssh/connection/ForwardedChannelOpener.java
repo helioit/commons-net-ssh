@@ -18,8 +18,8 @@
  */
 package org.apache.commons.net.ssh.connection;
 
+import org.apache.commons.net.ssh.SSHPacket;
 import org.apache.commons.net.ssh.transport.TransportException;
-import org.apache.commons.net.ssh.util.Buffer;
 
 /**
  * Takes care of handling {@code SSH_MSG_CHANNEL_OPEN} requests for forwarded channels of a specific type.
@@ -36,8 +36,8 @@ public interface ForwardedChannelOpener
      * Delegates a {@code SSH_MSG_CHANNEL_OPEN} request for the channel type claimed by this opener.
      * 
      * @param buf
-     *            {@link Buffer} containg the request except for the message identifier and channel type field
+     *            {@link SSHPacket} containg the request except for the message identifier and channel type field
      */
-    void handleOpen(Buffer buf) throws ConnectionException, TransportException;
+    void handleOpen(SSHPacket buf) throws ConnectionException, TransportException;
     
 }

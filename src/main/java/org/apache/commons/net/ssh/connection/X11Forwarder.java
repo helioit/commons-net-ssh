@@ -18,8 +18,8 @@
  */
 package org.apache.commons.net.ssh.connection;
 
+import org.apache.commons.net.ssh.SSHPacket;
 import org.apache.commons.net.ssh.transport.TransportException;
-import org.apache.commons.net.ssh.util.Buffer;
 
 /**
  * Handles forwarded {@code x11} channels. The actual request to forward X11 should be made from the specific
@@ -63,7 +63,7 @@ public class X11Forwarder extends AbstractForwardedChannelOpener
     /**
      * Internal API
      */
-    public void handleOpen(Buffer buf) throws ConnectionException, TransportException
+    public void handleOpen(SSHPacket buf) throws ConnectionException, TransportException
     {
         callListener(listener, new X11Channel(conn, buf.readInt(), buf.readInt(), buf.readInt(), buf.readString(), buf
                 .readInt()));

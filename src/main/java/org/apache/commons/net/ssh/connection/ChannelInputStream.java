@@ -7,7 +7,7 @@ import java.io.InterruptedIOException;
 import org.apache.commons.net.ssh.ErrorNotifiable;
 import org.apache.commons.net.ssh.SSHException;
 import org.apache.commons.net.ssh.transport.TransportException;
-import org.apache.commons.net.ssh.util.Buffer;
+import org.apache.commons.net.ssh.util.Buffer.PlainBuffer;
 
 /**
  * {@link InputStream} for channels. Can {@link #receive(byte[], int, int) receive} data into its buffer for serving to
@@ -18,7 +18,7 @@ public class ChannelInputStream extends InputStream implements ErrorNotifiable
     
     private final Channel chan;
     private final LocalWindow win;
-    private final Buffer buf;
+    private final PlainBuffer buf;
     private final byte[] b = new byte[1];
     private boolean eof;
     private SSHException error;
@@ -28,7 +28,7 @@ public class ChannelInputStream extends InputStream implements ErrorNotifiable
         this.chan = chan;
         this.win = win;
         
-        buf = new Buffer(chan.getLocalMaxPacketSize());
+        buf = new PlainBuffer(chan.getLocalMaxPacketSize());
     }
     
     @Override
@@ -98,7 +98,7 @@ public class ChannelInputStream extends InputStream implements ErrorNotifiable
             if (len > buf.available())
                 len = buf.available();
             buf.readRawBytes(b, off, len);
-            if (buf.rpos() > win.getMaxPacketSize() || buf.available() == 0)
+            if (buf.rpos() > win.getMaxPacketSize() && buf.available() == 0)
                 buf.clear();
         }
         if (!chan.getAutoExpand())

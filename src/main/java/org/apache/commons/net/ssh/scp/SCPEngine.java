@@ -25,8 +25,8 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Queue;
 
-import org.apache.commons.net.ssh.SessionFactory;
 import org.apache.commons.net.ssh.SSHException;
+import org.apache.commons.net.ssh.SessionFactory;
 import org.apache.commons.net.ssh.connection.ConnectionException;
 import org.apache.commons.net.ssh.connection.Session.Command;
 import org.apache.commons.net.ssh.transport.TransportException;
@@ -37,7 +37,7 @@ import org.slf4j.LoggerFactory;
 /**
  * @see <a href="http://blogs.sun.com/janp/entry/how_the_scp_protocol_works">SCP Protocol</a>
  */
-public abstract class SCP
+public abstract class SCPEngine
 {
     
     public static class SCPException extends SSHException
@@ -93,7 +93,7 @@ public abstract class SCP
     
     protected Command scp;
     
-    protected SCP(SessionFactory host)
+    protected SCPEngine(SessionFactory host)
     {
         this.host = host;
     }
@@ -230,13 +230,13 @@ public abstract class SCP
     
     abstract void startCopy(String sourcePath, String targetPath) throws IOException;
     
-    public void transfer(InputStream in, OutputStream out, int bufSize, long len) throws IOException
+    void transfer(InputStream in, OutputStream out, int bufSize, long len) throws IOException
     {
         final byte[] buf = new byte[bufSize];
         long count = 0;
         int read = 0;
         
-        long startTime = System.currentTimeMillis();
+        final long startTime = System.currentTimeMillis();
         
         while (count < len && (read = in.read(buf, 0, (int) Math.min(bufSize, len - count))) != -1)
         {

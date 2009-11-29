@@ -21,12 +21,13 @@ package org.apache.commons.net.ssh.kex;
 import java.security.PublicKey;
 
 import org.apache.commons.net.ssh.Factory;
+import org.apache.commons.net.ssh.SSHPacket;
 import org.apache.commons.net.ssh.digest.Digest;
 import org.apache.commons.net.ssh.digest.SHA1;
 import org.apache.commons.net.ssh.signature.Signature;
 import org.apache.commons.net.ssh.transport.Transport;
 import org.apache.commons.net.ssh.transport.TransportException;
-import org.apache.commons.net.ssh.util.Buffer;
+import org.apache.commons.net.ssh.util.Buffer.PlainBuffer;
 import org.apache.commons.net.ssh.util.Constants.DisconnectReason;
 import org.apache.commons.net.ssh.util.Constants.KeyType;
 import org.apache.commons.net.ssh.util.Constants.Message;
@@ -89,10 +90,10 @@ public abstract class AbstractDHG implements KeyExchange
         e = dh.getE();
         
         log.info("Sending SSH_MSG_KEXDH_INIT");
-        trans.writePacket(new Buffer(Message.KEXDH_INIT).putMPInt(e));
+        trans.writePacket(new SSHPacket(Message.KEXDH_INIT).putMPInt(e));
     }
     
-    public boolean next(Buffer buffer) throws TransportException
+    public boolean next(SSHPacket buffer) throws TransportException
     {
         Message msg = buffer.readMessageID();
         if (msg != Message.KEXDH_31)
@@ -105,9 +106,9 @@ public abstract class AbstractDHG implements KeyExchange
         dh.setF(f);
         K = dh.getK();
         
-        hostKey = new Buffer(K_S).readPublicKey();
+        hostKey = new PlainBuffer(K_S).readPublicKey();
         
-        buffer = new Buffer() // our hash
+        PlainBuffer buf = new PlainBuffer() // our hash
                 .putString(V_C) // 
                 .putString(V_S) // 
                 .putString(I_C) //
@@ -116,7 +117,7 @@ public abstract class AbstractDHG implements KeyExchange
                 .putMPInt(e) //
                 .putMPInt(f) //
                 .putMPInt(K); //
-        sha.update(buffer.array(), 0, buffer.available());
+        sha.update(buf.array(), 0, buf.available());
         H = sha.digest();
         
         Signature verif = Factory.Named.Util.create(trans.getConfig().getSignatureFactories(), // 

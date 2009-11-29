@@ -22,8 +22,9 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.apache.commons.net.ssh.SSHPacket;
 import org.apache.commons.net.ssh.transport.TransportException;
-import org.apache.commons.net.ssh.util.Buffer;
+import org.apache.commons.net.ssh.util.Buffer.PlainBuffer;
 
 /**
  * Handles remote port forwarding.
@@ -188,7 +189,7 @@ public class RemotePortForwarder extends AbstractForwardedChannelOpener
      */
     public Forward bind(Forward forward, ConnectListener listener) throws ConnectionException, TransportException
     {
-        Buffer reply = conn.sendGlobalRequest(PF_REQ, true, new Buffer() //
+        SSHPacket reply = conn.sendGlobalRequest(PF_REQ, true, new PlainBuffer() //
                 .putString(forward.address) //
                 .putInt(forward.port)) //
                 .get(conn.getTimeout());
@@ -211,7 +212,7 @@ public class RemotePortForwarder extends AbstractForwardedChannelOpener
     {
         try
         {
-            conn.sendGlobalRequest(PF_CANCEL, true, new Buffer() //
+            conn.sendGlobalRequest(PF_CANCEL, true, new PlainBuffer() //
                     .putString(forward.address) //
                     .putInt(forward.port)) //
                     .get(conn.getTimeout());
@@ -233,7 +234,7 @@ public class RemotePortForwarder extends AbstractForwardedChannelOpener
      * Internal API. Creates a {@link ForwardedTCPIPChannel} from the {@code CHANNEL_OPEN} request and calls associated
      * {@code ConnectListener} for that forward in a separate thread.
      */
-    public void handleOpen(Buffer buf) throws ConnectionException, TransportException
+    public void handleOpen(SSHPacket buf) throws ConnectionException, TransportException
     {
         ForwardedTCPIPChannel chan = new ForwardedTCPIPChannel(conn, buf.readInt(), buf.readInt(), buf.readInt(), //
                 new Forward(buf.readString(), buf.readInt()), //

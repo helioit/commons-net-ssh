@@ -18,8 +18,8 @@
  */
 package org.apache.commons.net.ssh.userauth;
 
+import org.apache.commons.net.ssh.SSHPacket;
 import org.apache.commons.net.ssh.transport.TransportException;
-import org.apache.commons.net.ssh.util.Buffer;
 import org.apache.commons.net.ssh.util.PasswordFinder;
 import org.apache.commons.net.ssh.util.Constants.Message;
 import org.apache.commons.net.ssh.util.PasswordFinder.Resource;
@@ -40,7 +40,7 @@ public class AuthPassword extends AbstractAuthMethod
     }
     
     @Override
-    public Buffer buildReq() throws UserAuthException
+    public SSHPacket buildReq() throws UserAuthException
     {
         Resource resource = getResource();
         log.info("Requesting password for " + resource);
@@ -60,7 +60,7 @@ public class AuthPassword extends AbstractAuthMethod
     }
     
     @Override
-    public void handle(Message cmd, Buffer buf) throws UserAuthException, TransportException
+    public void handle(Message cmd, SSHPacket buf) throws UserAuthException, TransportException
     {
         if (cmd == Message.USERAUTH_60)
             throw new UserAuthException("Password change request received; unsupported operation");

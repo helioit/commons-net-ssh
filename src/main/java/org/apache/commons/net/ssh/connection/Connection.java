@@ -18,10 +18,11 @@
  */
 package org.apache.commons.net.ssh.connection;
 
+import org.apache.commons.net.ssh.SSHPacket;
 import org.apache.commons.net.ssh.transport.Transport;
 import org.apache.commons.net.ssh.transport.TransportException;
-import org.apache.commons.net.ssh.util.Buffer;
 import org.apache.commons.net.ssh.util.Future;
+import org.apache.commons.net.ssh.util.Buffer.PlainBuffer;
 
 /**
  * Connection layer of the SSH protocol.
@@ -37,14 +38,14 @@ public interface Connection
      * @param wantReply
      *            whether a reply is requested
      * @param specifics
-     *            {@link Buffer} containing fields specific to the request
+     *            {@link SSHPacket} containing fields specific to the request
      * @return a {@link Future} for the reply data (in case {@code wantReply} is true) which allows waiting on the
      *         reply, or {@code null} if a reply is not requested.
      * @throws TransportException
      *             if there is an error sending the request
      */
-    public Future<Buffer, ConnectionException> sendGlobalRequest(String name, boolean wantReply, Buffer specifics)
-            throws TransportException;
+    public Future<SSHPacket, ConnectionException> sendGlobalRequest(String name, boolean wantReply,
+            PlainBuffer specifics) throws TransportException;
     
     /**
      * Attach a {@link Channel} to this connection. A channel must be attached to the connection if it is to receive any

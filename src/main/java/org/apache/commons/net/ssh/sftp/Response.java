@@ -18,7 +18,9 @@
  */
 package org.apache.commons.net.ssh.sftp;
 
-public class Response extends Packet
+import org.apache.commons.net.ssh.util.Buffer;
+
+public class Response extends SFTPPacket<Response>
 {
     
     public static enum StatusCode
@@ -54,7 +56,7 @@ public class Response extends Packet
     private final PacketType type;
     private final long reqID;
     
-    public Response(Packet pk)
+    public Response(Buffer<Response> pk)
     {
         super(pk);
         this.type = readType();
@@ -76,30 +78,30 @@ public class Response extends Packet
         return StatusCode.fromInt(readInt());
     }
     
-    public void ensurePacket(PacketType pt) throws SFTPException
+    public Response ensurePacketTypeIs(PacketType pt) throws SFTPException
     {
         if (getType() != pt)
-        {
             if (getType() == PacketType.STATUS)
                 throw new SFTPException(readStatusCode(), readString());
             else
                 throw new SFTPException("Unexpected packet " + getType());
-        }
+        return this;
     }
     
-    public void ensureStatusOK() throws SFTPException
+    public Response ensureStatusOK() throws SFTPException
     {
         if (getType() == PacketType.STATUS)
-            ensureStatus(StatusCode.OK);
+            return ensureStatus(StatusCode.OK);
         else
             throw new SFTPException("Unexpected packet " + getType());
     }
     
-    public void ensureStatus(StatusCode acceptable) throws SFTPException
+    public Response ensureStatus(StatusCode acceptable) throws SFTPException
     {
         StatusCode sc = readStatusCode();
         if (sc != acceptable)
             throw new SFTPException(sc, readString());
+        return this;
     }
     
 }

@@ -29,14 +29,15 @@ import org.apache.commons.net.ssh.Factory;
 import org.apache.commons.net.ssh.HostKeyVerifier;
 import org.apache.commons.net.ssh.PacketHandler;
 import org.apache.commons.net.ssh.SSHException;
+import org.apache.commons.net.ssh.SSHPacket;
 import org.apache.commons.net.ssh.cipher.Cipher;
 import org.apache.commons.net.ssh.compression.Compression;
 import org.apache.commons.net.ssh.digest.Digest;
 import org.apache.commons.net.ssh.kex.KeyExchange;
 import org.apache.commons.net.ssh.mac.MAC;
-import org.apache.commons.net.ssh.util.Buffer;
 import org.apache.commons.net.ssh.util.Event;
 import org.apache.commons.net.ssh.util.SecurityUtils;
+import org.apache.commons.net.ssh.util.Buffer.PlainBuffer;
 import org.apache.commons.net.ssh.util.Constants.DisconnectReason;
 import org.apache.commons.net.ssh.util.Constants.KeyType;
 import org.apache.commons.net.ssh.util.Constants.Message;
@@ -53,7 +54,7 @@ import org.slf4j.LoggerFactory;
 /**
  * Algorithm negotiation and key exchange.
  */
-public final class KeyExchanger implements PacketHandler, ErrorNotifiable
+public final class Negotiator implements PacketHandler, ErrorNotifiable
 {
     
     private static enum Expected
@@ -71,8 +72,8 @@ public final class KeyExchanger implements PacketHandler, ErrorNotifiable
     private final TransportProtocol transport;
     
     /**
-     * {@link HostKeyVerifier#verify(InetAddress, PublicKey)} is invoked by
-     * {@link #verifyHost(PublicKey)} when we are ready to verify the the server's host key.
+     * {@link HostKeyVerifier#verify(InetAddress, PublicKey)} is invoked by {@link #verifyHost(PublicKey)} when we are
+     * ready to verify the the server's host key.
      */
     private final Queue<HostKeyVerifier> hostVerifiers = new LinkedList<HostKeyVerifier>();
     
@@ -117,7 +118,7 @@ public final class KeyExchanger implements PacketHandler, ErrorNotifiable
     
     private final Event<TransportException> done = new Event<TransportException>("kex done", TransportException.chainer);
     
-    KeyExchanger(TransportProtocol trans)
+    Negotiator(TransportProtocol trans)
     {
         this.transport = trans;
     }
@@ -125,9 +126,8 @@ public final class KeyExchanger implements PacketHandler, ErrorNotifiable
     /**
      * Add a callback for host key verification.
      * <p>
-     * Any of the {@link HostKeyVerifier} implementations added this way can deem a host key to be
-     * acceptable, allowing key exchange to successfuly complete. Otherwise, a
-     * {@link TransportException} will result during key exchange.
+     * Any of the {@link HostKeyVerifier} implementations added this way can deem a host key to be acceptable, allowing
+     * key exchange to successfuly complete. Otherwise, a {@link TransportException} will result during key exchange.
      * 
      * @param hkv
      *            object whose {@link HostKeyVerifier#verify} method will be invoked
@@ -152,7 +152,7 @@ public final class KeyExchanger implements PacketHandler, ErrorNotifiable
     /**
      * Internal API; do not use!
      */
-    public void handle(Message msg, Buffer buf) throws TransportException
+    public void handle(Message msg, SSHPacket buf) throws TransportException
     {
         switch (expected)
         {
@@ -162,9 +162,8 @@ public final class KeyExchanger implements PacketHandler, ErrorNotifiable
             log.info("Received SSH_MSG_KEXINIT");
             startKex(false); // Will start key exchange if not already on
             /*
-             * We block on this event to prevent a race condition where we may have received a
-             * SSH_MSG_KEXINIT before having sent the packet ourselves (would cause gotKexInit() to
-             * fail)
+             * We block on this event to prevent a race condition where we may have received a SSH_MSG_KEXINIT before
+             * having sent the packet ourselves (would cause gotKexInit() to fail)
              */
             kexInitSent.await(transport.getTimeout());
             gotKexInit(buf);
@@ -224,10 +223,9 @@ public final class KeyExchanger implements PacketHandler, ErrorNotifiable
     }
     
     /**
-     * Starts key exchange by sending a {@code SSH_MSG_KEXINIT} packet. Key exchange needs to be
-     * done once mandatorily after initializing the {@link Transport} for it to be usable and may be
-     * initiated at any later point e.g. if {@link Transport#getConfig() algorithms} have changed
-     * and should be renegotiated.
+     * Starts key exchange by sending a {@code SSH_MSG_KEXINIT} packet. Key exchange needs to be done once mandatorily
+     * after initializing the {@link Transport} for it to be usable and may be initiated at any later point e.g. if
+     * {@link Transport#getConfig() algorithms} have changed and should be renegotiated.
      * 
      * @param waitForDone
      *            whether should block till key exchange completed
@@ -280,7 +278,7 @@ public final class KeyExchanger implements PacketHandler, ErrorNotifiable
             throw new TransportException(DisconnectReason.PROTOCOL_ERROR, "Was expecting " + expected);
     }
     
-    private void extractProposal(Buffer buffer)
+    private void extractProposal(SSHPacket buffer)
     {
         serverProposal = new String[PROP_MAX];
         // recreate the packet payload which will be needed at a later time
@@ -295,7 +293,7 @@ public final class KeyExchanger implements PacketHandler, ErrorNotifiable
             serverProposal[i] = buffer.readString();
     }
     
-    private void gotKexInit(Buffer buf) throws TransportException
+    private void gotKexInit(SSHPacket buf) throws TransportException
     {
         extractProposal(buf);
         negotiate();
@@ -304,8 +302,8 @@ public final class KeyExchanger implements PacketHandler, ErrorNotifiable
     }
     
     /**
-     * Put new keys into use. This method will intialize the ciphers, digests, MACs and compression
-     * according to the negotiated server and client proposals.
+     * Put new keys into use. This method will intialize the ciphers, digests, MACs and compression according to the
+     * negotiated server and client proposals.
      */
     private void gotNewKeys() // TODO: refactor; too huge
     {
@@ -331,7 +329,7 @@ public final class KeyExchanger implements PacketHandler, ErrorNotifiable
             System.arraycopy(H, 0, sessionID, 0, H.length);
         }
         
-        Buffer buffer = new Buffer().putMPInt(K) //
+        PlainBuffer buffer = new PlainBuffer().putMPInt(K) //
                 .putRawBytes(H) //
                 .putByte((byte) 0x41) //
                 .putRawBytes(sessionID);
@@ -386,8 +384,8 @@ public final class KeyExchanger implements PacketHandler, ErrorNotifiable
     }
     
     /**
-     * Compute the negotiated proposals by merging the client and server proposal. The negotiated
-     * proposal will be stored in the {@link #negotiated} field.
+     * Compute the negotiated proposals by merging the client and server proposal. The negotiated proposal will be
+     * stored in the {@link #negotiated} field.
      */
     private void negotiate() throws TransportException
     {
@@ -420,8 +418,8 @@ public final class KeyExchanger implements PacketHandler, ErrorNotifiable
     }
     
     /**
-     * Private method used while putting new keys into use that will resize the key used to
-     * initialize the cipher to the needed length.
+     * Private method used while putting new keys into use that will resize the key used to initialize the cipher to the
+     * needed length.
      * 
      * @param E
      *            the key to resize
@@ -439,7 +437,7 @@ public final class KeyExchanger implements PacketHandler, ErrorNotifiable
     {
         while (blockSize > E.length)
         {
-            Buffer buffer = new Buffer().putMPInt(K) //
+            PlainBuffer buffer = new PlainBuffer().putMPInt(K) //
                     .putRawBytes(H) //
                     .putRawBytes(E);
             hash.update(buffer.array(), 0, buffer.available());
@@ -459,7 +457,7 @@ public final class KeyExchanger implements PacketHandler, ErrorNotifiable
      */
     private void sendKexInit() throws TransportException
     {
-        Buffer buf = new Buffer(Message.KEXINIT);
+        SSHPacket buf = new SSHPacket(Message.KEXINIT);
         
         // Put cookie
         int p = buf.wpos();
@@ -484,7 +482,7 @@ public final class KeyExchanger implements PacketHandler, ErrorNotifiable
     private void sendNewKeys() throws TransportException
     {
         log.info("Sending SSH_MSG_NEWKEYS");
-        transport.writePacket(new Buffer(Message.NEWKEYS));
+        transport.writePacket(new SSHPacket(Message.NEWKEYS));
     }
     
     private void setKexDone()
@@ -495,8 +493,7 @@ public final class KeyExchanger implements PacketHandler, ErrorNotifiable
     }
     
     /**
-     * Tries to validate host key with all the host key verifiers known to this instance (
-     * {@link #hostVerifiers})
+     * Tries to validate host key with all the host key verifiers known to this instance ( {@link #hostVerifiers})
      * 
      * @param key
      *            the host key to verify

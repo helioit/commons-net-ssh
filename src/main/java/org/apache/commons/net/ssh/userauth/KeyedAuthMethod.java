@@ -23,9 +23,10 @@ import java.security.PrivateKey;
 import java.security.PublicKey;
 
 import org.apache.commons.net.ssh.Factory;
+import org.apache.commons.net.ssh.SSHPacket;
 import org.apache.commons.net.ssh.keyprovider.KeyProvider;
 import org.apache.commons.net.ssh.signature.Signature;
-import org.apache.commons.net.ssh.util.Buffer;
+import org.apache.commons.net.ssh.util.Buffer.PlainBuffer;
 import org.apache.commons.net.ssh.util.Constants.KeyType;
 
 public abstract class KeyedAuthMethod extends AbstractAuthMethod
@@ -38,7 +39,7 @@ public abstract class KeyedAuthMethod extends AbstractAuthMethod
         this.kProv = kProv;
     }
     
-    protected Buffer putPubKey(Buffer reqBuf) throws UserAuthException
+    protected SSHPacket putPubKey(SSHPacket reqBuf) throws UserAuthException
     {
         PublicKey key;
         try
@@ -51,12 +52,12 @@ public abstract class KeyedAuthMethod extends AbstractAuthMethod
         
         // public key as 2 strings: [ key type | key blob ]
         reqBuf.putString(KeyType.fromKey(key).toString()) //
-                .putString(new Buffer().putPublicKey(key).getCompactData());
+                .putString(new PlainBuffer().putPublicKey(key).getCompactData());
         
         return reqBuf;
     }
     
-    protected Buffer putSig(Buffer reqBuf) throws UserAuthException
+    protected SSHPacket putSig(SSHPacket reqBuf) throws UserAuthException
     {
         PrivateKey key;
         try
@@ -73,7 +74,7 @@ public abstract class KeyedAuthMethod extends AbstractAuthMethod
             throw new UserAuthException("Could not create signature instance for " + kt + " key");
         
         sigger.init(null, key);
-        sigger.update(new Buffer().putString(params.getTransport().getKeyExchanger().getSessionID()) //
+        sigger.update(new PlainBuffer().putString(params.getTransport().getKeyExchanger().getSessionID()) //
                 .putBuffer(reqBuf) // & rest of the data for sig
                 .getCompactData());
         reqBuf.putSignature(kt, sigger.sign());

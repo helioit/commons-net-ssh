@@ -31,6 +31,7 @@ import org.apache.commons.net.ssh.SSHException;
 import org.apache.commons.net.ssh.SSHRuntimeException;
 import org.apache.commons.net.ssh.mac.HMACSHA1;
 import org.apache.commons.net.ssh.mac.MAC;
+import org.apache.commons.net.ssh.util.Buffer.PlainBuffer;
 import org.apache.commons.net.ssh.util.Constants.KeyType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -38,8 +39,7 @@ import org.slf4j.LoggerFactory;
 // TODO: allow modifications to known_hosts e.g. adding entries
 
 /**
- * A {@link HostKeyVerifier} implementation for a {@code known_hosts} file i.e. in the format used
- * by OpenSSH.
+ * A {@link HostKeyVerifier} implementation for a {@code known_hosts} file i.e. in the format used by OpenSSH.
  * <p>
  * Hashed hostnames are correctly handled.
  * 
@@ -84,8 +84,7 @@ public class KnownHosts implements HostKeyVerifier
          * 
          * @param possibilities
          *            a set of possibilities to check against
-         * @return the possibility which was successfuly matched, or {@code null} if there was no
-         *         match
+         * @return the possibility which was successfuly matched, or {@code null} if there was no match
          */
         public boolean appliesTo(String hostname)
         {
@@ -136,7 +135,7 @@ public class KnownHosts implements HostKeyVerifier
                 {
                     return null;
                 }
-                key = new Buffer(decoded).readPublicKey();
+                key = new PlainBuffer(decoded).readPublicKey();
             }
             return key;
         }
@@ -193,8 +192,7 @@ public class KnownHosts implements HostKeyVerifier
     }
     
     /**
-     * Checks whether the specified hostname is known per the contents of the {@code known_hosts}
-     * file.
+     * Checks whether the specified hostname is known per the contents of the {@code known_hosts} file.
      * 
      * @return {@code true} on successful verfication or {@code false} on failure
      */

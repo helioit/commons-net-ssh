@@ -26,12 +26,13 @@ import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.commons.net.ssh.ErrorNotifiable;
 import org.apache.commons.net.ssh.SSHException;
+import org.apache.commons.net.ssh.SSHPacket;
 import org.apache.commons.net.ssh.transport.Transport;
 import org.apache.commons.net.ssh.transport.TransportException;
-import org.apache.commons.net.ssh.util.Buffer;
 import org.apache.commons.net.ssh.util.BufferUtils;
 import org.apache.commons.net.ssh.util.Event;
 import org.apache.commons.net.ssh.util.IOUtils;
+import org.apache.commons.net.ssh.util.Buffer.PlainBuffer;
 import org.apache.commons.net.ssh.util.Constants.DisconnectReason;
 import org.apache.commons.net.ssh.util.Constants.Message;
 import org.slf4j.Logger;
@@ -153,7 +154,7 @@ public abstract class AbstractChannel implements Channel
         return type;
     }
     
-    public void handle(Message msg, Buffer buf) throws ConnectionException, TransportException
+    public void handle(Message msg, SSHPacket buf) throws ConnectionException, TransportException
     {
         switch (msg)
         {
@@ -236,7 +237,7 @@ public abstract class AbstractChannel implements Channel
                 + rwin + " >";
     }
     
-    private void gotChannelRequest(Buffer buf) throws ConnectionException, TransportException
+    private void gotChannelRequest(SSHPacket buf) throws ConnectionException, TransportException
     {
         String reqType = buf.readString();
         buf.readBoolean(); // We don't care about the 'want-reply' value
@@ -264,31 +265,31 @@ public abstract class AbstractChannel implements Channel
         close.set();
     }
     
-    protected void gotExtendedData(int dataTypeCode, Buffer buf) throws ConnectionException, TransportException
+    protected void gotExtendedData(int dataTypeCode, SSHPacket buf) throws ConnectionException, TransportException
     {
         throw new ConnectionException(DisconnectReason.PROTOCOL_ERROR, "Extended data not supported on " + type
                 + " channel");
     }
     
-    protected void gotUnknown(Message msg, Buffer buf) throws ConnectionException, TransportException
+    protected void gotUnknown(Message msg, SSHPacket buf) throws ConnectionException, TransportException
     {
         trans.sendUnimplemented();
     }
     
-    protected void handleRequest(String reqType, Buffer buf) throws ConnectionException, TransportException
+    protected void handleRequest(String reqType, SSHPacket buf) throws ConnectionException, TransportException
     {
         trans.writePacket(newBuffer(Message.CHANNEL_FAILURE));
     }
     
-    protected Buffer newBuffer(Message cmd)
+    protected SSHPacket newBuffer(Message cmd)
     {
-        return new Buffer(cmd).putInt(recipient);
+        return new SSHPacket(cmd).putInt(recipient);
     }
     
-    protected void receiveInto(Buffer buf, ChannelInputStream stream) throws ConnectionException, TransportException
+    protected void receiveInto(SSHPacket buf, ChannelInputStream stream) throws ConnectionException, TransportException
     {
         int len = buf.readInt();
-        if (len < 0 || len > getLocalMaxPacketSize())
+        if (len < 0 || len > getLocalMaxPacketSize() || len != buf.available())
             throw new ConnectionException(DisconnectReason.PROTOCOL_ERROR, "Bad item length: " + len);
         if (log.isTraceEnabled())
             log.trace("IN #{}: {}", id, BufferUtils.printHex(buf.array(), buf.rpos(), len));
@@ -296,7 +297,7 @@ public abstract class AbstractChannel implements Channel
     }
     
     protected synchronized Event<ConnectionException> sendChannelRequest(String reqType, boolean wantReply,
-            Buffer reqSpecific) throws TransportException
+            PlainBuffer reqSpecific) throws TransportException
     {
         log.info("Sending channel request for `{}`", reqType);
         trans.writePacket(newBuffer(Message.CHANNEL_REQUEST).putString(reqType) //

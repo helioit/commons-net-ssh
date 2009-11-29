@@ -38,6 +38,7 @@ import javax.crypto.NoSuchPaddingException;
 
 import org.apache.commons.net.ssh.SSHRuntimeException;
 import org.apache.commons.net.ssh.keyprovider.FileKeyProvider;
+import org.apache.commons.net.ssh.util.Buffer.PlainBuffer;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -84,8 +85,7 @@ public class SecurityUtils
     /**
      * Attempts to detect how a key file is encoded.
      * <p>
-     * Return values are consistent with the {@code NamedFactory} implementations in the {@code
-     * keyprovider} package.
+     * Return values are consistent with the {@code NamedFactory} implementations in the {@code keyprovider} package.
      * 
      * @param location
      * @return name of the key file format
@@ -148,7 +148,7 @@ public class SecurityUtils
         {
             throw new SSHRuntimeException(e);
         }
-        md5.update(new Buffer().putPublicKey(key).getCompactData());
+        md5.update(new PlainBuffer().putPublicKey(key).getCompactData());
         String undelimed = BufferUtils.toHex(md5.digest());
         String fp = undelimed.substring(0, 2);
         for (int i = 2; i <= undelimed.length() - 2; i += 2)
@@ -280,8 +280,8 @@ public class SecurityUtils
     }
     
     /**
-     * Attempts registering BouncyCastle as security provider if it has not been previously
-     * attempted and returns whether the registration succeeded.
+     * Attempts registering BouncyCastle as security provider if it has not been previously attempted and returns
+     * whether the registration succeeded.
      * 
      * @return whether BC registered
      */

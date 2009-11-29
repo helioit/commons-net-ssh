@@ -21,6 +21,7 @@ package org.apache.commons.net.ssh.util;
 import java.io.Closeable;
 import java.io.IOException;
 
+import org.apache.commons.net.ssh.SSHPacket;
 import org.apache.commons.net.ssh.transport.Transport;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -43,7 +44,7 @@ public class IOUtils
             }
     }
     
-    public static long writeQuietly(Transport trans, Buffer payload)
+    public static long writeQuietly(Transport trans, SSHPacket payload)
     {
         try
         {

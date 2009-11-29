@@ -35,7 +35,7 @@ import org.apache.commons.net.ssh.util.IOUtils;
 /**
  * Support for uploading files over a connected {@link SSHClient} link using SCP.
  */
-public class SCPUploadClient extends SCP
+public class SCPUploadClient extends SCPEngine
 {
     
     private final ModeGetter modeGetter;

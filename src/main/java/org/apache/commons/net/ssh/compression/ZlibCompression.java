@@ -18,8 +18,8 @@
  */
 package org.apache.commons.net.ssh.compression;
 
+import org.apache.commons.net.ssh.SSHPacket;
 import org.apache.commons.net.ssh.transport.TransportException;
-import org.apache.commons.net.ssh.util.Buffer;
 import org.apache.commons.net.ssh.util.Constants.DisconnectReason;
 
 import com.jcraft.jzlib.JZlib;
@@ -59,7 +59,7 @@ public class ZlibCompression implements Compression
     {
     }
     
-    public void compress(Buffer buffer) throws TransportException
+    public void compress(SSHPacket buffer) throws TransportException
     {
         stream.next_in = buffer.array();
         stream.next_in_index = buffer.rpos();
@@ -96,7 +96,7 @@ public class ZlibCompression implements Compression
         return false;
     }
     
-    public void uncompress(Buffer from, Buffer to) throws TransportException
+    public void uncompress(SSHPacket from, SSHPacket to) throws TransportException
     {
         stream.next_in = from.array();
         stream.next_in_index = from.rpos();

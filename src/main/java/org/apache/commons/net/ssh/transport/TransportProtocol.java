@@ -25,14 +25,15 @@ import org.apache.commons.net.ssh.Config;
 import org.apache.commons.net.ssh.ConnInfo;
 import org.apache.commons.net.ssh.ErrorNotifiable;
 import org.apache.commons.net.ssh.SSHException;
+import org.apache.commons.net.ssh.SSHPacket;
 import org.apache.commons.net.ssh.Service;
 import org.apache.commons.net.ssh.cipher.Cipher;
 import org.apache.commons.net.ssh.compression.Compression;
 import org.apache.commons.net.ssh.mac.MAC;
 import org.apache.commons.net.ssh.random.Random;
-import org.apache.commons.net.ssh.util.Buffer;
 import org.apache.commons.net.ssh.util.Event;
 import org.apache.commons.net.ssh.util.IOUtils;
+import org.apache.commons.net.ssh.util.Buffer.PlainBuffer;
 import org.apache.commons.net.ssh.util.Constants.DisconnectReason;
 import org.apache.commons.net.ssh.util.Constants.Message;
 import org.slf4j.Logger;
@@ -138,7 +139,7 @@ public final class TransportProtocol implements Transport
     private final Random prng;
     
     /** For key (re)exchange */
-    private final KeyExchanger kexer;
+    private final Negotiator kexer;
     /** For encoding packets */
     private final Encoder encoder;
     /** For decoding packets */
@@ -169,7 +170,7 @@ public final class TransportProtocol implements Transport
     {
         this.config = config;
         this.prng = config.getRandomFactory().create();
-        this.kexer = new KeyExchanger(this);
+        this.kexer = new Negotiator(this);
         this.encoder = new Encoder(prng);
         this.decoder = new Decoder(this);
         clientID = "SSH-2.0-" + config.getVersion();
@@ -186,7 +187,7 @@ public final class TransportProtocol implements Transport
             connInfo.getOutputStream().write((clientID + "\r\n").getBytes());
             
             // Read server's ID
-            Buffer buf = new Buffer();
+            PlainBuffer buf = new PlainBuffer();
             while ((serverID = readIdentification(buf)) == null)
                 buf.putByte((byte) connInfo.getInputStream().read());
             
@@ -215,7 +216,7 @@ public final class TransportProtocol implements Transport
      * @return
      * @throws IOException
      */
-    private String readIdentification(Buffer buffer) throws IOException
+    private String readIdentification(PlainBuffer buffer) throws IOException
     {
         String ident;
         
@@ -281,7 +282,7 @@ public final class TransportProtocol implements Transport
         return config;
     }
     
-    public KeyExchanger getKeyExchanger()
+    public Negotiator getKeyExchanger()
     {
         return kexer;
     }
@@ -358,17 +359,17 @@ public final class TransportProtocol implements Transport
     private void sendServiceRequest(String serviceName) throws TransportException
     {
         log.debug("Sending SSH_MSG_SERVICE_REQUEST for {}", serviceName);
-        writePacket(new Buffer(Message.SERVICE_REQUEST).putString(serviceName));
+        writePacket(new SSHPacket(Message.SERVICE_REQUEST).putString(serviceName));
     }
     
     public long sendUnimplemented() throws TransportException
     {
         long seq = decoder.getSequenceNumber();
         log.info("Sending SSH_MSG_UNIMPLEMENTED for packet #{}", seq);
-        return writePacket(new Buffer(Message.UNIMPLEMENTED).putInt(seq));
+        return writePacket(new SSHPacket(Message.UNIMPLEMENTED).putInt(seq));
     }
     
-    public long writePacket(Buffer payload) throws TransportException
+    public long writePacket(SSHPacket payload) throws TransportException
     {
         // synchronized to queue packets correctly & also to guarantee that
         // there won't be a mid-way change in encoder's algos
@@ -447,7 +448,7 @@ public final class TransportProtocol implements Transport
         if (message == null)
             message = "";
         log.debug("Sending SSH_MSG_DISCONNECT: reason=[{}], msg=[{}]", reason, message);
-        IOUtils.writeQuietly(this, new Buffer(Message.DISCONNECT) //
+        IOUtils.writeQuietly(this, new SSHPacket(Message.DISCONNECT) //
                 .putInt(reason.toInt()) //
                 .putString(message) //                                                                             
                 .putString("")); // lang tag
@@ -457,8 +458,7 @@ public final class TransportProtocol implements Transport
      * This is where all incoming packets are handled. If they pertain to the transport layer, they are handled here;
      * otherwise they are delegated to the active service instance if any via {@link Service#handle}.
      * <p>
-     * Even among the transport layer specific packets, key exchange packets are delegated to
-     * {@link KeyExchanger#handle}.
+     * Even among the transport layer specific packets, key exchange packets are delegated to {@link Negotiator#handle}.
      * <p>
      * This method is called in the context of the {@link #dispatcher} thread via {@link Decoder#received} when a full
      * packet has been decoded.
@@ -470,7 +470,7 @@ public final class TransportProtocol implements Transport
      * @throws SSHException
      *             if an error occurs during handling (unrecoverable)
      */
-    public void handle(Message msg, Buffer buf) throws SSHException
+    public void handle(Message msg, SSHPacket buf) throws SSHException
     {
         this.msg = msg;
         
@@ -515,14 +515,14 @@ public final class TransportProtocol implements Transport
             }
     }
     
-    private void gotDebug(Buffer buf)
+    private void gotDebug(SSHPacket buf)
     {
         boolean display = buf.readBoolean();
         String message = buf.readString();
         log.info("Received SSH_MSG_DEBUG (display={}) '{}'", display, message);
     }
     
-    private void gotDisconnect(Buffer buf) throws TransportException
+    private void gotDisconnect(SSHPacket buf) throws TransportException
     {
         DisconnectReason code = DisconnectReason.fromInt(buf.readInt());
         String message = buf.readString();
@@ -551,7 +551,7 @@ public final class TransportProtocol implements Transport
      * @param seqNum
      * @throws TransportException
      */
-    private void gotUnimplemented(Buffer buf) throws SSHException
+    private void gotUnimplemented(SSHPacket buf) throws SSHException
     {
         long seqNum = buf.readLong();
         log.info("Received SSH_MSG_UNIMPLEMENTED #{}", seqNum);

@@ -18,8 +18,8 @@
  */
 package org.apache.commons.net.ssh.userauth;
 
+import org.apache.commons.net.ssh.SSHPacket;
 import org.apache.commons.net.ssh.transport.TransportException;
-import org.apache.commons.net.ssh.util.Buffer;
 import org.apache.commons.net.ssh.util.Constants.Message;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -55,7 +55,7 @@ public abstract class AbstractAuthMethod implements AuthMethod
         return name;
     }
     
-    public void handle(Message msg, Buffer buf) throws UserAuthException, TransportException
+    public void handle(Message msg, SSHPacket buf) throws UserAuthException, TransportException
     {
         throw new UserAuthException("Unknown packet received during " + getName() + " auth: " + msg);
     }
@@ -76,12 +76,12 @@ public abstract class AbstractAuthMethod implements AuthMethod
     }
     
     /**
-     * Builds a {@link Buffer} containing the fields common to all authentication methods.
-     * Method-specific fields can further be put into this buffer.
+     * Builds a {@link SSHPacket} containing the fields common to all authentication methods. Method-specific fields can
+     * further be put into this buffer.
      */
-    protected Buffer buildReq() throws UserAuthException
+    protected SSHPacket buildReq() throws UserAuthException
     {
-        return new Buffer(Message.USERAUTH_REQUEST) // SSH_MSG_USERAUTH_REQUEST
+        return new SSHPacket(Message.USERAUTH_REQUEST) // SSH_MSG_USERAUTH_REQUEST
                 .putString(params.getUsername()) // username goes first
                 .putString(params.getNextServiceName()) // the service that we'd like on success
                 .putString(name); // name of auth method

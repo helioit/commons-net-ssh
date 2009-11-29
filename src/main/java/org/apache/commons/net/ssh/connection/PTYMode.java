@@ -21,7 +21,7 @@ package org.apache.commons.net.ssh.connection;
 import java.util.Map;
 import java.util.Map.Entry;
 
-import org.apache.commons.net.ssh.util.Buffer;
+import org.apache.commons.net.ssh.util.Buffer.PlainBuffer;
 
 /**
  * Various modes for a psuedo-terminal. They are meant to have integer parameters.
@@ -148,7 +148,7 @@ public enum PTYMode
     
     public static byte[] encode(Map<PTYMode, Integer> modes)
     {
-        Buffer buf = new Buffer();
+        PlainBuffer buf = new PlainBuffer();
         for (Entry<PTYMode, Integer> entry : modes.entrySet())
         {
             buf.putByte(entry.getKey().getOpcode());
