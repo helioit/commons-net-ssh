@@ -21,9 +21,9 @@ package examples.ssh;
 import org.apache.commons.net.ssh.SSHClient;
 
 /**
- * This example demonstrates uploading of a file over SCP to the SSH server.
+ * This example demonstrates uploading of a file over SFTP to the SSH server.
  */
-public class SCPUpload
+public class SFTPUpload
 {
     
     // static
@@ -40,10 +40,7 @@ public class SCPUpload
         {
             ssh.authPublickey(System.getProperty("user.name"));
             
-            // Compression = significant speedup for large file transfers on fast links
-            // present here to demo algorithm renegotiation - could have just put this before connect()
-            // ssh.useCompression();
-            ssh.scpUpload("/Users/shikhar/Documents", "/tmp/");
+            ssh.scpUpload("/tmp/hundred", ".");
             
         } finally
         {

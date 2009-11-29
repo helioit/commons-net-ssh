@@ -68,7 +68,7 @@ class RudimentaryPTY
             // This is kinda messy because java only allows console input after you hit return
             // But this is just an example... a GUI app could implement a proper PTY
             
-            Pipe.pipe(System.in, shell.getOutputStream(), shell.getRemoteMaxPacketSize(), true);
+            Pipe.pipe(System.in, shell.getOutputStream(), shell.getRemoteMaxPacketSize(), false);
             
         } finally
         {

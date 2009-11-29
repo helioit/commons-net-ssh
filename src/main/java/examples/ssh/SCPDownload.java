@@ -26,20 +26,21 @@ import org.apache.commons.net.ssh.SSHClient;
 public class SCPDownload
 {
     
-    // static {
+    // static
+    // {
     // BasicConfigurator.configure(new ConsoleAppender(new PatternLayout("%d [%-15.15t] %-5p %-30.30c{1} - %m%n")));
     // }
     
     public static void main(String[] args) throws Exception
     {
         SSHClient ssh = new SSHClient();
-        // ssh.useCompression(); // => significant speedup for large file transfers on fast links
+        ssh.useCompression(); // => significant speedup for large file transfers on fast links
         ssh.loadKnownHosts();
         ssh.connect("localhost");
         try
         {
             ssh.authPublickey(System.getProperty("user.name"));
-            ssh.download("ten", "/tmp");
+            ssh.scpDownload("hundred", "/tmp/");
         } finally
         {
             ssh.disconnect();
