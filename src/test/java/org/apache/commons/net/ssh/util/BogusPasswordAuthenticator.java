@@ -19,6 +19,7 @@
 package org.apache.commons.net.ssh.util;
 
 import org.apache.sshd.server.PasswordAuthenticator;
+import org.apache.sshd.server.session.ServerSession;
 
 /**
  * Successfully authenticates when username == password.
@@ -26,9 +27,9 @@ import org.apache.sshd.server.PasswordAuthenticator;
 public class BogusPasswordAuthenticator implements PasswordAuthenticator
 {
     
-    public Object authenticate(String username, String password)
+    public boolean authenticate(String username, String password, ServerSession s)
     {
-        return username != null && username.equals(password) ? username : null;
+        return username.equals(password);
     }
     
 }

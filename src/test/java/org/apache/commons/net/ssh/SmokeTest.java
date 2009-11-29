@@ -18,17 +18,14 @@
  */
 package org.apache.commons.net.ssh;
 
-import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.net.ServerSocket;
 
-import org.apache.commons.net.ssh.connection.Session.Shell;
 import org.apache.commons.net.ssh.transport.TransportException;
 import org.apache.commons.net.ssh.userauth.UserAuthException;
 import org.apache.commons.net.ssh.util.BogusPasswordAuthenticator;
-import org.apache.commons.net.ssh.util.EchoShellFactory;
 import org.apache.sshd.SshServer;
 import org.apache.sshd.common.keyprovider.FileKeyPairProvider;
 import org.junit.After;
@@ -39,7 +36,8 @@ import org.junit.Test;
 
 public class SmokeTest
 {
-    // static {
+    // static
+    // {
     // BasicConfigurator.configure(new ConsoleAppender(new PatternLayout("%d [%-15.15t] %-5p %-30.30c{1} - %m%n")));
     // }
     
@@ -61,17 +59,16 @@ public class SmokeTest
         sshd = SshServer.setUpDefaultServer();
         sshd.setPort(port);
         sshd.setKeyPairProvider(new FileKeyPairProvider(new String[] { hostkey }));
-        sshd.setShellFactory(new EchoShellFactory());
+        // sshd.setShellFactory(new EchoShellFactory());
         sshd.setPasswordAuthenticator(new BogusPasswordAuthenticator());
         sshd.start();
         
         ssh = new SSHClient();
         ssh.addHostKeyVerifier(fingerprint);
-        
     }
     
     @After
-    public void tearUp() throws IOException
+    public void tearUp() throws IOException, InterruptedException
     {
         ssh.disconnect();
         sshd.stop();
@@ -92,19 +89,19 @@ public class SmokeTest
         assertTrue(ssh.isConnected());
     }
     
-    @Test
-    // TODO -- test I/O
-    public void testShell() throws IOException
-    {
-        connect();
-        authenticate();
-        
-        Shell shell = ssh.startSession().startShell();
-        assertTrue(shell.isOpen());
-        
-        shell.close();
-        assertFalse(shell.isOpen());
-    }
+    // @Test
+    // // TODO -- test I/O
+    // public void testShell() throws IOException
+    // {
+    // connect();
+    // authenticate();
+    //        
+    // Shell shell = ssh.startSession().startShell();
+    // assertTrue(shell.isOpen());
+    //        
+    // shell.close();
+    // assertFalse(shell.isOpen());
+    // }
     
     private void authenticate() throws UserAuthException, TransportException
     {

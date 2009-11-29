@@ -25,33 +25,27 @@ import java.io.UnsupportedEncodingException;
 import java.math.BigInteger;
 import java.security.GeneralSecurityException;
 
+import org.apache.commons.net.ssh.SSHPacket;
 import org.apache.commons.net.ssh.util.Buffer.BufferException;
-import org.apache.commons.net.ssh.util.Constants.Message;
+import org.apache.commons.net.ssh.util.Buffer.PlainBuffer;
 import org.junit.Before;
 import org.junit.Test;
 
 /**
- * Tests {@link Buffer} functionality
+ * Tests {@link SSHPacket} functionality
  */
 public class BufferTest
 {
-    private Buffer posBuf;
-    private Buffer handyBuf;
+    private PlainBuffer posBuf;
+    private PlainBuffer handyBuf;
     
     @Before
     public void setUp() throws UnsupportedEncodingException, GeneralSecurityException
     {
         // for position test
         byte[] data = "Hello".getBytes("UTF-8");
-        posBuf = new Buffer(data);
-        handyBuf = new Buffer();
-    }
-    
-    @Test
-    public void testCommand()
-    {
-        // message identifier
-        assertEquals(handyBuf.putMessageID(Message.IGNORE).readMessageID(), Message.IGNORE);
+        posBuf = new PlainBuffer(data);
+        handyBuf = new PlainBuffer();
     }
     
     @Test
@@ -82,7 +76,7 @@ public class BufferTest
     {
         char[] pass = "lolcatz".toCharArray();
         // test if put correctly as a string
-        assertEquals(new Buffer().putPassword(pass).readString(), "lolcatz");
+        assertEquals(new PlainBuffer().putPassword(pass).readString(), "lolcatz");
         // test that char[] was blanked out
         assertArrayEquals(pass, "       ".toCharArray());
     }
