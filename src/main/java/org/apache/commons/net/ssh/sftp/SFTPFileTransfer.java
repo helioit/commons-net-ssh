@@ -7,11 +7,11 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.EnumSet;
 
-import org.apache.commons.net.ssh.FileTransfer;
 import org.apache.commons.net.ssh.sftp.Response.StatusCode;
 import org.apache.commons.net.ssh.util.IOUtils;
 import org.apache.commons.net.ssh.util.Pipe;
 import org.apache.commons.net.ssh.xfer.AbstractFileTransfer;
+import org.apache.commons.net.ssh.xfer.FileTransfer;
 import org.apache.commons.net.ssh.xfer.FileTransferUtil;
 import org.apache.commons.net.ssh.xfer.ModeGetter;
 import org.apache.commons.net.ssh.xfer.ModeSetter;

@@ -2,9 +2,9 @@ package org.apache.commons.net.ssh.scp;
 
 import java.io.IOException;
 
-import org.apache.commons.net.ssh.FileTransfer;
 import org.apache.commons.net.ssh.SessionFactory;
 import org.apache.commons.net.ssh.xfer.AbstractFileTransfer;
+import org.apache.commons.net.ssh.xfer.FileTransfer;
 
 public class SCPFileTransfer extends AbstractFileTransfer implements FileTransfer
 {

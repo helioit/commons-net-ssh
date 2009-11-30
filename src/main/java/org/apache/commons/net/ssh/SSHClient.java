@@ -86,6 +86,7 @@ import org.apache.commons.net.ssh.util.KnownHosts;
 import org.apache.commons.net.ssh.util.PasswordFinder;
 import org.apache.commons.net.ssh.util.SecurityUtils;
 import org.apache.commons.net.ssh.util.Constants.DisconnectReason;
+import org.apache.commons.net.ssh.xfer.FileTransfer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

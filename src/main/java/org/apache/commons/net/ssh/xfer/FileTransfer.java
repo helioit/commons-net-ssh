@@ -1,9 +1,7 @@
-package org.apache.commons.net.ssh;
+package org.apache.commons.net.ssh.xfer;
 
 import java.io.IOException;
 
-import org.apache.commons.net.ssh.xfer.ModeGetter;
-import org.apache.commons.net.ssh.xfer.ModeSetter;
 
 public interface FileTransfer
 {
