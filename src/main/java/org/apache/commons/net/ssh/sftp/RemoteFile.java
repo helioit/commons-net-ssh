@@ -40,7 +40,7 @@ public class RemoteFile extends RemoteResource
         return new RemoteFileOutputStream(this);
     }
     
-    public FileAttributes getAttributes() throws IOException
+    public FileAttributes fetchAttributes() throws IOException
     {
         return sftp.make(newRequest(PacketType.FSTAT)) //
                 .ensurePacketTypeIs(PacketType.ATTRS) //
@@ -49,7 +49,7 @@ public class RemoteFile extends RemoteResource
     
     public long length() throws IOException
     {
-        return getAttributes().getSize();
+        return fetchAttributes().getSize();
     }
     
     public void setLength(long len) throws IOException

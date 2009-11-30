@@ -24,11 +24,12 @@ import java.util.Set;
 import java.util.Map.Entry;
 
 import org.apache.commons.net.ssh.util.Buffer.PlainBuffer;
+import org.apache.commons.net.ssh.xfer.FilePermission;
 
 public class FileAttributes
 {
     
-    private static enum Flag
+    public static enum Flag
     {
         
         SIZE(0x00000001), UIDGID(0x00000002), MODE(0x00000004), ACMODTIME(0x00000008), EXTENDED(0x80000000);
@@ -61,11 +62,6 @@ public class FileAttributes
     private final long mtime;
     private final Map<String, String> ext = new HashMap<String, String>();
     
-    private boolean isSet(Flag flag)
-    {
-        return flag.isSet(mask);
-    }
-    
     public FileAttributes()
     {
         size = atime = mtime = uid = gid = mask = 0;
@@ -76,9 +72,9 @@ public class FileAttributes
     {
         mask = buf.readInt();
         
-        size = isSet(Flag.SIZE) ? buf.readUINT64() : 0;
+        size = has(Flag.SIZE) ? buf.readUINT64() : 0;
         
-        if (isSet(Flag.UIDGID))
+        if (has(Flag.UIDGID))
         {
             uid = buf.readInt();
             gid = buf.readInt();
@@ -88,9 +84,9 @@ public class FileAttributes
             gid = 0;
         }
         
-        mode = new FileMode(isSet(Flag.MODE) ? buf.readInt() : 0);
+        mode = new FileMode(has(Flag.MODE) ? buf.readInt() : 0);
         
-        if (isSet(Flag.ACMODTIME))
+        if (has(Flag.ACMODTIME))
         {
             atime = buf.readLong();
             mtime = buf.readLong();
@@ -100,7 +96,7 @@ public class FileAttributes
             mtime = 0;
         }
         
-        if (isSet(Flag.EXTENDED))
+        if (has(Flag.EXTENDED))
         {
             final int extCount = buf.readInt();
             for (int i = 0; i < extCount; i++)
@@ -119,6 +115,11 @@ public class FileAttributes
         this.atime = atime;
         this.mtime = mtime;
         this.ext.putAll(ext);
+    }
+    
+    public boolean has(Flag flag)
+    {
+        return flag.isSet(mask);
     }
     
     public long getSize()
@@ -141,7 +142,7 @@ public class FileAttributes
         return mode;
     }
     
-    public Set<FileMode.Permission> getPermissions()
+    public Set<FilePermission> getPermissions()
     {
         return mode.getPermissions();
     }
@@ -171,25 +172,25 @@ public class FileAttributes
         PlainBuffer buf = new PlainBuffer();
         buf.putInt(mask);
         
-        if (isSet(Flag.SIZE))
+        if (has(Flag.SIZE))
             buf.putUINT64(size);
         
-        if (isSet(Flag.UIDGID))
+        if (has(Flag.UIDGID))
         {
             buf.putInt(uid);
             buf.putInt(gid);
         }
         
-        if (isSet(Flag.MODE))
+        if (has(Flag.MODE))
             buf.putInt(mode.getMask());
         
-        if (isSet(Flag.ACMODTIME))
+        if (has(Flag.ACMODTIME))
         {
             buf.putInt(atime);
             buf.putInt(mtime);
         }
         
-        if (isSet(Flag.EXTENDED))
+        if (has(Flag.EXTENDED))
         {
             buf.putInt(ext.size());
             for (Entry<String, String> entry : ext.entrySet())
@@ -205,19 +206,19 @@ public class FileAttributes
     public String toString()
     {
         StringBuilder sb = new StringBuilder("[");
-        if (isSet(Flag.SIZE))
+        if (has(Flag.SIZE))
             sb.append("size=" + size + ";");
         
-        if (isSet(Flag.UIDGID))
+        if (has(Flag.UIDGID))
             sb.append("uid=" + size + ",gid=" + gid + ";");
         
-        if (isSet(Flag.MODE))
+        if (has(Flag.MODE))
             sb.append("mode=" + mode.toString() + ";");
         
-        if (isSet(Flag.ACMODTIME))
+        if (has(Flag.ACMODTIME))
             sb.append("atime=" + atime + ",mtime=" + mtime + ";");
         
-        if (isSet(Flag.EXTENDED))
+        if (has(Flag.EXTENDED))
             sb.append("ext=" + ext);
         
         sb.append("]");
@@ -259,23 +260,18 @@ public class FileAttributes
             return this;
         }
         
-        // public Builder withType(FileMode.Type type)
-        // {
-        // mask |= Flag.MODE.get();
-        // this.mode = new FileMode(type, mode.getPermissions());
-        // return this;
-        // }
-        
-        public Builder withPermissions(Set<FileMode.Permission> perms)
+        public Builder withPermissions(Set<FilePermission> perms)
         {
             mask |= Flag.MODE.get();
-            this.mode = new FileMode(mode.getType(), perms);
+            this.mode = new FileMode(FilePermission.toMask(perms));
             return this;
         }
         
         public Builder withPermissions(int perms)
         {
-            return withPermissions(FileMode.Permission.fromMask(perms));
+            mask |= Flag.MODE.get();
+            this.mode = new FileMode(perms);
+            return this;
         }
         
         public Builder withExtended(String type, String data)

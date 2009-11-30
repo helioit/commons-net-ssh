@@ -16,43 +16,42 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.commons.net.ssh.scp;
+package org.apache.commons.net.ssh.xfer;
 
 import java.io.File;
 import java.io.IOException;
 
-/*
- * TODO
- * Use Runtime.exec() to run unix commands for setting these values 
- */
-
 /**
- * STUB
+ * Default implementation of {@link ModeGetter} that supplies file permissions as {@code "0644"}, directory permissions
+ * as {@code "0755"}, and does not supply mtime and atime.
  */
-public class UnixModeSetter implements ModeSetter
+public class DefaultModeGetter implements ModeGetter
 {
     
-    public void setLastAccessedTime(File f, long t) throws IOException
+    public long getLastAccessTime(File f)
     {
-        // TODO Auto-generated method stub
-        
+        return 0;
     }
     
-    public void setLastModifiedTime(File f, long t) throws IOException
+    public long getLastModifiedTime(File f)
     {
-        // TODO Auto-generated method stub
-        
+        // return f.lastModified() / 1000;
+        return 0;
     }
     
-    public void setPermissions(File f, String perms) throws IOException
+    public int getPermissions(File f) throws IOException
     {
-        // TODO Auto-generated method stub
-        
+        if (f.isDirectory())
+            return 0755;
+        else if (f.isFile())
+            return 0644;
+        else
+            throw new IOException("Unsupported file type: " + f);
     }
     
-    public boolean shouldPreserveTimes()
+    public boolean preservesTimes()
     {
-        return true;
+        return false;
     }
     
 }

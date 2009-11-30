@@ -31,26 +31,28 @@ class PathUtil
         this.sftp = sftp;
     }
     
+    private String getDotDir() throws IOException
+    {
+        return (dotDir != null) ? dotDir : (dotDir = sftp.canonicalize("."));
+    }
+    
     private String canon(String path) throws IOException
     {
-        if (path.equals("."))
-            return (dotDir != null) ? dotDir : (dotDir = sftp.canonicalize("."));
-        else
-            return sftp.canonicalize(path);
+        return sftp.canonicalize(path);
     }
     
     public PathComponents getComponents(String path) throws IOException
     {
-        if (path.isEmpty())
-            return getComponents(canon("."));
+        if (path.isEmpty() || path.equals("."))
+            return getComponents(getDotDir());
         
         final int lastSlash = path.lastIndexOf("/");
         
         if (lastSlash == -1)
-            if (path.equals(".") || path.equals(".."))
+            if (path.equals(".."))
                 return getComponents(canon(path));
             else
-                return new PathComponents(canon("."), path);
+                return new PathComponents(getDotDir(), path);
         
         final String name = path.substring(lastSlash + 1);
         
@@ -65,7 +67,7 @@ class PathUtil
     
     static String adjustForParent(String parent, String path)
     {
-        return (path.startsWith("/")) ? path // Absolute path
+        return (path.startsWith("/")) ? path // Absolute path, nothing to adjust
                 : (parent + (parent.endsWith("/") ? "" : "/") + path); // Relative path
     }
     

@@ -25,7 +25,6 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Queue;
 
-import org.apache.commons.net.ssh.SSHException;
 import org.apache.commons.net.ssh.SessionFactory;
 import org.apache.commons.net.ssh.connection.ConnectionException;
 import org.apache.commons.net.ssh.connection.Session.Command;
@@ -37,25 +36,12 @@ import org.slf4j.LoggerFactory;
 /**
  * @see <a href="http://blogs.sun.com/janp/entry/how_the_scp_protocol_works">SCP Protocol</a>
  */
-public abstract class SCPEngine
+abstract class SCPEngine
 {
     
-    public static class SCPException extends SSHException
+    static enum Arg
     {
-        public SCPException(String message)
-        {
-            super(message);
-        }
-        
-        public SCPException(String message, Throwable cause)
-        {
-            super(message, cause);
-        }
-    }
-    
-    protected static enum Arg
-    {
-        SOURCE('f'), SINK('t'), RECURSIVE('r'), VERBOSE('v'), PRESERVE_MODES('p'), QUIET('q');
+        SOURCE('f'), SINK('t'), RECURSIVE('r'), VERBOSE('v'), PRESERVE_TIMES('p'), QUIET('q');
         
         private char a;
         
@@ -71,34 +57,24 @@ public abstract class SCPEngine
         }
     }
     
-    protected static final char LF = '\n';
-    protected static final String SCP_COMMAND = "scp";
+    static final String SCP_COMMAND = "scp";
     
-    protected static void addArg(List<String> args, Arg arg)
-    {
-        addArg(args, arg.toString());
-    }
+    static final char LF = '\n';
     
-    protected static void addArg(List<String> args, String arg)
-    {
-        args.add(arg);
-    }
+    final Logger log = LoggerFactory.getLogger(getClass());
     
-    protected final Logger log = LoggerFactory.getLogger(getClass());
+    final SessionFactory host;
+    final Queue<String> warnings = new LinkedList<String>();
     
-    protected final SessionFactory host;
+    Command scp;
+    int exitStatus;
     
-    protected final Queue<String> warnings = new LinkedList<String>();
-    protected int exitStatus;
-    
-    protected Command scp;
-    
-    protected SCPEngine(SessionFactory host)
+    SCPEngine(SessionFactory host)
     {
         this.host = host;
     }
     
-    public synchronized int copy(String sourcePath, String targetPath) throws IOException
+    public int copy(String sourcePath, String targetPath) throws IOException
     {
         cleanSlate();
         try
@@ -161,11 +137,12 @@ public abstract class SCPEngine
         warnings.clear();
     }
     
-    void execSCPWith(List<String> args) throws ConnectionException, TransportException
+    void execSCPWith(List<Arg> args, String path) throws ConnectionException, TransportException
     {
         String cmd = SCP_COMMAND;
-        for (String arg : args)
+        for (Arg arg : args)
             cmd += " " + arg;
+        cmd += " " + ((path == null || path.equals("")) ? "." : path);
         scp = host.startSession().exec(cmd);
     }
     

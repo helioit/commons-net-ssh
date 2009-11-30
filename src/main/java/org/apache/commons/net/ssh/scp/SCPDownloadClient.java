@@ -28,28 +28,24 @@ import org.apache.commons.net.ssh.SSHClient;
 import org.apache.commons.net.ssh.SessionFactory;
 import org.apache.commons.net.ssh.connection.ConnectionException;
 import org.apache.commons.net.ssh.transport.TransportException;
-import org.apache.commons.net.ssh.util.FileTransferUtil;
 import org.apache.commons.net.ssh.util.IOUtils;
+import org.apache.commons.net.ssh.xfer.FileTransferUtil;
+import org.apache.commons.net.ssh.xfer.ModeSetter;
 
 /**
  * Support for uploading files over a connected {@link SSHClient} link using SCP.
  */
-public class SCPDownloadClient extends SCPEngine
+public final class SCPDownloadClient extends SCPEngine
 {
     
     private final ModeSetter modeSetter;
     
     private boolean recursive = true;
     
-    public SCPDownloadClient(SessionFactory host)
-    {
-        this(host, null);
-    }
-    
-    public SCPDownloadClient(SessionFactory host, ModeSetter modeSetter)
+    SCPDownloadClient(SessionFactory host, ModeSetter modeSetter)
     {
         super(host);
-        this.modeSetter = modeSetter == null ? new DefaultModeSetter() : modeSetter;
+        this.modeSetter = modeSetter;
     }
     
     /**
@@ -61,25 +57,42 @@ public class SCPDownloadClient extends SCPEngine
         return super.copy(sourcePath, targetPath);
     }
     
+    public boolean getRecursive()
+    {
+        return recursive;
+    }
+    
     public void setRecursive(boolean recursive)
     {
         this.recursive = recursive;
     }
     
-    void init(String source) throws ConnectionException, TransportException
+    @Override
+    void startCopy(String sourcePath, String targetPath) throws IOException
     {
-        List<String> args = new LinkedList<String>();
-        addArg(args, Arg.SOURCE);
-        addArg(args, Arg.QUIET);
-        if (recursive)
-            addArg(args, Arg.RECURSIVE);
-        if (modeSetter.shouldPreserveTimes())
-            addArg(args, Arg.PRESERVE_MODES);
-        addArg(args, source == null || source.equals("") ? "." : source);
-        execSCPWith(args);
+        init(sourcePath);
+        
+        signal("Start status OK");
+        
+        String msg = readMessage(true);
+        do
+            process(null, msg, new File(targetPath));
+        while ((msg = readMessage(false)) != null);
     }
     
-    long parseLong(String longString, String valType) throws SCPException
+    private void init(String source) throws ConnectionException, TransportException
+    {
+        List<Arg> args = new LinkedList<Arg>();
+        args.add(Arg.SOURCE);
+        args.add(Arg.QUIET);
+        if (recursive)
+            args.add(Arg.RECURSIVE);
+        if (modeSetter.preservesTimes())
+            args.add(Arg.PRESERVE_TIMES);
+        execSCPWith(args, source);
+    }
+    
+    private long parseLong(String longString, String valType) throws SCPException
     {
         long val = 0;
         try
@@ -92,19 +105,19 @@ public class SCPDownloadClient extends SCPEngine
         return val;
     }
     
-    /* e.g. "C0644" -> "644"; "D0755" -> "755" */
-    String parsePermissions(String cmd) throws SCPException
+    /* e.g. "C0644" -> 0644; "D0755" -> 0755 */
+    private int parsePermissions(String cmd) throws SCPException
     {
         if (cmd.length() != 5)
             throw new SCPException("Could not parse permissions from `" + cmd + "`");
-        return cmd.substring(2);
+        return Integer.parseInt(cmd.substring(1), 8);
     }
     
-    void prepare(File f, String perms, String tMsg) throws IOException
+    private void prepare(File f, int perms, String tMsg) throws IOException
     {
         modeSetter.setPermissions(f, perms);
         
-        if (tMsg != null && modeSetter.shouldPreserveTimes())
+        if (tMsg != null && modeSetter.preservesTimes())
         {
             String[] tMsgParts = tokenize(tMsg, 4); // e.g. T<mtime> 0 <atime> 0
             modeSetter.setLastModifiedTime(f, parseLong(tMsgParts[0].substring(1), "last modified time"));
@@ -112,7 +125,7 @@ public class SCPDownloadClient extends SCPEngine
         }
     }
     
-    boolean process(String bufferedTMsg, String msg, File f) throws IOException
+    private boolean process(String bufferedTMsg, String msg, File f) throws IOException
     {
         if (msg.length() < 1)
             throw new SCPException("Could not parse message `" + msg + "`");
@@ -152,7 +165,7 @@ public class SCPDownloadClient extends SCPEngine
         return false;
     }
     
-    void processDirectory(String dMsg, String tMsg, File f) throws IOException
+    private void processDirectory(String dMsg, String tMsg, File f) throws IOException
     {
         String[] dMsgParts = tokenize(dMsg, 3); // e.g. D0755 0 <dirname>
         
@@ -171,7 +184,7 @@ public class SCPDownloadClient extends SCPEngine
         signal("ACK: E");
     }
     
-    void processFile(String cMsg, String tMsg, File f) throws IOException
+    private void processFile(String cMsg, String tMsg, File f) throws IOException
     {
         String[] cMsgParts = tokenize(cMsg, 3);
         
@@ -186,19 +199,6 @@ public class SCPDownloadClient extends SCPEngine
         check("Remote agrees transfer done");
         signal("Transfer done");
         IOUtils.closeQuietly(fos);
-    }
-    
-    @Override
-    void startCopy(String sourcePath, String targetPath) throws IOException
-    {
-        init(sourcePath);
-        
-        signal("Start status OK");
-        
-        String msg = readMessage(true);
-        do
-            process(null, msg, new File(targetPath));
-        while ((msg = readMessage(false)) != null);
     }
     
     private String[] tokenize(String msg, int numPartsExpected) throws IOException

@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Set;
 
 import org.apache.commons.net.ssh.SessionFactory;
+import org.apache.commons.net.ssh.xfer.FilePermission;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -16,12 +17,12 @@ public class SFTPClient
     protected final Logger log = LoggerFactory.getLogger(getClass());
     
     private final SFTPEngine sftp;
-    private final FileTransferHandler xfer;
+    private final SFTPFileTransfer xfer;
     
     public SFTPClient(SessionFactory ssh) throws IOException
     {
         this.sftp = new SFTPEngine(ssh).init();
-        this.xfer = new FileTransferHandler(sftp);
+        this.xfer = new SFTPFileTransfer(sftp);
     }
     
     public SFTPEngine getSFTPEngine()
@@ -29,7 +30,7 @@ public class SFTPClient
         return sftp;
     }
     
-    public FileTransferHandler getFileTansferHandler()
+    public SFTPFileTransfer getFileTansfer()
     {
         return xfer;
     }
@@ -117,7 +118,7 @@ public class SFTPClient
         return stat(path).getMtime();
     }
     
-    public Set<FileMode.Permission> perms(String path) throws IOException
+    public Set<FilePermission> perms(String path) throws IOException
     {
         return stat(path).getPermissions();
     }

@@ -97,7 +97,7 @@ public class SFTPEngine
         return new Request(type, reqID = reqID + 1 & 0xffffffffL);
     }
     
-    private void transmit(SFTPPacket<Request> payload) throws IOException
+    private synchronized void transmit(SFTPPacket<Request> payload) throws IOException
     {
         final int len = payload.available();
         out.write((len >>> 24) & 0xff);

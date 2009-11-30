@@ -1,4 +1,4 @@
-package org.apache.commons.net.ssh.util;
+package org.apache.commons.net.ssh.xfer;
 
 import java.io.File;
 import java.io.IOException;

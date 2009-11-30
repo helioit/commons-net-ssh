@@ -16,45 +16,34 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.commons.net.ssh.scp;
+package org.apache.commons.net.ssh.xfer;
 
 import java.io.File;
 import java.io.IOException;
 
+
 /**
- * Default implementation of {@link ModeGetter} that supplies file permissions as {@code "0644"}, directory permissions
- * as {@code "0755"}, and does not supply mtime and atime.
+ * Default implementation of {@link ModeSetter} that does not set any permissions or preserve mtime and atime.
  */
-public class DefaultModeGetter implements ModeGetter
+public class DefaultModeSetter implements ModeSetter
 {
     
-    public long getLastAccessTime(File f)
+    public void setLastAccessedTime(File f, long t) throws IOException
     {
-        // return f.lastModified() / 1000;
-        return 0;
+        // can't do ntn
     }
     
-    public long getLastModifiedTime(File f)
+    public void setLastModifiedTime(File f, long t) throws IOException
     {
-        // return f.lastModified() / 1000;
-        return 0;
+        // f.setLastModified(t * 1000);
     }
     
-    public String getPermissions(File f) throws IOException
+    public void setPermissions(File f, int perms) throws IOException
     {
-        if (f.isDirectory())
-        {
-            return "0755";
-        } else if (f.isFile())
-        {
-            return "0644";
-        } else
-        {
-            throw new IOException("Unsupported file type: " + f);
-        }
+        // TODO: set user's rwx permissions; can't do anything about group and world
     }
     
-    public boolean shouldPreserveTimes()
+    public boolean preservesTimes()
     {
         return false;
     }

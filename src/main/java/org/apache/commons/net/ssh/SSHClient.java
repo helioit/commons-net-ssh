@@ -69,8 +69,7 @@ import org.apache.commons.net.ssh.mac.HMACSHA196;
 import org.apache.commons.net.ssh.random.BouncyCastleRandom;
 import org.apache.commons.net.ssh.random.JCERandom;
 import org.apache.commons.net.ssh.random.SingletonRandomFactory;
-import org.apache.commons.net.ssh.scp.SCPDownloadClient;
-import org.apache.commons.net.ssh.scp.SCPUploadClient;
+import org.apache.commons.net.ssh.scp.SCPFileTransfer;
 import org.apache.commons.net.ssh.sftp.SFTPClient;
 import org.apache.commons.net.ssh.signature.SignatureDSA;
 import org.apache.commons.net.ssh.signature.SignatureRSA;
@@ -105,7 +104,7 @@ import org.slf4j.LoggerFactory;
  * {@link #registerX11Forwarder(ConnectListener) register} a {@link ConnectListener} for {@code x11} channels.
  * <p>
  * {@link #newLocalPortForwarder Local} and {@link #getRemotePortForwarder() remote} port forwarding is possible. For
- * SCP, see {@link SCPDownloadClient} and {@link SCPUploadClient} which require a connected {@code SSHClient}.
+ * SCP, TODO document
  * <p>
  * <em>A simple example:</em>
  * <p>
@@ -249,26 +248,6 @@ public class SSHClient extends SocketClient implements SessionFactory
         this.trans = new TransportProtocol(config);
         this.auth = new UserAuthProtocol(trans);
         this.conn = new ConnectionProtocol(trans);
-    }
-    
-    public void scpUpload(String source, String target) throws IOException
-    {
-        new SCPUploadClient(this).copy(source, target);
-    }
-    
-    public void scpDownload(String source, String target) throws IOException
-    {
-        new SCPDownloadClient(this).copy(source, target);
-    }
-    
-    public void sftpUpload(String source, String target) throws IOException
-    {
-        startSFTP().put(source, target);
-    }
-    
-    public void sftpDownload(String source, String target) throws IOException
-    {
-        startSFTP().get(source, target);
     }
     
     /**
@@ -733,6 +712,18 @@ public class SSHClient extends SocketClient implements SessionFactory
         return x11f;
     }
     
+    public FileTransfer newSCPFileTransfer()
+    {
+        assert isConnected() && isAuthenticated();
+        return new SCPFileTransfer(this);
+    }
+    
+    public SFTPClient newSFTPClient() throws IOException
+    {
+        assert isConnected() && isAuthenticated();
+        return new SFTPClient(this);
+    }
+    
     /**
      * Does key re-exchange.
      * 
@@ -761,12 +752,6 @@ public class SSHClient extends SocketClient implements SessionFactory
         sess.open();
         assert sess.isOpen();
         return sess;
-    }
-    
-    public SFTPClient startSFTP() throws IOException
-    {
-        assert isConnected() && isAuthenticated();
-        return new SFTPClient(this);
     }
     
     /**

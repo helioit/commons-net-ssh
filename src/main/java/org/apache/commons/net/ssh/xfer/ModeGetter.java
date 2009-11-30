@@ -16,7 +16,7 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.commons.net.ssh.scp;
+package org.apache.commons.net.ssh.xfer;
 
 import java.io.File;
 import java.io.IOException;
@@ -52,14 +52,14 @@ public interface ModeGetter
      * 
      * @param f
      *            the file
-     * @return permissions in octal format, e.g. "644"
+     * @return permissions in octal format, e.g. 0644
      * @throws IOException
      */
-    String getPermissions(File f) throws IOException;
+    int getPermissions(File f) throws IOException;
     
     /**
      * Whether this implementation can provide mtime and atime information.
      */
-    boolean shouldPreserveTimes();
+    boolean preservesTimes();
     
 }

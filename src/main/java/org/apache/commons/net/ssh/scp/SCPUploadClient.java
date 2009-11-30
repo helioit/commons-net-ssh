@@ -26,30 +26,27 @@ import java.io.InputStream;
 import java.util.LinkedList;
 import java.util.List;
 
-import org.apache.commons.net.ssh.SessionFactory;
 import org.apache.commons.net.ssh.SSHClient;
+import org.apache.commons.net.ssh.SessionFactory;
 import org.apache.commons.net.ssh.connection.ConnectionException;
 import org.apache.commons.net.ssh.transport.TransportException;
 import org.apache.commons.net.ssh.util.IOUtils;
+import org.apache.commons.net.ssh.xfer.ModeGetter;
 
 /**
  * Support for uploading files over a connected {@link SSHClient} link using SCP.
  */
-public class SCPUploadClient extends SCPEngine
+public final class SCPUploadClient extends SCPEngine
 {
     
     private final ModeGetter modeGetter;
+    
     private FileFilter fileFilter;
     
-    public SCPUploadClient(SessionFactory host)
-    {
-        this(host, null);
-    }
-    
-    public SCPUploadClient(SessionFactory host, ModeGetter modeGetter)
+    SCPUploadClient(SessionFactory host, ModeGetter modeGetter)
     {
         super(host);
-        this.modeGetter = modeGetter == null ? new DefaultModeGetter() : modeGetter;
+        this.modeGetter = modeGetter;
     }
     
     /**
@@ -66,7 +63,15 @@ public class SCPUploadClient extends SCPEngine
         this.fileFilter = fileFilter;
     }
     
-    File[] getChildren(File f) throws IOException
+    @Override
+    protected synchronized void startCopy(String sourcePath, String targetPath) throws IOException
+    {
+        init(targetPath);
+        check("Start status OK");
+        process(new File(sourcePath));
+    }
+    
+    private File[] getChildren(File f) throws IOException
     {
         File[] files = fileFilter == null ? f.listFiles() : f.listFiles(fileFilter);
         if (files == null)
@@ -74,18 +79,17 @@ public class SCPUploadClient extends SCPEngine
         return files;
     }
     
-    void init(String target) throws ConnectionException, TransportException
+    private void init(String target) throws ConnectionException, TransportException
     {
-        List<String> args = new LinkedList<String>();
-        addArg(args, Arg.SINK);
-        addArg(args, Arg.RECURSIVE);
-        if (modeGetter.shouldPreserveTimes())
-            addArg(args, Arg.PRESERVE_MODES);
-        args.add(target == null || target.equals("") ? "." : target);
-        execSCPWith(args);
+        List<Arg> args = new LinkedList<Arg>();
+        args.add(Arg.SINK);
+        args.add(Arg.RECURSIVE);
+        if (modeGetter.preservesTimes())
+            args.add(Arg.PRESERVE_TIMES);
+        execSCPWith(args, target);
     }
     
-    void process(File f) throws IOException
+    private void process(File f) throws IOException
     {
         if (f.isDirectory())
             sendDirectory(f);
@@ -95,12 +99,12 @@ public class SCPUploadClient extends SCPEngine
             throw new IOException(f + " is not a regular file or directory");
     }
     
-    void sendDirectory(File f) throws IOException
+    private void sendDirectory(File f) throws IOException
     {
         log.info("Entering directory `{}`", f.getName());
-        if (modeGetter.shouldPreserveTimes())
+        if (modeGetter.preservesTimes())
             sendMessage("T" + modeGetter.getLastModifiedTime(f) + " 0 " + modeGetter.getLastAccessTime(f) + " 0");
-        sendMessage("D" + modeGetter.getPermissions(f) + " 0 " + f.getName());
+        sendMessage("D0" + getPermString(f) + " 0 " + f.getName());
         
         for (File child : getChildren(f))
             process(child);
@@ -109,25 +113,22 @@ public class SCPUploadClient extends SCPEngine
         log.info("Exiting directory `{}`", f.getName());
     }
     
-    void sendFile(File f) throws IOException
+    private void sendFile(File f) throws IOException
     {
         log.info("Sending `{}`...", f.getName());
-        if (modeGetter.shouldPreserveTimes())
+        if (modeGetter.preservesTimes())
             sendMessage("T" + modeGetter.getLastModifiedTime(f) + " 0 " + modeGetter.getLastAccessTime(f) + " 0");
         InputStream src = new FileInputStream(f);
-        sendMessage("C" + modeGetter.getPermissions(f) + " " + f.length() + " " + f.getName());
+        sendMessage("C0" + getPermString(f) + " " + f.length() + " " + f.getName());
         transfer(src, scp.getOutputStream(), scp.getRemoteMaxPacketSize(), f.length());
         signal("Transfer done");
         check("Remote agrees transfer done");
         IOUtils.closeQuietly(src);
     }
     
-    @Override
-    synchronized void startCopy(String sourcePath, String targetPath) throws IOException
+    private String getPermString(File f) throws IOException
     {
-        init(targetPath);
-        check("Start status OK");
-        process(new File(sourcePath));
+        return Integer.toOctalString(modeGetter.getPermissions(f) & 07777);
     }
     
 }

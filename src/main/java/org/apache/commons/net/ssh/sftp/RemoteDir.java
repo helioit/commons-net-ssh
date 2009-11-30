@@ -32,15 +32,7 @@ public class RemoteDir extends RemoteResource
         super(sftp, path, handle);
     }
     
-    public boolean accepted(RemoteResourceInfo r, RemoteResourceFilter... filters) throws IOException
-    {
-        for (RemoteResourceFilter filter : filters)
-            if (!filter.accept(r))
-                return false;
-        return true;
-    }
-    
-    public List<RemoteResourceInfo> scan(RemoteResourceFilter... filters) throws IOException
+    public List<RemoteResourceInfo> scan(RemoteResourceFilter filter) throws IOException
     {
         List<RemoteResourceInfo> rri = new LinkedList<RemoteResourceInfo>();
         loop: for (;;)
@@ -57,7 +49,7 @@ public class RemoteDir extends RemoteResource
                     res.readString(); // long name - IGNORED - shdve never been in the protocol
                     final FileAttributes attrs = res.readFileAttributes();
                     RemoteResourceInfo inf = new RemoteResourceInfo(path, name, attrs);
-                    if (!(name.equals(".") || name.equals("..")) && accepted(inf, filters))
+                    if (!(name.equals(".") || name.equals("..")) && (filter == null || filter.accept(inf)))
                         rri.add(inf);
                 }
                 break loop;
