@@ -67,7 +67,7 @@ public class LocalWindow extends Window
     private synchronized void sendWindowAdjust(int inc) throws TransportException
     {
         log.info("Sending SSH_MSG_CHANNEL_WINDOW_ADJUST to #{} for {} bytes", chan.getRecipient(), inc);
-        chan.getTransport().writePacket(new SSHPacket(Message.CHANNEL_WINDOW_ADJUST) //
+        chan.getTransport().write(new SSHPacket(Message.CHANNEL_WINDOW_ADJUST) //
                 .putInt(chan.getRecipient()) //
                 .putInt(inc));
     }

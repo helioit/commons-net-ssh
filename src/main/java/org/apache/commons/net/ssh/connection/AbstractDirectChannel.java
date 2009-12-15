@@ -40,7 +40,7 @@ public abstract class AbstractDirectChannel extends AbstractChannel implements C
     
     public void open() throws ConnectionException, TransportException
     {
-        trans.writePacket(buildOpenReq());
+        trans.write(buildOpenReq());
         open.await(conn.getTimeout());
     }
     

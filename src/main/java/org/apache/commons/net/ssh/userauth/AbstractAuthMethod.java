@@ -67,7 +67,7 @@ public abstract class AbstractAuthMethod implements AuthMethod
     
     public void request() throws UserAuthException, TransportException
     {
-        params.getTransport().writePacket(buildReq());
+        params.getTransport().write(buildReq());
     }
     
     public boolean shouldRetry()

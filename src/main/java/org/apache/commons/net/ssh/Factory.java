@@ -18,6 +18,7 @@
  */
 package org.apache.commons.net.ssh;
 
+import java.util.LinkedList;
 import java.util.List;
 
 /**
@@ -30,8 +31,8 @@ public interface Factory<T>
 {
     
     /**
-     * Inteface for a named factory. Named factories are simply factories that are identified by a
-     * name. Such names are used mainly in SSH algorithm negotiation.
+     * Inteface for a named factory. Named factories are simply factories that are identified by a name. Such names are
+     * used mainly in SSH algorithm negotiation.
      * 
      * @param <T>
      *            type of object created by this factory
@@ -46,8 +47,8 @@ public interface Factory<T>
         {
             
             /**
-             * Creates an object by picking a factory from {@code factories} that is identified by
-             * {@code name} from a list of named {@code factories}. Uses the first match.
+             * Creates an object by picking a factory from {@code factories} that is identified by {@code name} from a
+             * list of named {@code factories}. Uses the first match.
              * 
              * @param factories
              *            list of available factories
@@ -67,8 +68,8 @@ public interface Factory<T>
             }
             
             /**
-             * Retrieve a particular factory as identified by {@code name} from a list of named
-             * {@code factories}. Returns the first match.
+             * Retrieve a particular factory as identified by {@code name} from a list of named {@code factories}.
+             * Returns the first match.
              * 
              * @param factories
              *            list of factories
@@ -87,8 +88,7 @@ public interface Factory<T>
             }
             
             /**
-             * Get a comma-delimited string containing the factory names from the given list of
-             * {@code factories}.
+             * Get a comma-delimited string containing the factory names from the given list of {@code factories}.
              * 
              * @param factories
              *            list of available factories
@@ -96,16 +96,12 @@ public interface Factory<T>
              *            type of the {@code factories}
              * @return a comma separated list of factory names
              */
-            public static <T> String getNames(List<Named<T>> factories)
+            public static <T> List<String> getNames(List<Named<T>> factories)
             {
-                StringBuffer sb = new StringBuffer();
+                List<String> list = new LinkedList<String>();
                 for (Named<T> f : factories)
-                {
-                    if (sb.length() > 0)
-                        sb.append(",");
-                    sb.append(f.getName());
-                }
-                return sb.toString();
+                    list.add(f.getName());
+                return list;
             }
             
             /**

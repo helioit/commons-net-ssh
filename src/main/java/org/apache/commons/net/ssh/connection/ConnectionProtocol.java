@@ -145,10 +145,10 @@ public class ConnectionProtocol extends AbstractService implements Connection
     {
         super.notifyError(error);
         
-        ErrorNotifiable.Util.alertAll(error, globalReqFutures.toArray());
+        ErrorNotifiable.Util.alertAll(error, globalReqFutures.toArray(new ErrorNotifiable[globalReqFutures.size()]));
         globalReqFutures.clear();
         
-        ErrorNotifiable.Util.alertAll(error, channels.values().toArray());
+        ErrorNotifiable.Util.alertAll(error, channels.values().toArray(new ErrorNotifiable[channels.size()]));
         channels.clear();
     }
     
@@ -188,7 +188,7 @@ public class ConnectionProtocol extends AbstractService implements Connection
             PlainBuffer specifics) throws TransportException
     {
         log.info("Making global request for `{}`", name);
-        trans.writePacket(new SSHPacket(Message.GLOBAL_REQUEST) //
+        trans.write(new SSHPacket(Message.GLOBAL_REQUEST) //
                 .putString(name) //
                 .putBoolean(wantReply) //
                 .putBuffer(specifics)); //
@@ -230,7 +230,7 @@ public class ConnectionProtocol extends AbstractService implements Connection
     
     public void sendOpenFailure(int recipient, Reason reason, String message) throws TransportException
     {
-        trans.writePacket(new SSHPacket(Message.CHANNEL_OPEN_FAILURE) //
+        trans.write(new SSHPacket(Message.CHANNEL_OPEN_FAILURE) //
                 .putInt(recipient) //
                 .putInt(reason.getCode()) //
                 .putString(message));

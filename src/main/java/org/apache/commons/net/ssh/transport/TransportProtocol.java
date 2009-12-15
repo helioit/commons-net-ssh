@@ -65,12 +65,11 @@ public final class TransportProtocol implements Transport
         {
             try
             {
-                byte[] recvbuf = new byte[decoder.getMaxPacketLength()];
+                final byte[] recvbuf = new byte[decoder.getMaxPacketLength()];
                 int needed = 1;
-                int read;
                 while (!Thread.currentThread().isInterrupted())
                 {
-                    read = connInfo.getInputStream().read(recvbuf, 0, needed);
+                    int read = connInfo.getInputStream().read(recvbuf, 0, needed);
                     if (read == -1)
                         throw new TransportException("Broken transport; encountered EOF");
                     else
@@ -85,6 +84,41 @@ public final class TransportProtocol implements Transport
                     die(e);
             }
             log.debug("Stopping");
+        }
+    };
+    
+    private final Thread heartbeater = new Thread()
+    {
+        {
+            setName("heartbeater");
+            // setDaemon(true);
+        }
+        
+        @Override
+        public void run()
+        {
+            try
+            {
+                while (!Thread.currentThread().isInterrupted())
+                {
+                    int hi;
+                    synchronized (this)
+                    {
+                        while ((hi = heartbeatInterval) == 0)
+                            wait();
+                    }
+                    Thread.sleep(hi * 1000);
+                    log.info("Sending heartbeat since {} seconds elapsed", hi);
+                    write(new SSHPacket(Message.IGNORE));
+                }
+            } catch (Exception e)
+            {
+                if (Thread.currentThread().isInterrupted())
+                {
+                    // We are meant to shut up and draw to a close if interrupted
+                } else
+                    die(e);
+            }
         }
     };
     
@@ -124,6 +158,7 @@ public final class TransportProtocol implements Transport
     private void finishOff()
     {
         dispatcher.interrupt();
+        heartbeater.interrupt();
         connInfo.shutdownIO();
     }
     
@@ -139,7 +174,7 @@ public final class TransportProtocol implements Transport
     private final Random prng;
     
     /** For key (re)exchange */
-    private final Negotiator kexer;
+    private final KeyExchanger kexer;
     /** For encoding packets */
     private final Encoder encoder;
     /** For decoding packets */
@@ -147,6 +182,8 @@ public final class TransportProtocol implements Transport
     
     /** Message identifier of last packet received */
     private Message msg;
+    
+    private int heartbeatInterval = 0;
     
     /** Client version identification string */
     private final String clientID;
@@ -170,7 +207,7 @@ public final class TransportProtocol implements Transport
     {
         this.config = config;
         this.prng = config.getRandomFactory().create();
-        this.kexer = new Negotiator(this);
+        this.kexer = new KeyExchanger(this);
         this.encoder = new Encoder(prng);
         this.decoder = new Decoder(this);
         clientID = "SSH-2.0-" + config.getVersion();
@@ -199,6 +236,7 @@ public final class TransportProtocol implements Transport
         }
         
         dispatcher.start();
+        heartbeater.start();
     }
     
     /**
@@ -282,7 +320,7 @@ public final class TransportProtocol implements Transport
         return config;
     }
     
-    public Negotiator getKeyExchanger()
+    public KeyExchanger getKeyExchanger()
     {
         return kexer;
     }
@@ -359,17 +397,17 @@ public final class TransportProtocol implements Transport
     private void sendServiceRequest(String serviceName) throws TransportException
     {
         log.debug("Sending SSH_MSG_SERVICE_REQUEST for {}", serviceName);
-        writePacket(new SSHPacket(Message.SERVICE_REQUEST).putString(serviceName));
+        write(new SSHPacket(Message.SERVICE_REQUEST).putString(serviceName));
     }
     
     public long sendUnimplemented() throws TransportException
     {
         long seq = decoder.getSequenceNumber();
         log.info("Sending SSH_MSG_UNIMPLEMENTED for packet #{}", seq);
-        return writePacket(new SSHPacket(Message.UNIMPLEMENTED).putInt(seq));
+        return write(new SSHPacket(Message.UNIMPLEMENTED).putInt(seq));
     }
     
-    public long writePacket(SSHPacket payload) throws TransportException
+    public long write(SSHPacket payload) throws TransportException
     {
         // synchronized to queue packets correctly & also to guarantee that
         // there won't be a mid-way change in encoder's algos
@@ -385,7 +423,7 @@ public final class TransportProtocol implements Transport
             } else if (encoder.getSequenceNumber() == 0) // We get here every 2**32th packet
                 kexer.startKex(true);
             
-            long seq = encoder.encode(payload);
+            final long seq = encoder.encode(payload);
             try
             {
                 connInfo.getOutputStream().write(payload.array(), payload.rpos(), payload.available());
@@ -402,6 +440,23 @@ public final class TransportProtocol implements Transport
     public boolean isRunning()
     {
         return !close.isSet();
+    }
+    
+    public void setHeartbeatInterval(int interval)
+    {
+        synchronized (heartbeater)
+        {
+            heartbeatInterval = interval;
+            heartbeater.notify();
+        }
+    }
+    
+    public int getHeartbeatInterval()
+    {
+        synchronized (heartbeater)
+        {
+            return heartbeatInterval;
+        }
     }
     
     public void join() throws TransportException
@@ -458,7 +513,8 @@ public final class TransportProtocol implements Transport
      * This is where all incoming packets are handled. If they pertain to the transport layer, they are handled here;
      * otherwise they are delegated to the active service instance if any via {@link Service#handle}.
      * <p>
-     * Even among the transport layer specific packets, key exchange packets are delegated to {@link Negotiator#handle}.
+     * Even among the transport layer specific packets, key exchange packets are delegated to
+     * {@link KeyExchanger#handle}.
      * <p>
      * This method is called in the context of the {@link #dispatcher} thread via {@link Decoder#received} when a full
      * packet has been decoded.

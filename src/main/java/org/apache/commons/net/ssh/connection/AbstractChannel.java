@@ -221,7 +221,8 @@ public abstract class AbstractChannel implements Channel
     {
         log.debug("Channel #{} got notified of {}", getID(), error.toString());
         ErrorNotifiable.Util.alertAll(error, open, close, in, out);
-        ErrorNotifiable.Util.alertAll(error, chanReqResponseEvents.toArray());
+        ErrorNotifiable.Util.alertAll(error, chanReqResponseEvents.toArray(new ErrorNotifiable[chanReqResponseEvents
+                .size()]));
         finishOff();
     }
     
@@ -278,7 +279,7 @@ public abstract class AbstractChannel implements Channel
     
     protected void handleRequest(String reqType, SSHPacket buf) throws ConnectionException, TransportException
     {
-        trans.writePacket(newBuffer(Message.CHANNEL_FAILURE));
+        trans.write(newBuffer(Message.CHANNEL_FAILURE));
     }
     
     protected SSHPacket newBuffer(Message cmd)
@@ -300,7 +301,7 @@ public abstract class AbstractChannel implements Channel
             PlainBuffer reqSpecific) throws TransportException
     {
         log.info("Sending channel request for `{}`", reqType);
-        trans.writePacket(newBuffer(Message.CHANNEL_REQUEST).putString(reqType) //
+        trans.write(newBuffer(Message.CHANNEL_REQUEST).putString(reqType) //
                 .putBoolean(wantReply) //
                 .putBuffer(reqSpecific));
         
@@ -343,7 +344,7 @@ public abstract class AbstractChannel implements Channel
             if (!closeReqd && !eofSent)
             {
                 log.info("Sending EOF");
-                trans.writePacket(newBuffer(Message.CHANNEL_EOF));
+                trans.write(newBuffer(Message.CHANNEL_EOF));
                 if (eofGot)
                     sendClose();
             }
@@ -394,7 +395,7 @@ public abstract class AbstractChannel implements Channel
             if (!closeReqd)
             {
                 log.info("Sending close");
-                trans.writePacket(newBuffer(Message.CHANNEL_CLOSE));
+                trans.write(newBuffer(Message.CHANNEL_CLOSE));
             }
         } finally
         {

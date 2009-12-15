@@ -85,7 +85,7 @@ public class AuthPublickey extends KeyedAuthMethod
     private void sendSignedReq() throws UserAuthException, TransportException
     {
         log.debug("Sending signed request");
-        params.getTransport().writePacket(putSig(buildReq(true)));
+        params.getTransport().write(putSig(buildReq(true)));
     }
     
     /**

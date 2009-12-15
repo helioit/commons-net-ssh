@@ -18,6 +18,8 @@
  */
 package org.apache.commons.net.ssh;
 
+import java.util.Arrays;
+
 import org.apache.commons.net.ssh.util.Buffer;
 import org.apache.commons.net.ssh.util.Constants;
 import org.apache.commons.net.ssh.util.Constants.Message;
@@ -51,6 +53,13 @@ public class SSHPacket extends Buffer<SSHPacket>
         super();
         rpos = wpos = 5;
         putMessageID(msg);
+    }
+    
+    public SSHPacket(SSHPacket p)
+    {
+        this.data = Arrays.copyOf(p.data, p.wpos);
+        this.rpos = p.rpos;
+        this.wpos = p.wpos;
     }
     
     /**

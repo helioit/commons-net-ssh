@@ -75,7 +75,7 @@ public class ChannelOutputStream extends OutputStream implements ErrorNotifiable
         try
         {
             win.waitAndConsume(bufferLength);
-            chan.getTransport().writePacket(buffer);
+            chan.getTransport().write(buffer);
         } finally
         {
             prepBuffer();

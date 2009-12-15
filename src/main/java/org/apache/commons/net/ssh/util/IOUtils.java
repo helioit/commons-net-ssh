@@ -48,7 +48,7 @@ public class IOUtils
     {
         try
         {
-            return trans.writePacket(payload);
+            return trans.write(payload);
         } catch (IOException logged)
         {
             LOG.warn("Error writing packet to {} - {}", trans, logged);

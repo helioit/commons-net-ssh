@@ -50,7 +50,7 @@ public abstract class AbstractForwardedChannel extends AbstractChannel implement
          * Must ensure channel is attached before confirming, data could start coming in immediately!
          */
         conn.attach(this);
-        trans.writePacket(newBuffer(Message.CHANNEL_OPEN_CONFIRMATION) //
+        trans.write(newBuffer(Message.CHANNEL_OPEN_CONFIRMATION) //
                 .putInt(getID()) //
                 .putInt(getLocalWinSize()) //
                 .putInt(getLocalMaxPacketSize()));

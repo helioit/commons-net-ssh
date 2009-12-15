@@ -32,14 +32,13 @@ public interface ErrorNotifiable
         /**
          * Notify all {@code notifiables} of given {@code error}.
          * <p>
-         * The signature states {@code Object...} for convenience but all {@code notifiables} must
-         * be instances of {@link ErrorNotifiable}.
+         * The signature states {@code Object...} for convenience but all {@code notifiables} must be instances of
+         * {@link ErrorNotifiable}.
          */
-        public static void alertAll(SSHException error, Object... notifiables)
+        public static <T extends ErrorNotifiable> void alertAll(SSHException error, T... notifiables)
         {
-            for (Object notifiable : notifiables)
-                if (notifiable instanceof ErrorNotifiable)
-                    ((ErrorNotifiable) notifiable).notifyError(error);
+            for (ErrorNotifiable notifiable : notifiables)
+                notifiable.notifyError(error);
         }
     }
     

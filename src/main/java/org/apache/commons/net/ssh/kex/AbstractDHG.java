@@ -90,7 +90,7 @@ public abstract class AbstractDHG implements KeyExchange
         e = dh.getE();
         
         log.info("Sending SSH_MSG_KEXDH_INIT");
-        trans.writePacket(new SSHPacket(Message.KEXDH_INIT).putMPInt(e));
+        trans.write(new SSHPacket(Message.KEXDH_INIT).putMPInt(e));
     }
     
     public boolean next(SSHPacket buffer) throws TransportException

@@ -54,7 +54,7 @@ import org.slf4j.LoggerFactory;
 /**
  * Algorithm negotiation and key exchange.
  */
-public final class Negotiator implements PacketHandler, ErrorNotifiable
+public final class KeyExchanger implements PacketHandler, ErrorNotifiable
 {
     
     private static enum Expected
@@ -81,44 +81,22 @@ public final class Negotiator implements PacketHandler, ErrorNotifiable
     
     /** What we are expecting from the next packet */
     private Expected expected = Expected.KEXINIT;
-    /** Negotiated algorithms */
-    private String[] negotiated;
-    /** Server's proposed algorithms - each string comma-delimited in order of preference */
-    private String[] serverProposal;
-    
-    /** Client's proposed algorithms - each string comma-delimited in order of preference */
-    private String[] clientProposal;
-    // Friendlier names for array indexes w.r.t the above 3 arrays
-    private static final int PROP_KEX_ALG = 0;
-    // private static final int PROP_SRVR_HOST_KEY_ALG = 1;
-    private static final int PROP_ENC_ALG_C2S = 2;
-    private static final int PROP_ENC_ALG_S2C = 3;
-    private static final int PROP_MAC_ALG_C2S = 4;
-    private static final int PROP_MAC_ALG_S2C = 5;
-    private static final int PROP_COMP_ALG_C2S = 6;
-    private static final int PROP_COMP_ALG_S2C = 7;
-    private static final int PROP_LANG_C2S = 8;
-    private static final int PROP_LANG_S2C = 9;
-    
-    private static final int PROP_MAX = 10;
     
     /** Instance of negotiated key exchange algorithm */
     private KeyExchange kex;
-    /** Payload of our SSH_MSG_KEXINIT; is passed on to the KeyExchange alg */
-    private byte[] I_C;
-    
-    /** Payload of server's SSH_MSG_KEXINIT; is passed on to the KeyExchange alg */
-    private byte[] I_S;
     
     /** Computed session ID */
     private byte[] sessionID;
+    
+    private Proposal clientProposal, serverProposal;
+    private NegotiatedAlgorithms negotiated;
     
     private final Event<TransportException> kexInitSent = new Event<TransportException>("kexinit sent",
             TransportException.chainer);
     
     private final Event<TransportException> done = new Event<TransportException>("kex done", TransportException.chainer);
     
-    Negotiator(TransportProtocol trans)
+    KeyExchanger(TransportProtocol trans)
     {
         this.transport = trans;
     }
@@ -166,6 +144,7 @@ public final class Negotiator implements PacketHandler, ErrorNotifiable
              * having sent the packet ourselves (would cause gotKexInit() to fail)
              */
             kexInitSent.await(transport.getTimeout());
+            buf.rpos(buf.rpos() - 1);
             gotKexInit(buf);
             expected = Expected.FOLLOWUP;
             break;
@@ -213,9 +192,7 @@ public final class Negotiator implements PacketHandler, ErrorNotifiable
         return kexOngoing.get();
     }
     
-    /**
-     * Internal API, do not use!
-     */
+    @SuppressWarnings("unchecked")
     public void notifyError(SSHException error)
     {
         log.debug("Got notified of {}", error.toString());
@@ -249,22 +226,6 @@ public final class Negotiator implements PacketHandler, ErrorNotifiable
         done.await(transport.getTimeout());
     }
     
-    private String[] createProposal()
-    {
-        return new String[] { //
-        Factory.Named.Util.getNames(transport.getConfig().getKeyExchangeFactories()), // PROP_KEX_ALG
-                Factory.Named.Util.getNames(transport.getConfig().getSignatureFactories()), // PROP_SRVR_HOST_KEY_ALG
-                Factory.Named.Util.getNames(transport.getConfig().getCipherFactories()), // PROP_ENC_ALG_C2S
-                Factory.Named.Util.getNames(transport.getConfig().getCipherFactories()), // PROP_ENC_ALG_S2C
-                Factory.Named.Util.getNames(transport.getConfig().getMACFactories()), // PROP_MAC_ALG_C2S
-                Factory.Named.Util.getNames(transport.getConfig().getMACFactories()), // PROP_MAC_ALG_S2C
-                Factory.Named.Util.getNames(transport.getConfig().getCompressionFactories()), // PROP_MAC_ALG_C2S
-                Factory.Named.Util.getNames(transport.getConfig().getCompressionFactories()), // PROP_COMP_ALG_S2C
-                "", // PROP_LANG_C2S (optional, thus empty string)
-                "" // PROP_LANG_S2C (optional, thus empty string)
-        };
-    }
-    
     private synchronized void ensureKexOngoing() throws TransportException
     {
         if (!isKexOngoing())
@@ -272,33 +233,20 @@ public final class Negotiator implements PacketHandler, ErrorNotifiable
                     "Key exchange packet received when key exchange was not ongoing");
     }
     
-    private void ensureReceivedMatchesExpected(Message got, Message expected) throws TransportException
+    private static void ensureReceivedMatchesExpected(Message got, Message expected) throws TransportException
     {
         if (got != expected)
             throw new TransportException(DisconnectReason.PROTOCOL_ERROR, "Was expecting " + expected);
     }
     
-    private void extractProposal(SSHPacket buffer)
-    {
-        serverProposal = new String[PROP_MAX];
-        // recreate the packet payload which will be needed at a later time
-        byte[] d = buffer.array();
-        I_S = new byte[buffer.available() + 1];
-        I_S[0] = Message.KEXINIT.toByte();
-        System.arraycopy(d, buffer.rpos(), I_S, 1, I_S.length - 1);
-        // skip 16 bytes of random data
-        buffer.rpos(buffer.rpos() + 16);
-        // read proposal
-        for (int i = 0; i < serverProposal.length; i++)
-            serverProposal[i] = buffer.readString();
-    }
-    
     private void gotKexInit(SSHPacket buf) throws TransportException
     {
-        extractProposal(buf);
-        negotiate();
-        kex = Factory.Named.Util.create(transport.getConfig().getKeyExchangeFactories(), negotiated[PROP_KEX_ALG]);
-        kex.init(transport, transport.getServerID().getBytes(), transport.getClientID().getBytes(), I_S, I_C);
+        serverProposal = new Proposal(buf);
+        negotiated = clientProposal.negotiate(serverProposal);
+        kex = Factory.Named.Util.create(transport.getConfig().getKeyExchangeFactories(), negotiated
+                .getKeyExchangeAlgorithm());
+        kex.init(transport, transport.getServerID().getBytes(), transport.getClientID().getBytes(), buf
+                .getCompactData(), clientProposal.getPacket().getCompactData());
     }
     
     /**
@@ -307,21 +255,9 @@ public final class Negotiator implements PacketHandler, ErrorNotifiable
      */
     private void gotNewKeys() // TODO: refactor; too huge
     {
-        byte[] IVc2s;
-        byte[] IVs2c;
-        byte[] Ec2s;
-        byte[] Es2c;
-        byte[] MACc2s;
-        byte[] MACs2c;
         byte[] K = kex.getK();
         byte[] H = kex.getH();
         Digest hash = kex.getHash();
-        Cipher s2ccipher;
-        Cipher c2scipher;
-        MAC s2cmac;
-        MAC c2smac;
-        Compression s2ccomp;
-        Compression c2scomp;
         
         if (sessionID == null)
         {
@@ -333,88 +269,59 @@ public final class Negotiator implements PacketHandler, ErrorNotifiable
                 .putRawBytes(H) //
                 .putByte((byte) 0x41) //
                 .putRawBytes(sessionID);
-        int pos = buffer.available();
+        int len = buffer.available();
+        
         byte[] buf = buffer.array();
-        hash.update(buf, 0, pos);
-        IVc2s = hash.digest();
+        hash.update(buf, 0, len);
+        byte[] IVc2s = hash.digest();
         
-        int j = pos - sessionID.length - 1;
-        
-        buf[j]++;
-        hash.update(buf, 0, pos);
-        IVs2c = hash.digest();
+        int j = len - sessionID.length - 1;
         
         buf[j]++;
-        hash.update(buf, 0, pos);
-        Ec2s = hash.digest();
+        hash.update(buf, 0, len);
+        byte[] IVs2c = hash.digest();
         
         buf[j]++;
-        hash.update(buf, 0, pos);
-        Es2c = hash.digest();
+        hash.update(buf, 0, len);
+        byte[] Ec2s = hash.digest();
         
         buf[j]++;
-        hash.update(buf, 0, pos);
-        MACc2s = hash.digest();
+        hash.update(buf, 0, len);
+        byte[] Es2c = hash.digest();
         
         buf[j]++;
-        hash.update(buf, 0, pos);
-        MACs2c = hash.digest();
+        hash.update(buf, 0, len);
+        byte[] MACc2s = hash.digest();
         
-        s2ccipher = Factory.Named.Util.create(transport.getConfig().getCipherFactories(), negotiated[PROP_ENC_ALG_S2C]);
+        buf[j]++;
+        hash.update(buf, 0, len);
+        byte[] MACs2c = hash.digest();
+        
+        Cipher s2ccipher = Factory.Named.Util.create(transport.getConfig().getCipherFactories(), negotiated
+                .getServer2ClientCipherAlgorithm());
         Es2c = resizeKey(Es2c, s2ccipher.getBlockSize(), hash, K, H);
         s2ccipher.init(Cipher.Mode.Decrypt, Es2c, IVs2c);
         
-        s2cmac = Factory.Named.Util.create(transport.getConfig().getMACFactories(), negotiated[PROP_MAC_ALG_S2C]);
+        MAC s2cmac = Factory.Named.Util.create(transport.getConfig().getMACFactories(), negotiated
+                .getServer2ClientMACAlgorithm());
         s2cmac.init(MACs2c);
         
-        c2scipher = Factory.Named.Util.create(transport.getConfig().getCipherFactories(), negotiated[PROP_ENC_ALG_C2S]);
+        Cipher c2scipher = Factory.Named.Util.create(transport.getConfig().getCipherFactories(), negotiated
+                .getClient2ServerCipherAlgorithm());
         Ec2s = resizeKey(Ec2s, c2scipher.getBlockSize(), hash, K, H);
         c2scipher.init(Cipher.Mode.Encrypt, Ec2s, IVc2s);
         
-        c2smac = Factory.Named.Util.create(transport.getConfig().getMACFactories(), negotiated[PROP_MAC_ALG_C2S]);
+        MAC c2smac = Factory.Named.Util.create(transport.getConfig().getMACFactories(), negotiated
+                .getClient2ServerMACAlgorithm());
         c2smac.init(MACc2s);
         
-        s2ccomp = Factory.Named.Util.create(transport.getConfig().getCompressionFactories(),
-                negotiated[PROP_COMP_ALG_S2C]);
-        c2scomp = Factory.Named.Util.create(transport.getConfig().getCompressionFactories(),
-                negotiated[PROP_COMP_ALG_C2S]);
+        Compression s2ccomp = Factory.Named.Util.create(transport.getConfig().getCompressionFactories(), negotiated
+                .getServer2ClientCompressionAlgorithm());
+        Compression c2scomp = Factory.Named.Util.create(transport.getConfig().getCompressionFactories(), negotiated
+                .getClient2ServerCompressionAlgorithm());
         
         transport.setClientToServerAlgorithms(c2scipher, c2smac, c2scomp);
         transport.setServerToClientAlgorithms(s2ccipher, s2cmac, s2ccomp);
-    }
-    
-    /**
-     * Compute the negotiated proposals by merging the client and server proposal. The negotiated proposal will be
-     * stored in the {@link #negotiated} field.
-     */
-    private void negotiate() throws TransportException
-    {
-        String[] guess = new String[PROP_MAX];
-        for (int i = 0; i < PROP_MAX; i++)
-        {
-            String[] c = clientProposal[i].split(",");
-            String[] s = serverProposal[i].split(",");
-            for (String ci : c)
-            {
-                for (String si : s)
-                    if (ci.equals(si))
-                    { // first match wins
-                        guess[i] = ci;
-                        break;
-                    }
-                if (guess[i] != null)
-                    break;
-            }
-            if (guess[i] == null && // 
-                    i != PROP_LANG_C2S && i != PROP_LANG_S2C) // since we don't negotiate languages
-                throw new TransportException("Unable to negotiate");
-        }
-        negotiated = guess;
-        
-        log.info("Negotiated algorithms: client -> server = (" + negotiated[PROP_ENC_ALG_C2S] + ", "
-                + negotiated[PROP_MAC_ALG_C2S] + ", " + negotiated[PROP_COMP_ALG_C2S] + ") | server -> client = ("
-                + negotiated[PROP_ENC_ALG_S2C] + ", " + negotiated[PROP_MAC_ALG_S2C] + ", "
-                + negotiated[PROP_COMP_ALG_S2C] + ")");
     }
     
     /**
@@ -457,32 +364,16 @@ public final class Negotiator implements PacketHandler, ErrorNotifiable
      */
     private void sendKexInit() throws TransportException
     {
-        SSHPacket buf = new SSHPacket(Message.KEXINIT);
-        
-        // Put cookie
-        int p = buf.wpos();
-        buf.wpos(p + 16);
-        transport.getConfig().getRandomFactory().create().fill(buf.array(), p, 16);
-        
-        // Put the 10 name-list's
-        for (String s : clientProposal = createProposal())
-            buf.putString(s);
-        
-        buf.putBoolean(false) // Optimistic next packet does not follow
-                .putInt(0); // "Reserved" for future by spec
-        
-        I_C = buf.getCompactData(); // Store for future
-        
         log.info("Sending SSH_MSG_KEXINIT");
-        transport.writePacket(buf);
-        
+        clientProposal = new Proposal(transport.getConfig());
+        transport.write(clientProposal.getPacket());
         kexInitSent.set();
     }
     
     private void sendNewKeys() throws TransportException
     {
         log.info("Sending SSH_MSG_NEWKEYS");
-        transport.writePacket(new SSHPacket(Message.NEWKEYS));
+        transport.write(new SSHPacket(Message.NEWKEYS));
     }
     
     private void setKexDone()
@@ -511,7 +402,6 @@ public final class Negotiator implements PacketHandler, ErrorNotifiable
         throw new TransportException(DisconnectReason.HOST_KEY_NOT_VERIFIABLE, "Could not verify `"
                 + KeyType.fromKey(key) + "` host key with fingerprint `" + SecurityUtils.getFingerprint(key)
                 + "` for `" + transport.getRemoteHost() + "`");
-        
     }
     
 }

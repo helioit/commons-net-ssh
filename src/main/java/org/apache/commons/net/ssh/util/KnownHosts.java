@@ -18,13 +18,17 @@
  */
 package org.apache.commons.net.ssh.util;
 
+import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
 import java.security.PublicKey;
-import java.util.LinkedList;
-import java.util.List;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.LinkedHashSet;
+import java.util.Set;
 
 import org.apache.commons.net.ssh.HostKeyVerifier;
 import org.apache.commons.net.ssh.SSHException;
@@ -48,16 +52,29 @@ import org.slf4j.LoggerFactory;
 public class KnownHosts implements HostKeyVerifier
 {
     
+    private static final String LS = System.getProperty("line.separator");
+    
     /**
      * Represents a single line
      */
-    static class Entry
+    public static class Entry
     {
-        
         private final String[] hosts;
         private final KeyType type;
-        private final String sKey;
+        private String sKey;
         private PublicKey key;
+        
+        private final MAC sha1 = new HMACSHA1();
+        
+        /**
+         * Construct an entry from the hostname and public key
+         */
+        public Entry(String hostname, PublicKey key)
+        {
+            this.key = key;
+            hosts = new String[] { hostname };
+            type = KeyType.fromKey(key);
+        }
         
         /**
          * Construct an entry from a string containing the line
@@ -67,7 +84,7 @@ public class KnownHosts implements HostKeyVerifier
          * @throws SSHException
          *             if it could not be parsed for any reason
          */
-        Entry(String line) throws SSHException
+        public Entry(String line) throws SSHException
         {
             String[] parts = line.split(" ");
             if (parts.length != 3)
@@ -84,7 +101,7 @@ public class KnownHosts implements HostKeyVerifier
          * 
          * @param possibilities
          *            a set of possibilities to check against
-         * @return the possibility which was successfuly matched, or {@code null} if there was no match
+         * @return the possibility which was successfully matched, or {@code null} if there was no match
          */
         public boolean appliesTo(String hostname)
         {
@@ -104,7 +121,6 @@ public class KnownHosts implements HostKeyVerifier
                 }
                 if (salt.length != 20)
                     return false;
-                MAC sha1 = new HMACSHA1();
                 sha1.init(salt);
                 if (BufferUtils.equals(host, sha1.doFinal(hostname.getBytes())))
                     return true;
@@ -145,56 +161,74 @@ public class KnownHosts implements HostKeyVerifier
             return type;
         }
         
-        @Override
-        public String toString()
+        public String getLine()
         {
             String s = hosts[0];
             for (int i = 1; i < hosts.length; i++)
                 s += "," + hosts[i];
             s += " " + type.toString();
+            if (sKey == null)
+            {
+                PlainBuffer buf = new PlainBuffer().putPublicKey(key);
+                sKey = Base64.encodeBytes(buf.array(), buf.rpos(), buf.available());
+            }
             s += " " + sKey;
             return s;
         }
+        
+        @Override
+        public String toString()
+        {
+            return "Entry{hostnames=" + Arrays.toString(hosts) + "; type=" + type + "; key=" + getKey() + "}";
+        }
+        
+        // IMPLEMENT HashCode & equals()
+        
     }
     
     private final Logger log = LoggerFactory.getLogger(getClass());
     
-    private final List<Entry> entries = new LinkedList<Entry>();
+    private final File khFile;
+    private final Set<Entry> entries = new LinkedHashSet<Entry>();
     
     /**
      * Constructs a {@code KnownHosts} object from a file location
      * 
-     * @param loc
+     * @param khFile
      *            the file location
      * @throws IOException
      *             if there is an error reading the file
      */
-    public KnownHosts(File location) throws IOException
+    public KnownHosts(File khFile) throws IOException
     {
-        BufferedReader br = new BufferedReader(new FileReader(location));
-        String line;
-        try
+        this.khFile = khFile;
+        if (khFile.exists())
         {
-            // Read in the file, storing each line as an entry
-            while ((line = br.readLine()) != null)
-                try
-                {
-                    entries.add(new Entry(line));
-                } catch (SSHException ignore)
-                {
-                    log.debug("Bad line ({}): {} ", ignore.toString(), line);
-                    continue;
-                }
-        } finally
-        {
-            IOUtils.closeQuietly(br);
+            BufferedReader br = new BufferedReader(new FileReader(khFile));
+            String line;
+            try
+            {
+                // Read in the file, storing each line as an entry
+                while ((line = br.readLine()) != null)
+                    try
+                    {
+                        entries.add(new Entry(line));
+                    } catch (SSHException ignore)
+                    {
+                        log.debug("Bad line ({}): {} ", ignore.toString(), line);
+                        continue;
+                    }
+            } finally
+            {
+                IOUtils.closeQuietly(br);
+            }
         }
     }
     
     /**
      * Checks whether the specified hostname is known per the contents of the {@code known_hosts} file.
      * 
-     * @return {@code true} on successful verfication or {@code false} on failure
+     * @return {@code true} on successful verification or {@code false} on failure
      */
     public boolean verify(String hostname, PublicKey key)
     {
@@ -211,8 +245,19 @@ public class KnownHosts implements HostKeyVerifier
                     log.warn("Host key for `{}` has changed!", hostname);
                     return false;
                 }
-        
         return false;
     }
     
+    public Set<Entry> entries()
+    {
+        return Collections.unmodifiableSet(entries);
+    }
+    
+    public void write() throws IOException
+    {
+        BufferedOutputStream bos = new BufferedOutputStream(new FileOutputStream(khFile));
+        for (Entry entry : entries)
+            bos.write((entry.getLine() + LS).getBytes());
+        bos.close();
+    }
 }

@@ -62,7 +62,7 @@ public interface Transport extends PacketHandler
     int getTimeout();
     
     /**
-     * Set a timeout for methods that may block, e.g. {@link #reqService(Service)}, {@link Negotiator#waitForDone()}.
+     * Set a timeout for methods that may block, e.g. {@link #reqService(Service)}, {@link KeyExchanger#waitForDone()}.
      * 
      * @param timeout
      *            the timeout in seconds
@@ -70,10 +70,10 @@ public interface Transport extends PacketHandler
     void setTimeout(int timeout);
     
     /**
-     * Returns the associated {@link Negotiator}. This allows {@link Negotiator#startKex starting key (re)exchange} and
-     * other operations.
+     * Returns the associated {@link KeyExchanger}. This allows {@link KeyExchanger#startKex starting key (re)exchange}
+     * and other operations.
      */
-    Negotiator getKeyExchanger();
+    KeyExchanger getKeyExchanger();
     
     /**
      * Returns the hostname to which this transport is connected.
@@ -154,7 +154,11 @@ public interface Transport extends PacketHandler
      * @throws TransportException
      *             if an error occured sending the packet
      */
-    long writePacket(SSHPacket payload) throws TransportException;
+    long write(SSHPacket payload) throws TransportException;
+    
+    int getHeartbeatInterval();
+    
+    void setHeartbeatInterval(int interval);
     
     /**
      * Returns whether this transport is active.
