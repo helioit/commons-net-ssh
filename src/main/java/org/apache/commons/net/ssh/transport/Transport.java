@@ -22,6 +22,7 @@ import java.io.IOException;
 
 import org.apache.commons.net.ssh.Config;
 import org.apache.commons.net.ssh.ConnInfo;
+import org.apache.commons.net.ssh.HostKeyVerifier;
 import org.apache.commons.net.ssh.PacketHandler;
 import org.apache.commons.net.ssh.SSHPacket;
 import org.apache.commons.net.ssh.Service;
@@ -43,6 +44,10 @@ public interface Transport extends PacketHandler
      *             if there is an error during exchange of identification information
      */
     void init(ConnInfo connInfo) throws TransportException;
+    
+    void addHostKeyVerifier(HostKeyVerifier hkv);
+    
+    void doKex() throws TransportException;
     
     /**
      * Returns the version string used by this client to identify itself to an SSH server, e.g. "NET_3_0"
@@ -69,11 +74,9 @@ public interface Transport extends PacketHandler
      */
     void setTimeout(int timeout);
     
-    /**
-     * Returns the associated {@link KeyExchanger}. This allows {@link KeyExchanger#startKex starting key (re)exchange}
-     * and other operations.
-     */
-    KeyExchanger getKeyExchanger();
+    int getHeartbeatInterval();
+    
+    void setHeartbeatInterval(int interval);
     
     /**
      * Returns the hostname to which this transport is connected.
@@ -93,6 +96,8 @@ public interface Transport extends PacketHandler
      * @return server's version string (may be {@code null})
      */
     String getServerVersion();
+    
+    byte[] getSessionID();
     
     /**
      * Returns the currently active {@link Service} instance.
@@ -155,10 +160,6 @@ public interface Transport extends PacketHandler
      *             if an error occured sending the packet
      */
     long write(SSHPacket payload) throws TransportException;
-    
-    int getHeartbeatInterval();
-    
-    void setHeartbeatInterval(int interval);
     
     /**
      * Returns whether this transport is active.

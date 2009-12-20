@@ -24,13 +24,10 @@ import org.apache.commons.net.ssh.AbstractService;
 import org.apache.commons.net.ssh.Config;
 import org.apache.commons.net.ssh.ConnInfo;
 import org.apache.commons.net.ssh.ErrorNotifiable;
+import org.apache.commons.net.ssh.HostKeyVerifier;
 import org.apache.commons.net.ssh.SSHException;
 import org.apache.commons.net.ssh.SSHPacket;
 import org.apache.commons.net.ssh.Service;
-import org.apache.commons.net.ssh.cipher.Cipher;
-import org.apache.commons.net.ssh.compression.Compression;
-import org.apache.commons.net.ssh.mac.MAC;
-import org.apache.commons.net.ssh.random.Random;
 import org.apache.commons.net.ssh.util.Event;
 import org.apache.commons.net.ssh.util.IOUtils;
 import org.apache.commons.net.ssh.util.Buffer.PlainBuffer;
@@ -53,143 +50,21 @@ public final class TransportProtocol implements Transport
         }
     }
     
-    private final Thread dispatcher = new Thread()
-    {
-        {
-            setName("dispatcher");
-            // setDaemon(true);
-        }
-        
-        @Override
-        public void run()
-        {
-            try
-            {
-                final byte[] recvbuf = new byte[decoder.getMaxPacketLength()];
-                int needed = 1;
-                while (!Thread.currentThread().isInterrupted())
-                {
-                    int read = connInfo.getInputStream().read(recvbuf, 0, needed);
-                    if (read == -1)
-                        throw new TransportException("Broken transport; encountered EOF");
-                    else
-                        needed = decoder.received(recvbuf, read);
-                }
-            } catch (Exception e)
-            {
-                if (Thread.currentThread().isInterrupted())
-                {
-                    // We are meant to shut up and draw to a close if interrupted
-                } else
-                    die(e);
-            }
-            log.debug("Stopping");
-        }
-    };
-    
-    private final Thread heartbeater = new Thread()
-    {
-        {
-            setName("heartbeater");
-            // setDaemon(true);
-        }
-        
-        @Override
-        public void run()
-        {
-            try
-            {
-                while (!Thread.currentThread().isInterrupted())
-                {
-                    int hi;
-                    synchronized (this)
-                    {
-                        while ((hi = heartbeatInterval) == 0)
-                            wait();
-                    }
-                    Thread.sleep(hi * 1000);
-                    log.info("Sending heartbeat since {} seconds elapsed", hi);
-                    write(new SSHPacket(Message.IGNORE));
-                }
-            } catch (Exception e)
-            {
-                if (Thread.currentThread().isInterrupted())
-                {
-                    // We are meant to shut up and draw to a close if interrupted
-                } else
-                    die(e);
-            }
-        }
-    };
-    
-    private void die(Exception ex)
-    {
-        close.lock();
-        try
-        {
-            if (!close.isSet())
-            {
-                
-                log.error("Dying because - {}", ex.toString());
-                
-                SSHException causeOfDeath = SSHException.chainer.chain(ex);
-                
-                ErrorNotifiable.Util.alertAll(causeOfDeath, close, serviceAccept, kexer);
-                getService().notifyError(causeOfDeath);
-                setService(nullService);
-                
-                { // Perhaps can send disconnect packet to server
-                    final boolean didNotReceiveDisconnect = msg != Message.DISCONNECT;
-                    final boolean gotRequiredInfo = causeOfDeath.getDisconnectReason() != DisconnectReason.UNKNOWN;
-                    if (didNotReceiveDisconnect && gotRequiredInfo)
-                        sendDisconnect(causeOfDeath.getDisconnectReason(), causeOfDeath.getMessage());
-                }
-                
-                finishOff();
-                
-                close.set();
-            }
-        } finally
-        {
-            close.unlock();
-        }
-    }
-    
-    private void finishOff()
-    {
-        dispatcher.interrupt();
-        heartbeater.interrupt();
-        connInfo.shutdownIO();
-    }
-    
     private final Logger log = LoggerFactory.getLogger(getClass());
     
-    private final Config config;
     private final Service nullService = new NullService(this);
     
-    /** Currently active service e.g. UserAuthService, ConnectionService */
-    private volatile Service service = nullService;
+    private final Config config;
     
-    /** Psuedo-random number generator as retrieved from the factory manager */
-    private final Random prng;
-    
-    /** For key (re)exchange */
     private final KeyExchanger kexer;
-    /** For encoding packets */
+    
+    private final Reader reader;
+    
+    private final Heartbeater heartbeater;
+    
     private final Encoder encoder;
-    /** For decoding packets */
+    
     private final Decoder decoder;
-    
-    /** Message identifier of last packet received */
-    private Message msg;
-    
-    private int heartbeatInterval = 0;
-    
-    /** Client version identification string */
-    private final String clientID;
-    
-    /** Server version identification string */
-    private String serverID;
     
     private final Event<TransportException> serviceAccept = new Event<TransportException>("service accept",
             TransportException.chainer);
@@ -197,18 +72,31 @@ public final class TransportProtocol implements Transport
     private final Event<TransportException> close = new Event<TransportException>("transport close",
             TransportException.chainer);
     
+    /** Client version identification string */
+    private final String clientID;
+    
     private volatile int timeout = 30;
     
-    private volatile boolean authed;
+    private volatile boolean authed = false;
+    
+    /** Currently active service e.g. UserAuthService, ConnectionService */
+    private volatile Service service = nullService;
     
     private ConnInfo connInfo;
+    
+    /** Server version identification string */
+    private String serverID;
+    
+    /** Message identifier of last packet received */
+    private Message msg;
     
     public TransportProtocol(Config config)
     {
         this.config = config;
-        this.prng = config.getRandomFactory().create();
+        this.reader = new Reader(this);
+        this.heartbeater = new Heartbeater(this);
         this.kexer = new KeyExchanger(this);
-        this.encoder = new Encoder(prng);
+        this.encoder = new Encoder(config.getRandomFactory().create());
         this.decoder = new Decoder(this);
         clientID = "SSH-2.0-" + config.getVersion();
     }
@@ -235,8 +123,7 @@ public final class TransportProtocol implements Transport
             throw new TransportException(e);
         }
         
-        dispatcher.start();
-        heartbeater.start();
+        reader.start();
     }
     
     /**
@@ -300,6 +187,21 @@ public final class TransportProtocol implements Transport
         return ident;
     }
     
+    public void addHostKeyVerifier(HostKeyVerifier hkv)
+    {
+        kexer.addHostKeyVerifier(hkv);
+    }
+    
+    public void doKex() throws TransportException
+    {
+        kexer.startKex(true);
+    }
+    
+    public boolean isKexDone()
+    {
+        return kexer.isKexDone();
+    }
+    
     public int getTimeout()
     {
         return timeout;
@@ -310,6 +212,16 @@ public final class TransportProtocol implements Transport
         this.timeout = timeout;
     }
     
+    public int getHeartbeatInterval()
+    {
+        return heartbeater.getInterval();
+    }
+    
+    public void setHeartbeatInterval(int interval)
+    {
+        heartbeater.setInterval(interval);
+    }
+    
     public String getClientVersion()
     {
         return clientID.substring(8);
@@ -318,11 +230,6 @@ public final class TransportProtocol implements Transport
     public Config getConfig()
     {
         return config;
-    }
-    
-    public KeyExchanger getKeyExchanger()
-    {
-        return kexer;
     }
     
     public String getRemoteHost()
@@ -345,21 +252,9 @@ public final class TransportProtocol implements Transport
         return kexer.getSessionID();
     }
     
-    public boolean isAuthenticated()
-    {
-        return authed;
-    }
-    
     public synchronized Service getService()
     {
         return service;
-    }
-    
-    public void setAuthenticated()
-    {
-        this.authed = true;
-        encoder.setAuthenticated();
-        decoder.setAuthenticated();
     }
     
     public synchronized void setService(Service service)
@@ -400,6 +295,18 @@ public final class TransportProtocol implements Transport
         write(new SSHPacket(Message.SERVICE_REQUEST).putString(serviceName));
     }
     
+    public void setAuthenticated()
+    {
+        this.authed = true;
+        encoder.setAuthenticated();
+        decoder.setAuthenticated();
+    }
+    
+    public boolean isAuthenticated()
+    {
+        return authed;
+    }
+    
     public long sendUnimplemented() throws TransportException
     {
         long seq = decoder.getSequenceNumber();
@@ -407,61 +314,14 @@ public final class TransportProtocol implements Transport
         return write(new SSHPacket(Message.UNIMPLEMENTED).putInt(seq));
     }
     
-    public long write(SSHPacket payload) throws TransportException
+    public void join() throws TransportException
     {
-        // synchronized to queue packets correctly & also to guarantee that
-        // there won't be a mid-way change in encoder's algos
-        synchronized (encoder)
-        {
-            
-            if (kexer.isKexOngoing())
-            {
-                // Only transport layer packets (1 to 49) allowed except SERVICE_REQUEST
-                Message m = Message.fromByte(payload.array()[payload.rpos()]);
-                if (!m.in(1, 49) || m == Message.SERVICE_REQUEST)
-                    kexer.waitForDone();
-            } else if (encoder.getSequenceNumber() == 0) // We get here every 2**32th packet
-                kexer.startKex(true);
-            
-            final long seq = encoder.encode(payload);
-            try
-            {
-                connInfo.getOutputStream().write(payload.array(), payload.rpos(), payload.available());
-                connInfo.getOutputStream().flush();
-            } catch (IOException ioe)
-            {
-                throw new TransportException(ioe);
-            }
-            return seq;
-            
-        }
+        close.await();
     }
     
     public boolean isRunning()
     {
         return !close.isSet();
-    }
-    
-    public void setHeartbeatInterval(int interval)
-    {
-        synchronized (heartbeater)
-        {
-            heartbeatInterval = interval;
-            heartbeater.notify();
-        }
-    }
-    
-    public int getHeartbeatInterval()
-    {
-        synchronized (heartbeater)
-        {
-            return heartbeatInterval;
-        }
-    }
-    
-    public void join() throws TransportException
-    {
-        close.await();
     }
     
     public void disconnect()
@@ -498,6 +358,36 @@ public final class TransportProtocol implements Transport
         }
     }
     
+    public long write(SSHPacket payload) throws TransportException
+    {
+        // synchronized to queue packets correctly & also to guarantee that
+        // there won't be a mid-way change in encoder's algos
+        synchronized (encoder)
+        {
+            
+            if (kexer.isKexOngoing())
+            {
+                // Only transport layer packets (1 to 49) allowed except SERVICE_REQUEST
+                Message m = Message.fromByte(payload.array()[payload.rpos()]);
+                if (!m.in(1, 49) || m == Message.SERVICE_REQUEST)
+                    kexer.waitForDone();
+            } else if (encoder.getSequenceNumber() == 0) // We get here every 2**32th packet
+                kexer.startKex(true);
+            
+            final long seq = encoder.encode(payload);
+            try
+            {
+                connInfo.getOutputStream().write(payload.array(), payload.rpos(), payload.available());
+                connInfo.getOutputStream().flush();
+            } catch (IOException ioe)
+            {
+                throw new TransportException(ioe);
+            }
+            return seq;
+            
+        }
+    }
+    
     private void sendDisconnect(DisconnectReason reason, String message)
     {
         if (message == null)
@@ -516,7 +406,7 @@ public final class TransportProtocol implements Transport
      * Even among the transport layer specific packets, key exchange packets are delegated to
      * {@link KeyExchanger#handle}.
      * <p>
-     * This method is called in the context of the {@link #dispatcher} thread via {@link Decoder#received} when a full
+     * This method is called in the context of the {@link #reader} thread via {@link Decoder#received} when a full
      * packet has been decoded.
      * 
      * @param msg
@@ -616,6 +506,46 @@ public final class TransportProtocol implements Transport
         getService().notifyUnimplemented(seqNum);
     }
     
+    private void finishOff()
+    {
+        reader.interrupt();
+        heartbeater.interrupt();
+        connInfo.shutdownIO();
+    }
+    
+    void die(Exception ex)
+    {
+        close.lock();
+        try
+        {
+            if (!close.isSet())
+            {
+                
+                log.error("Dying because - {}", ex.toString());
+                
+                SSHException causeOfDeath = SSHException.chainer.chain(ex);
+                
+                ErrorNotifiable.Util.alertAll(causeOfDeath, close, serviceAccept, kexer);
+                getService().notifyError(causeOfDeath);
+                setService(nullService);
+                
+                { // Perhaps can send disconnect packet to server
+                    final boolean didNotReceiveDisconnect = msg != Message.DISCONNECT;
+                    final boolean gotRequiredInfo = causeOfDeath.getDisconnectReason() != DisconnectReason.UNKNOWN;
+                    if (didNotReceiveDisconnect && gotRequiredInfo)
+                        sendDisconnect(causeOfDeath.getDisconnectReason(), causeOfDeath.getMessage());
+                }
+                
+                finishOff();
+                
+                close.set();
+            }
+        } finally
+        {
+            close.unlock();
+        }
+    }
+    
     String getClientID()
     {
         return clientID;
@@ -626,14 +556,19 @@ public final class TransportProtocol implements Transport
         return serverID;
     }
     
-    void setClientToServerAlgorithms(Cipher cipher, MAC mac, Compression comp)
+    Encoder getEncoder()
     {
-        encoder.setAlgorithms(cipher, mac, comp);
+        return encoder;
     }
     
-    void setServerToClientAlgorithms(Cipher cipher, MAC mac, Compression comp)
+    Decoder getDecoder()
     {
-        decoder.setAlgorithms(cipher, mac, comp);
+        return decoder;
+    }
+    
+    ConnInfo getConnInfo()
+    {
+        return connInfo;
     }
     
 }

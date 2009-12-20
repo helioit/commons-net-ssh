@@ -120,16 +120,15 @@ final class Decoder extends Converter
                     
                     checkMAC(inputBuffer.array());
                     
-                    inputBuffer.wpos(packetLength + 4 - inputBuffer.readByte()); // Exclude the
-                    // padding & MAC
+                    // Exclude the padding & MAC
+                    inputBuffer.wpos(packetLength + 4 - inputBuffer.readByte());
                     
                     SSHPacket plain = decompressed();
                     
                     if (log.isTraceEnabled())
                         log.trace("Received packet #{}: {}", seq, plain.printHex());
                     
-                    packetHandler.handle(plain.readMessageID(), plain); // process the decoded
-                    // packet //
+                    packetHandler.handle(plain.readMessageID(), plain); // Process the decoded packet //
                     
                     inputBuffer.clear();
                     packetLength = -1;

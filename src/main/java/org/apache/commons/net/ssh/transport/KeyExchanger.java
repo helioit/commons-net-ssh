@@ -20,6 +20,7 @@ package org.apache.commons.net.ssh.transport;
 
 import java.net.InetAddress;
 import java.security.PublicKey;
+import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.Queue;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -54,7 +55,7 @@ import org.slf4j.LoggerFactory;
 /**
  * Algorithm negotiation and key exchange.
  */
-public final class KeyExchanger implements PacketHandler, ErrorNotifiable
+final class KeyExchanger implements PacketHandler, ErrorNotifiable
 {
     
     private static enum Expected
@@ -89,7 +90,7 @@ public final class KeyExchanger implements PacketHandler, ErrorNotifiable
     private byte[] sessionID;
     
     private Proposal clientProposal, serverProposal;
-    private NegotiatedAlgorithms negotiated;
+    private NegotiatedAlgorithms negotiatedAlgs;
     
     private final Event<TransportException> kexInitSent = new Event<TransportException>("kexinit sent",
             TransportException.chainer);
@@ -110,7 +111,7 @@ public final class KeyExchanger implements PacketHandler, ErrorNotifiable
      * @param hkv
      *            object whose {@link HostKeyVerifier#verify} method will be invoked
      */
-    public synchronized void addHostKeyVerifier(HostKeyVerifier hkv)
+    synchronized void addHostKeyVerifier(HostKeyVerifier hkv)
     {
         hostVerifiers.add(hkv);
     }
@@ -122,14 +123,226 @@ public final class KeyExchanger implements PacketHandler, ErrorNotifiable
      * 
      * @return session identifier as a byte array
      */
-    public byte[] getSessionID()
+    byte[] getSessionID()
     {
-        return sessionID;
+        return Arrays.copyOf(sessionID, sessionID.length);
     }
     
     /**
-     * Internal API; do not use!
+     * Returns whether key exchange has been completed
      */
+    boolean isKexDone()
+    {
+        return done.isSet();
+    }
+    
+    /**
+     * Returns whether key exchange is currently ongoing
+     */
+    boolean isKexOngoing()
+    {
+        return kexOngoing.get();
+    }
+    
+    /**
+     * Starts key exchange by sending a {@code SSH_MSG_KEXINIT} packet. Key exchange needs to be done once mandatorily
+     * after initializing the {@link Transport} for it to be usable and may be initiated at any later point e.g. if
+     * {@link Transport#getConfig() algorithms} have changed and should be renegotiated.
+     * 
+     * @param waitForDone
+     *            whether should block till key exchange completed
+     * @throws TransportException
+     *             if there is an error during key exchange
+     * @see {@link Transport#setTimeout} for setting timeout for kex
+     */
+    void startKex(boolean waitForDone) throws TransportException
+    {
+        if (!kexOngoing.getAndSet(true))
+        {
+            done.clear();
+            sendKexInit();
+        }
+        if (waitForDone)
+            waitForDone();
+    }
+    
+    void waitForDone() throws TransportException
+    {
+        done.await(transport.getTimeout());
+    }
+    
+    private synchronized void ensureKexOngoing() throws TransportException
+    {
+        if (!isKexOngoing())
+            throw new TransportException(DisconnectReason.PROTOCOL_ERROR,
+                    "Key exchange packet received when key exchange was not ongoing");
+    }
+    
+    private static void ensureReceivedMatchesExpected(Message got, Message expected) throws TransportException
+    {
+        if (got != expected)
+            throw new TransportException(DisconnectReason.PROTOCOL_ERROR, "Was expecting " + expected);
+    }
+    
+    /**
+     * Sends SSH_MSG_KEXINIT and sets the {@link kexInitSent} event.
+     * 
+     * @throws TransportException
+     */
+    private void sendKexInit() throws TransportException
+    {
+        log.info("Sending SSH_MSG_KEXINIT");
+        clientProposal = new Proposal(transport.getConfig());
+        transport.write(clientProposal.getPacket());
+        kexInitSent.set();
+    }
+    
+    private void sendNewKeys() throws TransportException
+    {
+        log.info("Sending SSH_MSG_NEWKEYS");
+        transport.write(new SSHPacket(Message.NEWKEYS));
+    }
+    
+    /**
+     * Tries to validate host key with all the host key verifiers known to this instance ( {@link #hostVerifiers})
+     * 
+     * @param key
+     *            the host key to verify
+     */
+    private synchronized void verifyHost(PublicKey key) throws TransportException
+    {
+        for (HostKeyVerifier hkv : hostVerifiers)
+        {
+            log.debug("Trying to verify host key with {}", hkv);
+            if (hkv.verify(transport.getRemoteHost(), key))
+                return;
+        }
+        
+        throw new TransportException(DisconnectReason.HOST_KEY_NOT_VERIFIABLE, "Could not verify `"
+                + KeyType.fromKey(key) + "` host key with fingerprint `" + SecurityUtils.getFingerprint(key)
+                + "` for `" + transport.getRemoteHost() + "`");
+    }
+    
+    private void setKexDone()
+    {
+        kexOngoing.set(false);
+        kexInitSent.clear();
+        done.set();
+    }
+    
+    private void gotKexInit(SSHPacket buf) throws TransportException
+    {
+        serverProposal = new Proposal(buf);
+        negotiatedAlgs = clientProposal.negotiate(serverProposal);
+        kex = Factory.Named.Util.create(transport.getConfig().getKeyExchangeFactories(), negotiatedAlgs
+                .getKeyExchangeAlgorithm());
+        kex.init(transport, transport.getServerID().getBytes(), transport.getClientID().getBytes(), buf
+                .getCompactData(), clientProposal.getPacket().getCompactData());
+    }
+    
+    /**
+     * Private method used while putting new keys into use that will resize the key used to initialize the cipher to the
+     * needed length.
+     * 
+     * @param E
+     *            the key to resize
+     * @param blockSize
+     *            the cipher block size
+     * @param hash
+     *            the hash algorithm
+     * @param K
+     *            the key exchange K parameter
+     * @param H
+     *            the key exchange H parameter
+     * @return the resized key
+     */
+    private static byte[] resizedKey(byte[] E, int blockSize, Digest hash, byte[] K, byte[] H)
+    {
+        while (blockSize > E.length)
+        {
+            PlainBuffer buffer = new PlainBuffer() //
+                    .putMPInt(K) //
+                    .putRawBytes(H) //
+                    .putRawBytes(E);
+            hash.update(buffer.array(), 0, buffer.available());
+            byte[] foo = hash.digest();
+            byte[] bar = new byte[E.length + foo.length];
+            System.arraycopy(E, 0, bar, 0, E.length);
+            System.arraycopy(foo, 0, bar, E.length, foo.length);
+            E = bar;
+        }
+        return E;
+    }
+    
+    /* See Sec. 7.2. "Output from Key Exchange", RFC 4253 */
+    private void gotNewKeys()
+    {
+        final Digest hash = kex.getHash();
+        
+        if (sessionID == null)
+            // session id is 'H' from the first key exchange and does not change thereafter
+            sessionID = Arrays.copyOf(kex.getH(), kex.getH().length);
+        
+        final PlainBuffer buf = new PlainBuffer() //
+                .putMPInt(kex.getK()) //
+                .putRawBytes(kex.getH()) //
+                .putByte((byte) 0) // Placeholder
+                .putRawBytes(sessionID);
+        final int pos = buf.available() - sessionID.length - 1; // Position of placeholder
+        
+        buf.array()[pos] = 'A';
+        hash.update(buf.array(), 0, buf.available());
+        final byte[] initialIV_C2S = hash.digest();
+        
+        buf.array()[pos] = 'B';
+        hash.update(buf.array(), 0, buf.available());
+        final byte[] initialIV_S2C = hash.digest();
+        
+        buf.array()[pos] = 'C';
+        hash.update(buf.array(), 0, buf.available());
+        final byte[] encryptionKey_C2S = hash.digest();
+        
+        buf.array()[pos] = 'D';
+        hash.update(buf.array(), 0, buf.available());
+        final byte[] encryptionKey_S2C = hash.digest();
+        
+        buf.array()[pos] = 'E';
+        hash.update(buf.array(), 0, buf.available());
+        final byte[] integrityKey_C2S = hash.digest();
+        
+        buf.array()[pos] = 'F';
+        hash.update(buf.array(), 0, buf.available());
+        final byte[] integrityKey_S2C = hash.digest();
+        
+        final Cipher cipher_C2S = Factory.Named.Util.create(transport.getConfig().getCipherFactories(), negotiatedAlgs
+                .getClient2ServerCipherAlgorithm());
+        cipher_C2S.init(Cipher.Mode.Encrypt, //
+                resizedKey(encryptionKey_C2S, cipher_C2S.getBlockSize(), hash, kex.getK(), kex.getH()), //
+                initialIV_C2S);
+        
+        final Cipher cipher_S2C = Factory.Named.Util.create(transport.getConfig().getCipherFactories(), //
+                negotiatedAlgs.getServer2ClientCipherAlgorithm());
+        cipher_S2C.init(Cipher.Mode.Decrypt, //
+                resizedKey(encryptionKey_S2C, cipher_S2C.getBlockSize(), hash, kex.getK(), kex.getH()), //
+                initialIV_S2C);
+        
+        final MAC mac_C2S = Factory.Named.Util.create(transport.getConfig().getMACFactories(), negotiatedAlgs
+                .getClient2ServerMACAlgorithm());
+        mac_C2S.init(integrityKey_C2S);
+        
+        final MAC mac_S2C = Factory.Named.Util.create(transport.getConfig().getMACFactories(), //
+                negotiatedAlgs.getServer2ClientMACAlgorithm());
+        mac_S2C.init(integrityKey_S2C);
+        
+        final Compression compression_S2C = Factory.Named.Util.create(transport.getConfig().getCompressionFactories(),
+                negotiatedAlgs.getServer2ClientCompressionAlgorithm());
+        final Compression compression_C2S = Factory.Named.Util.create(transport.getConfig().getCompressionFactories(),
+                negotiatedAlgs.getClient2ServerCompressionAlgorithm());
+        
+        transport.getEncoder().setAlgorithms(cipher_C2S, mac_C2S, compression_C2S);
+        transport.getDecoder().setAlgorithms(cipher_S2C, mac_S2C, compression_S2C);
+    }
+    
     public void handle(Message msg, SSHPacket buf) throws TransportException
     {
         switch (expected)
@@ -176,232 +389,11 @@ public final class KeyExchanger implements PacketHandler, ErrorNotifiable
         }
     }
     
-    /**
-     * Returns whether key exchange has been completed
-     */
-    public boolean isKexDone()
-    {
-        return done.isSet();
-    }
-    
-    /**
-     * Returns whether key exchange is currently ongoing
-     */
-    public boolean isKexOngoing()
-    {
-        return kexOngoing.get();
-    }
-    
     @SuppressWarnings("unchecked")
     public void notifyError(SSHException error)
     {
         log.debug("Got notified of {}", error.toString());
         ErrorNotifiable.Util.alertAll(error, kexInitSent, done);
-    }
-    
-    /**
-     * Starts key exchange by sending a {@code SSH_MSG_KEXINIT} packet. Key exchange needs to be done once mandatorily
-     * after initializing the {@link Transport} for it to be usable and may be initiated at any later point e.g. if
-     * {@link Transport#getConfig() algorithms} have changed and should be renegotiated.
-     * 
-     * @param waitForDone
-     *            whether should block till key exchange completed
-     * @throws TransportException
-     *             if there is an error during key exchange
-     * @see {@link Transport#setTimeout} for setting timeout for kex
-     */
-    public void startKex(boolean waitForDone) throws TransportException
-    {
-        if (!kexOngoing.getAndSet(true))
-        {
-            done.clear();
-            sendKexInit();
-        }
-        if (waitForDone)
-            waitForDone();
-    }
-    
-    public void waitForDone() throws TransportException
-    {
-        done.await(transport.getTimeout());
-    }
-    
-    private synchronized void ensureKexOngoing() throws TransportException
-    {
-        if (!isKexOngoing())
-            throw new TransportException(DisconnectReason.PROTOCOL_ERROR,
-                    "Key exchange packet received when key exchange was not ongoing");
-    }
-    
-    private static void ensureReceivedMatchesExpected(Message got, Message expected) throws TransportException
-    {
-        if (got != expected)
-            throw new TransportException(DisconnectReason.PROTOCOL_ERROR, "Was expecting " + expected);
-    }
-    
-    private void gotKexInit(SSHPacket buf) throws TransportException
-    {
-        serverProposal = new Proposal(buf);
-        negotiated = clientProposal.negotiate(serverProposal);
-        kex = Factory.Named.Util.create(transport.getConfig().getKeyExchangeFactories(), negotiated
-                .getKeyExchangeAlgorithm());
-        kex.init(transport, transport.getServerID().getBytes(), transport.getClientID().getBytes(), buf
-                .getCompactData(), clientProposal.getPacket().getCompactData());
-    }
-    
-    /**
-     * Put new keys into use. This method will intialize the ciphers, digests, MACs and compression according to the
-     * negotiated server and client proposals.
-     */
-    private void gotNewKeys() // TODO: refactor; too huge
-    {
-        byte[] K = kex.getK();
-        byte[] H = kex.getH();
-        Digest hash = kex.getHash();
-        
-        if (sessionID == null)
-        {
-            sessionID = new byte[H.length];
-            System.arraycopy(H, 0, sessionID, 0, H.length);
-        }
-        
-        PlainBuffer buffer = new PlainBuffer().putMPInt(K) //
-                .putRawBytes(H) //
-                .putByte((byte) 0x41) //
-                .putRawBytes(sessionID);
-        int len = buffer.available();
-        
-        byte[] buf = buffer.array();
-        hash.update(buf, 0, len);
-        byte[] IVc2s = hash.digest();
-        
-        int j = len - sessionID.length - 1;
-        
-        buf[j]++;
-        hash.update(buf, 0, len);
-        byte[] IVs2c = hash.digest();
-        
-        buf[j]++;
-        hash.update(buf, 0, len);
-        byte[] Ec2s = hash.digest();
-        
-        buf[j]++;
-        hash.update(buf, 0, len);
-        byte[] Es2c = hash.digest();
-        
-        buf[j]++;
-        hash.update(buf, 0, len);
-        byte[] MACc2s = hash.digest();
-        
-        buf[j]++;
-        hash.update(buf, 0, len);
-        byte[] MACs2c = hash.digest();
-        
-        Cipher s2ccipher = Factory.Named.Util.create(transport.getConfig().getCipherFactories(), negotiated
-                .getServer2ClientCipherAlgorithm());
-        Es2c = resizeKey(Es2c, s2ccipher.getBlockSize(), hash, K, H);
-        s2ccipher.init(Cipher.Mode.Decrypt, Es2c, IVs2c);
-        
-        MAC s2cmac = Factory.Named.Util.create(transport.getConfig().getMACFactories(), negotiated
-                .getServer2ClientMACAlgorithm());
-        s2cmac.init(MACs2c);
-        
-        Cipher c2scipher = Factory.Named.Util.create(transport.getConfig().getCipherFactories(), negotiated
-                .getClient2ServerCipherAlgorithm());
-        Ec2s = resizeKey(Ec2s, c2scipher.getBlockSize(), hash, K, H);
-        c2scipher.init(Cipher.Mode.Encrypt, Ec2s, IVc2s);
-        
-        MAC c2smac = Factory.Named.Util.create(transport.getConfig().getMACFactories(), negotiated
-                .getClient2ServerMACAlgorithm());
-        c2smac.init(MACc2s);
-        
-        Compression s2ccomp = Factory.Named.Util.create(transport.getConfig().getCompressionFactories(), negotiated
-                .getServer2ClientCompressionAlgorithm());
-        Compression c2scomp = Factory.Named.Util.create(transport.getConfig().getCompressionFactories(), negotiated
-                .getClient2ServerCompressionAlgorithm());
-        
-        transport.setClientToServerAlgorithms(c2scipher, c2smac, c2scomp);
-        transport.setServerToClientAlgorithms(s2ccipher, s2cmac, s2ccomp);
-    }
-    
-    /**
-     * Private method used while putting new keys into use that will resize the key used to initialize the cipher to the
-     * needed length.
-     * 
-     * @param E
-     *            the key to resize
-     * @param blockSize
-     *            the cipher block size
-     * @param hash
-     *            the hash algorithm
-     * @param K
-     *            the key exchange K parameter
-     * @param H
-     *            the key exchange H parameter
-     * @return the resized key
-     */
-    private byte[] resizeKey(byte[] E, int blockSize, Digest hash, byte[] K, byte[] H)
-    {
-        while (blockSize > E.length)
-        {
-            PlainBuffer buffer = new PlainBuffer().putMPInt(K) //
-                    .putRawBytes(H) //
-                    .putRawBytes(E);
-            hash.update(buffer.array(), 0, buffer.available());
-            byte[] foo = hash.digest();
-            byte[] bar = new byte[E.length + foo.length];
-            System.arraycopy(E, 0, bar, 0, E.length);
-            System.arraycopy(foo, 0, bar, E.length, foo.length);
-            E = bar;
-        }
-        return E;
-    }
-    
-    /**
-     * Sends SSH_MSG_KEXINIT and sets the {@link kexInitSent} event.
-     * 
-     * @throws TransportException
-     */
-    private void sendKexInit() throws TransportException
-    {
-        log.info("Sending SSH_MSG_KEXINIT");
-        clientProposal = new Proposal(transport.getConfig());
-        transport.write(clientProposal.getPacket());
-        kexInitSent.set();
-    }
-    
-    private void sendNewKeys() throws TransportException
-    {
-        log.info("Sending SSH_MSG_NEWKEYS");
-        transport.write(new SSHPacket(Message.NEWKEYS));
-    }
-    
-    private void setKexDone()
-    {
-        kexOngoing.set(false);
-        kexInitSent.clear();
-        done.set();
-    }
-    
-    /**
-     * Tries to validate host key with all the host key verifiers known to this instance ( {@link #hostVerifiers})
-     * 
-     * @param key
-     *            the host key to verify
-     */
-    private synchronized void verifyHost(PublicKey key) throws TransportException
-    {
-        
-        for (HostKeyVerifier hkv : hostVerifiers)
-        {
-            log.debug("Trying to verify host key with {}", hkv);
-            if (hkv.verify(transport.getRemoteHost(), key))
-                return;
-        }
-        
-        throw new TransportException(DisconnectReason.HOST_KEY_NOT_VERIFIABLE, "Could not verify `"
-                + KeyType.fromKey(key) + "` host key with fingerprint `" + SecurityUtils.getFingerprint(key)
-                + "` for `" + transport.getRemoteHost() + "`");
     }
     
 }
