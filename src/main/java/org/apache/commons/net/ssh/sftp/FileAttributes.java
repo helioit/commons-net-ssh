@@ -26,7 +26,7 @@ import java.util.Map.Entry;
 import org.apache.commons.net.ssh.util.Buffer.PlainBuffer;
 import org.apache.commons.net.ssh.xfer.FilePermission;
 
-public class FileAttributes
+public final class FileAttributes
 {
     
     public static enum Flag
