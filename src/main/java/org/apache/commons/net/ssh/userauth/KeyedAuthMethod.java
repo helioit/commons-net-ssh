@@ -74,7 +74,7 @@ public abstract class KeyedAuthMethod extends AbstractAuthMethod
             throw new UserAuthException("Could not create signature instance for " + kt + " key");
         
         sigger.init(null, key);
-        sigger.update(new PlainBuffer().putString(params.getTransport().getKeyExchanger().getSessionID()) //
+        sigger.update(new PlainBuffer().putString(params.getTransport().getSessionID()) //
                 .putBuffer(reqBuf) // & rest of the data for sig
                 .getCompactData());
         reqBuf.putSignature(kt, sigger.sign());

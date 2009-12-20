@@ -232,7 +232,7 @@ public class SSHClient extends SocketClient implements SessionFactory
     protected final UserAuth auth;
     
     /** {@code ssh-connection} service */
-    protected final Connection conn;
+    protected final ConnectionProtocol conn;
     
     protected String hostname;
     
@@ -257,7 +257,7 @@ public class SSHClient extends SocketClient implements SessionFactory
      */
     public void addHostKeyVerifier(HostKeyVerifier hostKeyVerifier)
     {
-        trans.getKeyExchanger().addHostKeyVerifier(hostKeyVerifier);
+        trans.addHostKeyVerifier(hostKeyVerifier);
     }
     
     /**
@@ -269,13 +269,13 @@ public class SSHClient extends SocketClient implements SessionFactory
      * 
      * @see SecurityUtils#getFingerprint
      */
-    public void addHostKeyVerifier(final String fingerprint)
+    public void addHostKeyVerifier(final String hostname, final String fingerprint)
     {
         addHostKeyVerifier(new HostKeyVerifier()
         {
             public boolean verify(String hostname, PublicKey key)
             {
-                return SecurityUtils.getFingerprint(key).equals(fingerprint);
+                return hostname.equals(hostname) && SecurityUtils.getFingerprint(key).equals(fingerprint);
             }
         });
     }
@@ -309,7 +309,7 @@ public class SSHClient extends SocketClient implements SessionFactory
     public void auth(String username, Iterable<AuthMethod> methods) throws UserAuthException, TransportException
     {
         assert isConnected();
-        auth.authenticate(username, (Service) conn, methods);
+        auth.authenticate(username, conn, methods);
     }
     
     /**
@@ -784,7 +784,7 @@ public class SSHClient extends SocketClient implements SessionFactory
     protected void _connectAction_() throws IOException
     {
         super._connectAction_();
-        trans.init(new ConnInfo(getRemoteHostname(), _socket_));
+        trans.init(new ConnInfo(hostname, _socket_));
         doKex();
     }
     
@@ -803,11 +803,6 @@ public class SSHClient extends SocketClient implements SessionFactory
         super.connect(hostname, port, localAddr, localPort);
     }
     
-    public String getRemoteHostname()
-    {
-        return hostname;
-    }
-    
     /**
      * Do key exchange.
      * 
@@ -822,7 +817,7 @@ public class SSHClient extends SocketClient implements SessionFactory
         
         try
         {
-            trans.getKeyExchanger().startKex(true);
+            trans.doKex();
         } catch (TransportException te)
         {
             trans.disconnect(DisconnectReason.KEY_EXCHANGE_FAILED);
@@ -830,8 +825,6 @@ public class SSHClient extends SocketClient implements SessionFactory
         }
         
         log.info("Key exchange took {} seconds", (System.currentTimeMillis() - start) / 1000.0);
-        
-        assert trans.getKeyExchanger().isKexDone();
     }
     
 }

@@ -93,12 +93,19 @@ public class ChannelOutputStream extends OutputStream implements ErrorNotifiable
     }
     
     @Override
+    public synchronized void write(int w) throws IOException
+    {
+        b[0] = (byte) w;
+        write(b, 0, 1);
+    }
+    
+    @Override
     public synchronized void write(byte[] data, int off, int len) throws IOException
     {
         checkClose();
         while (len > 0)
         {
-            int x = Math.min(len, win.getMaxPacketSize() - bufferLength);
+            final int x = Math.min(len, win.getMaxPacketSize() - bufferLength);
             if (x <= 0)
             {
                 flush();
@@ -109,13 +116,6 @@ public class ChannelOutputStream extends OutputStream implements ErrorNotifiable
             off += x;
             len -= x;
         }
-    }
-    
-    @Override
-    public synchronized void write(int w) throws IOException
-    {
-        b[0] = (byte) w;
-        write(b, 0, 1);
     }
     
     private void checkClose() throws SSHException

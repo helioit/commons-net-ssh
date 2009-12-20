@@ -26,12 +26,12 @@ import java.net.Socket;
 public class ConnInfo
 {
     
-    private final String hostname;
-    private final Socket socket;
+    protected final String hostname;
+    protected final Socket socket;
     
     public ConnInfo(String hostname, Socket socket)
     {
-        this.hostname = hostname;
+        this.hostname = (hostname == null) ? socket.getInetAddress().getHostName() : hostname;
         this.socket = socket;
     }
     
