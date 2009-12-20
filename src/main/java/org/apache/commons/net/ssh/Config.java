@@ -30,9 +30,8 @@ import org.apache.commons.net.ssh.random.Random;
 import org.apache.commons.net.ssh.signature.Signature;
 
 /**
- * Holds configuration information and factories. Acts a container for factories of
- * {@link KeyExchange}, {@link Cipher}, {@link Compression}, {@link MAC}, {@link Signature},
- * {@link Random}, and {@link FileKeyProvider}.
+ * Holds configuration information and factories. Acts a container for factories of {@link KeyExchange}, {@link Cipher},
+ * {@link Compression}, {@link MAC}, {@link Signature}, {@link Random}, and {@link FileKeyProvider}.
  */
 public class Config
 {
@@ -119,8 +118,8 @@ public class Config
     }
     
     /**
-     * Returns the software version information for identification during SSH connection
-     * initialization. For example, {@code "NET_3_0"}.
+     * Returns the software version information for identification during SSH connection initialization. For example,
+     * {@code "NET_3_0"}.
      */
     public String getVersion()
     {
@@ -271,8 +270,8 @@ public class Config
     }
     
     /**
-     * Set the software version information for identification during SSH connection initialization.
-     * For example, {@code "NET_3_0"}.
+     * Set the software version information for identification during SSH connection initialization. For example,
+     * {@code "NET_3_0"}.
      * 
      * @param version
      *            software version info
