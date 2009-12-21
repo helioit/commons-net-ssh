@@ -29,7 +29,8 @@ import org.apache.commons.net.ssh.SSHClient;
 public class LocalPF
 {
     
-    // static {
+    // static
+    // {
     // BasicConfigurator.configure(new ConsoleAppender(new PatternLayout("%d [%-15.15t] %-5p %-30.30c{1} - %m%n")));
     // }
     
@@ -49,6 +50,7 @@ public class LocalPF
              * _We_ listen on localhost:8080 and forward all connections on to server, which then forwards it to
              * google.com:80
              */
+
             ssh.newLocalPortForwarder(new InetSocketAddress("localhost", 8080), "google.com", 80).listen();
             
         } finally

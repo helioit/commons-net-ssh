@@ -42,9 +42,9 @@ public class SCPUpload
             
             // Compression = significant speedup for large file transfers on fast links
             // present here to demo algorithm renegotiation - could have just put this before connect()
-            // ssh.useCompression();
-            ssh.scpUpload("/Users/shikhar/Documents", "/tmp/");
+            ssh.useCompression();
             
+            ssh.newSCPFileTransfer().upload("/Users/shikhar/well", "/tmp/");
         } finally
         {
             ssh.disconnect();

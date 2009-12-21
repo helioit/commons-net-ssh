@@ -39,12 +39,11 @@ public class SFTPUpload
         try
         {
             ssh.authPublickey(System.getProperty("user.name"));
-            
-            ssh.scpUpload("/tmp/hundred", ".");
-            
+            ssh.newSFTPClient().put("/Users/shikhar/well", "/tmp/");
         } finally
         {
             ssh.disconnect();
         }
     }
+    
 }

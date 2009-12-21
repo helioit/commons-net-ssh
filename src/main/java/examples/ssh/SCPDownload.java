@@ -34,13 +34,13 @@ public class SCPDownload
     public static void main(String[] args) throws Exception
     {
         SSHClient ssh = new SSHClient();
-        ssh.useCompression(); // => significant speedup for large file transfers on fast links
+        // ssh.useCompression(); // => significant speedup for large file transfers on fast links
         ssh.loadKnownHosts();
         ssh.connect("localhost");
         try
         {
             ssh.authPublickey(System.getProperty("user.name"));
-            ssh.scpDownload("hundred", "/tmp/");
+            ssh.newSCPFileTransfer().download("well", "/tmp/");
         } finally
         {
             ssh.disconnect();

@@ -39,7 +39,7 @@ public class SFTPDownload
         try
         {
             ssh.authPublickey(System.getProperty("user.name"));
-            ssh.scpDownload("hundred", "/tmp/");
+            ssh.newSFTPClient().get("well", "/tmp/");
         } finally
         {
             ssh.disconnect();

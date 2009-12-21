@@ -31,7 +31,8 @@ import org.apache.commons.net.ssh.connection.RemotePortForwarder.Forward;
 public class RemotePF
 {
     
-    // static {
+    // static
+    // {
     // BasicConfigurator.configure(new ConsoleAppender(new PatternLayout("%d [%-15.15t] %-5p %-30.30c{1} - %m%n")));
     // }
     
