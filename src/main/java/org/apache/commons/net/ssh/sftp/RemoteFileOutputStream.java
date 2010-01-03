@@ -32,17 +32,12 @@ public class RemoteFileOutputStream extends OutputStream
     
     public RemoteFileOutputStream(RemoteFile rf)
     {
-        this.rf = rf;
+        this(rf, 0);
     }
     
     public RemoteFileOutputStream(RemoteFile rf, long fileOffset)
     {
-        this(rf);
-        this.fileOffset = fileOffset;
-    }
-    
-    public void seek(long fileOffset)
-    {
+        this.rf = rf;
         this.fileOffset = fileOffset;
     }
     
