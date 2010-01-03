@@ -24,8 +24,8 @@ import java.net.Socket;
 import java.net.SocketAddress;
 
 import org.apache.commons.net.ssh.SSHPacket;
-import org.apache.commons.net.ssh.util.Pipe;
-import org.apache.commons.net.ssh.util.Pipe.ErrorCallback;
+import org.apache.commons.net.ssh.util.StreamCopier;
+import org.apache.commons.net.ssh.util.StreamCopier.ErrorCallback;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -45,22 +45,22 @@ public class LocalPortForwarder
         
         private void start() throws IOException
         {
-            sock.setSendBufferSize(getRemoteMaxPacketSize());
+            sock.setSendBufferSize(getLocalMaxPacketSize());
+            sock.setReceiveBufferSize(getRemoteMaxPacketSize());
             
-            ErrorCallback chanCloser = Pipe.closeOnErrorCallback(this);
+            final ErrorCallback chanCloser = StreamCopier.closeOnErrorCallback(this);
             
-            new Pipe("chan2soc", getInputStream(), sock.getOutputStream()) //
+            new StreamCopier("chan2soc", getInputStream(), sock.getOutputStream()) //
                     .bufSize(getLocalMaxPacketSize()) //
                     .errorCallback(chanCloser) //
                     .daemon(true) //
                     .start();
             
-            new Pipe("soc2chan", sock.getInputStream(), getOutputStream()) //
+            new StreamCopier("soc2chan", sock.getInputStream(), getOutputStream()) //
                     .bufSize(getRemoteMaxPacketSize()) //
                     .errorCallback(chanCloser) //
                     .daemon(true) //
                     .start();
-            
         }
         
         @Override

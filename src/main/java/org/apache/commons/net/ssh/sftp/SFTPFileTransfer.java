@@ -27,7 +27,7 @@ import java.util.EnumSet;
 
 import org.apache.commons.net.ssh.sftp.Response.StatusCode;
 import org.apache.commons.net.ssh.util.IOUtils;
-import org.apache.commons.net.ssh.util.Pipe;
+import org.apache.commons.net.ssh.util.StreamCopier;
 import org.apache.commons.net.ssh.xfer.AbstractFileTransfer;
 import org.apache.commons.net.ssh.xfer.FileTransfer;
 import org.apache.commons.net.ssh.xfer.FileTransferUtil;
@@ -125,7 +125,8 @@ public class SFTPFileTransfer extends AbstractFileTransfer implements FileTransf
             local = FileTransferUtil.getTargetFile(local, remote.getName());
             setAttributes(remote, local);
             RemoteFile rf = sftp.open(remote.getPath());
-            Pipe.pipe(rf.getInputStream(), new FileOutputStream(local), sftp.getSubsystem().getLocalMaxPacketSize());
+            StreamCopier.copy(rf.getInputStream(), new FileOutputStream(local), sftp.getSubsystem()
+                    .getLocalMaxPacketSize(), false);
             rf.close();
         }
         
@@ -258,9 +259,9 @@ public class SFTPFileTransfer extends AbstractFileTransfer implements FileTransf
                     getAttributes(local));
             try
             {
-                Pipe.pipe(new FileInputStream(local), rf.getOutputStream(), sftp.getSubsystem()
-                        .getRemoteMaxPacketSize()
-                        - rf.getOutgoingPacketOverhead());
+                StreamCopier.copy(new FileInputStream(local), //
+                        rf.getOutputStream(), sftp.getSubsystem().getRemoteMaxPacketSize()
+                                - rf.getOutgoingPacketOverhead(), false);
             } finally
             {
                 IOUtils.closeQuietly(rf);

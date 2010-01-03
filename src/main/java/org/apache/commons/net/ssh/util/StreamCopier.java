@@ -26,15 +26,10 @@ import java.io.OutputStream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class Pipe extends Thread
+public class StreamCopier extends Thread
 {
     
-    private static final Logger LOG = LoggerFactory.getLogger(Pipe.class);
-    
-    public interface EOFCallback
-    {
-        void hadEOF();
-    }
+    private static final Logger LOG = LoggerFactory.getLogger(StreamCopier.class);
     
     public interface ErrorCallback
     {
@@ -52,13 +47,7 @@ public class Pipe extends Thread
         };
     }
     
-    public static void pipe(InputStream in, OutputStream out, int bufSize) throws IOException
-    {
-        pipe(in, out, bufSize, true);
-    }
-    
-    public static void pipe(InputStream in, OutputStream out, int bufSize, boolean dontFlushEveryWrite)
-            throws IOException
+    public static void copy(InputStream in, OutputStream out, int bufSize, boolean flush) throws IOException
     {
         byte[] buf = new byte[bufSize];
         int len;
@@ -70,10 +59,10 @@ public class Pipe extends Thread
         {
             out.write(buf, 0, len);
             count += len;
-            if (!dontFlushEveryWrite)
+            if (flush)
                 out.flush();
         }
-        if (dontFlushEveryWrite)
+        if (!flush)
             out.flush();
         
         final float sizeKiB = count / 1024;
@@ -85,41 +74,42 @@ public class Pipe extends Thread
     }
     
     private final Logger log;
+    
     private final InputStream in;
     private final OutputStream out;
     private int bufSize = 1;
-    private boolean dontFlushEveryWrite;
+    private boolean flush = true;
     
     private ErrorCallback errCB;
     
-    public Pipe(String name, InputStream in, OutputStream out)
+    public StreamCopier(String name, InputStream in, OutputStream out)
     {
         this.in = in;
         this.out = out;
         
-        setName("pipe");
+        setName("streamCopier");
         log = LoggerFactory.getLogger(name);
     }
     
-    public Pipe bufSize(int size)
+    public StreamCopier bufSize(int size)
     {
         bufSize = size;
         return this;
     }
     
-    public Pipe dontFlushEveryWrite(boolean choice)
+    public StreamCopier flush(boolean choice)
     {
-        dontFlushEveryWrite = choice;
+        flush = choice;
         return this;
     }
     
-    public Pipe daemon(boolean choice)
+    public StreamCopier daemon(boolean choice)
     {
         setDaemon(choice);
         return this;
     }
     
-    public Pipe errorCallback(ErrorCallback cb)
+    public StreamCopier errorCallback(ErrorCallback cb)
     {
         errCB = cb;
         return this;
@@ -131,7 +121,7 @@ public class Pipe extends Thread
         try
         {
             log.debug("Wil pipe from {} to {}", in, out);
-            pipe(in, out, bufSize, dontFlushEveryWrite);
+            copy(in, out, bufSize, flush);
             log.debug("EOF on {}", in);
         } catch (IOException ioe)
         {
