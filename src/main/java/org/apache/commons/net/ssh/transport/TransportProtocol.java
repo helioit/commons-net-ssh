@@ -116,7 +116,7 @@ public final class TransportProtocol implements Transport
             
             // Read server's ID
             PlainBuffer buf = new PlainBuffer();
-            while ((serverID = readIdentification(buf)) == null)
+            while ((serverID = readIdentification(buf)).isEmpty())
                 buf.putByte((byte) connInfo.getInputStream().read());
             
             log.info("Server identity string: {}", serverID);
@@ -135,8 +135,6 @@ public final class TransportProtocol implements Transport
      * <p>
      * Several concerns are taken care of here, e.g. verifying protocol version, correct line endings as specified in
      * RFC and such.
-     * <p>
-     * It should be called from a loop like {@code String id; while ((id = readIdentification) == null) ; }
      * <p>
      * This is not efficient but is only done once.
      * 
@@ -160,7 +158,7 @@ public final class TransportProtocol implements Transport
                 {
                     // Need more data, so undo reading and return null
                     buffer.rpos(savedBufPos);
-                    return null;
+                    return "";
                 }
                 byte b = buffer.readByte();
                 if (b == '\r')
@@ -324,7 +322,7 @@ public final class TransportProtocol implements Transport
     
     public boolean isRunning()
     {
-        return !close.isSet();
+        return reader.isAlive() && !close.isSet();
     }
     
     public void disconnect()

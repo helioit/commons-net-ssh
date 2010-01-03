@@ -12,7 +12,9 @@ final class Heartbeater extends Thread
     
     private final TransportProtocol trans;
     
-    private int interval = 0;
+    private int interval;
+    
+    private boolean started;
     
     Heartbeater(TransportProtocol trans)
     {
@@ -25,7 +27,8 @@ final class Heartbeater extends Thread
         this.interval = interval;
         if (interval != 0)
         {
-            start();
+            if (!started)
+                start();
             notify();
         }
     }
@@ -48,7 +51,9 @@ final class Heartbeater extends Thread
                     while ((hi = interval) == 0)
                         wait();
                 }
-                if (trans.isRunning())
+                if (!started)
+                    started = true;
+                else if (trans.isRunning())
                 {
                     log.info("Sending heartbeat since {} seconds elapsed", hi);
                     trans.write(new SSHPacket(Message.IGNORE));
@@ -66,5 +71,4 @@ final class Heartbeater extends Thread
         
         log.debug("Stopping");
     }
-    
 }
