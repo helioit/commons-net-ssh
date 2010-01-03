@@ -64,7 +64,7 @@ public class SmokeTest
         sshd.start();
         
         ssh = new SSHClient();
-        ssh.addHostKeyVerifier(fingerprint);
+        ssh.addHostKeyVerifier("localhost", fingerprint);
     }
     
     @After
