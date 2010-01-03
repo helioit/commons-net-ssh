@@ -82,6 +82,12 @@ public class StatefulSFTPClient extends SFTPClient
     }
     
     @Override
+    public RemoteFile open(String filename, Set<OpenMode> mode, FileAttributes attrs) throws IOException
+    {
+        return super.open(cwdify(filename), mode, attrs);
+    }
+    
+    @Override
     public RemoteFile open(String filename, Set<OpenMode> mode) throws IOException
     {
         return super.open(cwdify(filename), mode);

@@ -70,10 +70,15 @@ public class SFTPClient
         }
     }
     
-    public RemoteFile open(String filename, Set<OpenMode> mode) throws IOException
+    public RemoteFile open(String filename, Set<OpenMode> mode, FileAttributes attrs) throws IOException
     {
         log.debug("Opening `{}`", filename);
-        return sftp.open(filename, mode);
+        return sftp.open(filename, mode, attrs);
+    }
+    
+    public RemoteFile open(String filename, Set<OpenMode> mode) throws IOException
+    {
+        return open(filename, mode, new FileAttributes());
     }
     
     public RemoteFile open(String filename) throws IOException
