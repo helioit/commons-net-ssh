@@ -62,11 +62,6 @@ final class Decoder extends Converter
         this.packetHandler = packetHandler;
     }
     
-    public int getMaxPacketLength()
-    {
-        return MAX_PACKET_LEN;
-    }
-    
     private void checkMAC(final byte[] data) throws TransportException
     {
         if (mac != null)
@@ -197,6 +192,11 @@ final class Decoder extends Converter
         macResult = new byte[mac.getBlockSize()];
         if (compression != null)
             compression.init(Compression.Type.Inflater, -1);
+    }
+    
+    int getMaxPacketLength()
+    {
+        return MAX_PACKET_LEN;
     }
     
 }

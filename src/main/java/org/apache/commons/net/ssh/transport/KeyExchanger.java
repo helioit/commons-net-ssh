@@ -45,13 +45,6 @@ import org.apache.commons.net.ssh.util.Constants.Message;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/*
- * TODO:
- * 
- * Allow client2server & server2client algorithms to be different; right now they can only be symmetric.
- * This would entail API support in Config (setters) and changes in KeyExchanger to use that API (getters).
- */
-
 /**
  * Algorithm negotiation and key exchange.
  */
@@ -95,11 +88,16 @@ final class KeyExchanger implements PacketHandler, ErrorNotifiable
     private final Event<TransportException> kexInitSent = new Event<TransportException>("kexinit sent",
             TransportException.chainer);
     
-    private final Event<TransportException> done = new Event<TransportException>("kex done", TransportException.chainer);
+    private final Event<TransportException> done;
     
     KeyExchanger(TransportProtocol trans)
     {
         this.transport = trans;
+        /*
+         * Use TransportProtocol's writeLock, since TransportProtocol.write() may wait on this event and the lock should
+         * be released while waiting.
+         */
+        this.done = new Event<TransportException>("kex done", TransportException.chainer, trans.getWriteLock());
     }
     
     /**
@@ -234,6 +232,7 @@ final class KeyExchanger implements PacketHandler, ErrorNotifiable
     {
         serverProposal = new Proposal(buf);
         negotiatedAlgs = clientProposal.negotiate(serverProposal);
+        log.debug("Negotiated algorithms: {}", negotiatedAlgs);
         kex = Factory.Named.Util.create(transport.getConfig().getKeyExchangeFactories(), negotiatedAlgs
                 .getKeyExchangeAlgorithm());
         kex.init(transport, transport.getServerID().getBytes(), transport.getClientID().getBytes(), buf
@@ -286,9 +285,9 @@ final class KeyExchanger implements PacketHandler, ErrorNotifiable
         final PlainBuffer buf = new PlainBuffer() //
                 .putMPInt(kex.getK()) //
                 .putRawBytes(kex.getH()) //
-                .putByte((byte) 0) // Placeholder
+                .putByte((byte) 0) // <placeholder>
                 .putRawBytes(sessionID);
-        final int pos = buf.available() - sessionID.length - 1; // Position of placeholder
+        final int pos = buf.available() - sessionID.length - 1; // Position of <placeholder>
         
         buf.array()[pos] = 'A';
         hash.update(buf.array(), 0, buf.available());

@@ -20,6 +20,7 @@ package org.apache.commons.net.ssh.transport;
 
 public final class NegotiatedAlgorithms
 {
+    
     private final String kex;
     private final String sig;
     private final String c2sCipher;
@@ -81,4 +82,20 @@ public final class NegotiatedAlgorithms
     {
         return s2cComp;
     }
+    
+    @Override
+    public String toString()
+    {
+        return ("[ " + //
+                "kex=" + kex + "; " + //
+                "sig=" + sig + "; " + //
+                "c2sCipher=" + c2sCipher + "; " + //
+                "s2cCipher=" + s2cCipher + "; " + //
+                "c2sMAC=" + c2sMAC + "; " + //
+                "s2cMAC=" + s2cMAC + "; " + //
+                "c2sComp=" + c2sComp + "; " + //
+                "s2cComp=" + s2cComp + //
+        " ]");
+    }
+    
 }

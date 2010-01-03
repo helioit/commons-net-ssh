@@ -54,7 +54,7 @@ class Converter
         return seq;
     }
     
-    synchronized void setAlgorithms(Cipher cipher, MAC mac, Compression compression)
+    void setAlgorithms(Cipher cipher, MAC mac, Compression compression)
     {
         this.cipher = cipher;
         this.mac = mac;
@@ -62,7 +62,7 @@ class Converter
         this.cipherSize = cipher.getIVSize();
     }
     
-    synchronized void setAuthenticated()
+    void setAuthenticated()
     {
         this.authed = true;
     }

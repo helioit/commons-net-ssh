@@ -18,6 +18,8 @@
  */
 package org.apache.commons.net.ssh.transport;
 
+import java.util.concurrent.locks.Lock;
+
 import org.apache.commons.net.ssh.SSHPacket;
 import org.apache.commons.net.ssh.cipher.Cipher;
 import org.apache.commons.net.ssh.compression.Compression;
@@ -36,9 +38,12 @@ final class Encoder extends Converter
     
     private final Random prng;
     
-    Encoder(Random prng)
+    private final Lock encodeLock;
+    
+    Encoder(Random prng, Lock encodeLock)
     {
         this.prng = prng;
+        this.encodeLock = encodeLock;
     }
     
     private SSHPacket checkHeaderSpace(SSHPacket buffer)
@@ -84,50 +89,77 @@ final class Encoder extends Converter
      */
     long encode(SSHPacket buffer) throws TransportException
     {
-        buffer = checkHeaderSpace(buffer);
-        
-        if (log.isTraceEnabled())
-            log.trace("Sending packet #{}: {}", seq, buffer.printHex());
-        
-        compress(buffer);
-        
-        final int payloadSize = buffer.available();
-        
-        // Compute padding length
-        int padLen = -(payloadSize + 5) & cipherSize - 1;
-        if (padLen < cipherSize)
-            padLen += cipherSize;
-        
-        final int startOfPacket = buffer.rpos() - 5;
-        final int packetLen = payloadSize + 1 + padLen;
-        
-        // Put packet header
-        buffer.wpos(startOfPacket);
-        buffer.putInt(packetLen);
-        buffer.putByte((byte) padLen);
-        
-        // Now wpos will mark end of padding
-        buffer.wpos(startOfPacket + 5 + payloadSize + padLen);
-        // Fill padding
-        prng.fill(buffer.array(), buffer.wpos() - padLen, padLen);
-        
-        seq = seq + 1 & 0xffffffffL;
-        
-        putMAC(buffer, startOfPacket, buffer.wpos());
-        
-        cipher.update(buffer.array(), startOfPacket, 4 + packetLen);
-        
-        buffer.rpos(startOfPacket); // Make ready-to-read
-        
-        return seq;
+        encodeLock.lock();
+        try
+        {
+            buffer = checkHeaderSpace(buffer);
+            
+            if (log.isTraceEnabled())
+                log.trace("Encoding packet #{}: {}", seq, buffer.printHex());
+            
+            compress(buffer);
+            
+            final int payloadSize = buffer.available();
+            
+            // Compute padding length
+            int padLen = -(payloadSize + 5) & cipherSize - 1;
+            if (padLen < cipherSize)
+                padLen += cipherSize;
+            
+            final int startOfPacket = buffer.rpos() - 5;
+            final int packetLen = payloadSize + 1 + padLen;
+            
+            // Put packet header
+            buffer.wpos(startOfPacket);
+            buffer.putInt(packetLen);
+            buffer.putByte((byte) padLen);
+            
+            // Now wpos will mark end of padding
+            buffer.wpos(startOfPacket + 5 + payloadSize + padLen);
+            // Fill padding
+            prng.fill(buffer.array(), buffer.wpos() - padLen, padLen);
+            
+            seq = seq + 1 & 0xffffffffL;
+            
+            putMAC(buffer, startOfPacket, buffer.wpos());
+            
+            cipher.update(buffer.array(), startOfPacket, 4 + packetLen);
+            
+            buffer.rpos(startOfPacket); // Make ready-to-read
+            
+            return seq;
+        } finally
+        {
+            encodeLock.unlock();
+        }
     }
     
     @Override
-    synchronized void setAlgorithms(Cipher cipher, MAC mac, Compression compression)
+    void setAlgorithms(Cipher cipher, MAC mac, Compression compression)
     {
-        super.setAlgorithms(cipher, mac, compression);
-        if (compression != null)
-            compression.init(Compression.Type.Deflater, -1);
+        encodeLock.lock();
+        try
+        {
+            super.setAlgorithms(cipher, mac, compression);
+            if (compression != null)
+                compression.init(Compression.Type.Deflater, -1);
+        } finally
+        {
+            encodeLock.unlock();
+        }
+    }
+    
+    @Override
+    void setAuthenticated()
+    {
+        encodeLock.lock();
+        try
+        {
+            super.setAuthenticated();
+        } finally
+        {
+            encodeLock.unlock();
+        }
     }
     
 }

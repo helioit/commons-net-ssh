@@ -19,6 +19,7 @@
 package org.apache.commons.net.ssh.transport;
 
 import java.io.IOException;
+import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.commons.net.ssh.AbstractService;
 import org.apache.commons.net.ssh.Config;
@@ -44,7 +45,7 @@ public final class TransportProtocol implements Transport
     
     private static final class NullService extends AbstractService
     {
-        public NullService(Transport trans)
+        NullService(Transport trans)
         {
             super("null-service", trans);
         }
@@ -90,14 +91,16 @@ public final class TransportProtocol implements Transport
     /** Message identifier of last packet received */
     private Message msg;
     
+    private final ReentrantLock writeLock = new ReentrantLock();
+    
     public TransportProtocol(Config config)
     {
         this.config = config;
         this.reader = new Reader(this);
         this.heartbeater = new Heartbeater(this);
-        this.kexer = new KeyExchanger(this);
-        this.encoder = new Encoder(config.getRandomFactory().create());
+        this.encoder = new Encoder(config.getRandomFactory().create(), writeLock);
         this.decoder = new Decoder(this);
+        this.kexer = new KeyExchanger(this);
         clientID = "SSH-2.0-" + config.getVersion();
     }
     
@@ -360,17 +363,19 @@ public final class TransportProtocol implements Transport
     
     public long write(SSHPacket payload) throws TransportException
     {
-        // synchronized to queue packets correctly & also to guarantee that
-        // there won't be a mid-way change in encoder's algos
-        synchronized (encoder)
+        writeLock.lock();
+        try
         {
             
             if (kexer.isKexOngoing())
             {
                 // Only transport layer packets (1 to 49) allowed except SERVICE_REQUEST
-                Message m = Message.fromByte(payload.array()[payload.rpos()]);
+                final Message m = Message.fromByte(payload.array()[payload.rpos()]);
                 if (!m.in(1, 49) || m == Message.SERVICE_REQUEST)
+                {
+                    assert m != Message.KEXINIT;
                     kexer.waitForDone();
+                }
             } else if (encoder.getSequenceNumber() == 0) // We get here every 2**32th packet
                 kexer.startKex(true);
             
@@ -383,8 +388,12 @@ public final class TransportProtocol implements Transport
             {
                 throw new TransportException(ioe);
             }
+            
             return seq;
             
+        } finally
+        {
+            writeLock.unlock();
         }
     }
     
@@ -569,6 +578,11 @@ public final class TransportProtocol implements Transport
     ConnInfo getConnInfo()
     {
         return connInfo;
+    }
+    
+    ReentrantLock getWriteLock()
+    {
+        return writeLock;
     }
     
 }
