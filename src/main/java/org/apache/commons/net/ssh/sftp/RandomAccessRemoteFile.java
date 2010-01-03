@@ -25,16 +25,18 @@ import java.io.DataOutputStream;
 import java.io.EOFException;
 import java.io.IOException;
 
-public class RandomAccessRemoteFile extends RemoteFile implements DataInput, DataOutput
+public class RandomAccessRemoteFile implements DataInput, DataOutput
 {
     
     private final byte[] singleByte = new byte[1];
     
+    private final RemoteFile rf;
+    
     private long fp;
     
-    public RandomAccessRemoteFile(SFTPEngine sftp, String path, String handle)
+    public RandomAccessRemoteFile(RemoteFile rf)
     {
-        super(sftp, path, handle);
+        this.rf = rf;
     }
     
     public long getFilePointer()
@@ -59,7 +61,7 @@ public class RandomAccessRemoteFile extends RemoteFile implements DataInput, Dat
     
     public int read(byte[] b, int off, int len) throws IOException
     {
-        int count = read(fp, b, off, len);
+        int count = rf.read(fp, b, off, len);
         fp += count;
         return count;
     }
@@ -197,7 +199,7 @@ public class RandomAccessRemoteFile extends RemoteFile implements DataInput, Dat
         if (n <= 0)
             return 0;
         final long pos = getFilePointer();
-        final long len = length();
+        final long len = rf.length();
         long newpos = pos + n;
         if (newpos > len)
             newpos = len;
@@ -220,7 +222,7 @@ public class RandomAccessRemoteFile extends RemoteFile implements DataInput, Dat
     
     public void write(byte[] b, int off, int len) throws IOException
     {
-        write(fp, b, off, len);
+        rf.write(fp, b, off, len);
         fp += (len - off);
     }
     
@@ -299,7 +301,7 @@ public class RandomAccessRemoteFile extends RemoteFile implements DataInput, Dat
     
     public void writeUTF(String str) throws IOException
     {
-        DataOutputStream dos = new DataOutputStream(new RemoteFileOutputStream(this, fp));
+        DataOutputStream dos = new DataOutputStream(new RemoteFileOutputStream(rf, fp));
         dos.writeUTF(str);
         fp += dos.size();
     }
