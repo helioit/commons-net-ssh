@@ -24,24 +24,48 @@ import java.io.InputStream;
 public class RemoteFileInputStream extends InputStream
 {
     
-    private final RemoteFile rf;
     private final byte[] b = new byte[1];
-    private long fileOffset = 0;
+    
+    private final RemoteFile rf;
+    
+    private long fileOffset;
+    private long markPos;
+    private long readLimit;
     
     public RemoteFileInputStream(RemoteFile rf)
     {
-        this.rf = rf;
+        this(rf, 0);
     }
     
     public RemoteFileInputStream(RemoteFile rf, int fileOffset)
     {
-        this(rf);
+        this.rf = rf;
         this.fileOffset = fileOffset;
     }
     
-    public void seek(long fileOffset)
+    @Override
+    public boolean markSupported()
     {
-        this.fileOffset = fileOffset;
+        return true;
+    }
+    
+    @Override
+    public void mark(int readLimit)
+    {
+        this.readLimit = readLimit;
+        markPos = fileOffset;
+    }
+    
+    @Override
+    public void reset() throws IOException
+    {
+        fileOffset = markPos;
+    }
+    
+    @Override
+    public long skip(long n) throws IOException
+    {
+        return (this.fileOffset = Math.min(fileOffset + n, rf.length()));
     }
     
     @Override
@@ -55,7 +79,11 @@ public class RemoteFileInputStream extends InputStream
     {
         int read = rf.read(fileOffset, into, off, len);
         if (read != -1)
+        {
             fileOffset += read;
+            if (markPos != 0 && read > readLimit) // Invalidate mark position
+                markPos = 0;
+        }
         return read;
     }
     
