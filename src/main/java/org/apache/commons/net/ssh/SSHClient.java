@@ -71,6 +71,7 @@ import org.apache.commons.net.ssh.random.JCERandom;
 import org.apache.commons.net.ssh.random.SingletonRandomFactory;
 import org.apache.commons.net.ssh.scp.SCPFileTransfer;
 import org.apache.commons.net.ssh.sftp.SFTPClient;
+import org.apache.commons.net.ssh.sftp.StatefulSFTPClient;
 import org.apache.commons.net.ssh.signature.SignatureDSA;
 import org.apache.commons.net.ssh.signature.SignatureRSA;
 import org.apache.commons.net.ssh.transport.Transport;
@@ -86,7 +87,6 @@ import org.apache.commons.net.ssh.util.KnownHosts;
 import org.apache.commons.net.ssh.util.PasswordFinder;
 import org.apache.commons.net.ssh.util.SecurityUtils;
 import org.apache.commons.net.ssh.util.Constants.DisconnectReason;
-import org.apache.commons.net.ssh.xfer.FileTransfer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -104,8 +104,9 @@ import org.slf4j.LoggerFactory;
  * remote command, starting a subsystem, etc. If you wish to request X11 forwarding for some session, first
  * {@link #registerX11Forwarder(ConnectListener) register} a {@link ConnectListener} for {@code x11} channels.
  * <p>
- * {@link #newLocalPortForwarder Local} and {@link #getRemotePortForwarder() remote} port forwarding is possible. For
- * SCP, TODO document
+ * {@link #newLocalPortForwarder Local} and {@link #getRemotePortForwarder() remote} port forwarding is possible. There
+ * are also utility methods for easily creating {@link #newSCPFileTransfer SCP} and {@link #newSFTPClient() SFTP}
+ * implementations.
  * <p>
  * <em>A simple example:</em>
  * <p>
@@ -261,9 +262,11 @@ public class SSHClient extends SocketClient implements SessionFactory
     }
     
     /**
-     * Add a {@link HostKeyVerifier} that will verify any host key that has the given {@code fingerprint}, e.g. {@code
-     * "4b:69:6c:72:6f:79:20:77:61:73:20:68:65:72:65:21"}
+     * Add a {@link HostKeyVerifier} that will verify any host with given hostname and a host key that has the given
+     * {@code fingerprint}, e.g. {@code "4b:69:6c:72:6f:79:20:77:61:73:20:68:65:72:65:21"}
      * 
+     * @param hostname
+     *            the hostname
      * @param fingerprint
      *            the expected fingerprint in colon-delimited format (16 octets in hex delimited by a colon)
      * 
@@ -535,8 +538,8 @@ public class SSHClient extends SocketClient implements SessionFactory
     }
     
     /**
-     * Returns a {@link FileKeyProvider} instance created from a location on the file system where an
-     * <em>unencrypted</em> private key file (does not require a passphrase) can be found. Simply calls
+     * Returns a {@link KeyProvider} instance created from a location on the file system where an <em>unencrypted</em>
+     * private key file (does not require a passphrase) can be found. Simply calls
      * {@link #loadKeys(String, PasswordFinder)} with the {@link PasswordFinder} argument as {@code null}.
      * 
      * @param location
@@ -554,8 +557,8 @@ public class SSHClient extends SocketClient implements SessionFactory
     }
     
     /**
-     * Utility function for createing a {@link FileKeyProvider} instance from given location on the file system. Creates
-     * a one-off {@link PasswordFinder} using {@link PasswordFinder.Util#createOneOff(char[])}, and calls
+     * Utility function for createing a {@link KeyProvider} instance from given location on the file system. Creates a
+     * one-off {@link PasswordFinder} using {@link PasswordFinder.Util#createOneOff(char[])}, and calls
      * {@link #loadKeys(String,PasswordFinder)}.
      * 
      * @param location
@@ -575,8 +578,8 @@ public class SSHClient extends SocketClient implements SessionFactory
     }
     
     /**
-     * Creates a {@link KeyProvider} instance from given location on the file system. Currently PKCS8 format private key
-     * files are supported (OpenSSH uses this format).
+     * Creates a {@link KeyProvider} instance from given location on the file system. Currently only PKCS8 format
+     * private key files are supported (OpenSSH uses this format).
      * <p>
      * 
      * @param location
@@ -604,9 +607,9 @@ public class SSHClient extends SocketClient implements SessionFactory
     }
     
     /**
-     * Convenience method for creating a {@link FileKeyProvider} instance from a {@code location} where an
-     * <i>encrypted</i> key file is located. Calls {@link #loadKeys(String, char[])} with a character array created from
-     * the supplied {@code passphrase} string.
+     * Convenience method for creating a {@link KeyProvider} instance from a {@code location} where an <i>encrypted</i>
+     * key file is located. Calls {@link #loadKeys(String, char[])} with a character array created from the supplied
+     * {@code passphrase} string.
      * 
      * @param location
      *            location of the key file
@@ -615,7 +618,6 @@ public class SSHClient extends SocketClient implements SessionFactory
      * @return the key provider for use in authentication
      * @throws IOException
      *             if the key file format is not known, if the file could not be read etc.
-     * @depends BouncyCastle
      */
     public KeyProvider loadKeys(String location, String passphrase) throws IOException
     {
@@ -713,12 +715,22 @@ public class SSHClient extends SocketClient implements SessionFactory
         return x11f;
     }
     
-    public FileTransfer newSCPFileTransfer()
+    /**
+     * Instantiates a {@link SCPFileTransfer} implementation.
+     */
+    public SCPFileTransfer newSCPFileTransfer()
     {
         assert isConnected() && isAuthenticated();
         return new SCPFileTransfer(this);
     }
     
+    /**
+     * Instantiates {@link SFTPClient} implementation.
+     * 
+     * @throws IOException
+     *             if there is an error starting the {@code sftp} subsystem
+     * @see StatefulSFTPClient
+     */
     public SFTPClient newSFTPClient() throws IOException
     {
         assert isConnected() && isAuthenticated();
