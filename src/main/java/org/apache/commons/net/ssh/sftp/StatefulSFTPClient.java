@@ -57,7 +57,7 @@ public class StatefulSFTPClient extends SFTPClient
         return ls(cwd, filter);
     }
     
-    public synchronized String getcwd() throws IOException
+    public synchronized String pwd() throws IOException
     {
         return super.canonicalize(cwd);
     }
