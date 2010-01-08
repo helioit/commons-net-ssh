@@ -71,7 +71,7 @@ public class StatefulSFTPClient extends SFTPClient
     @Override
     public List<RemoteResourceInfo> ls(String path, RemoteResourceFilter filter) throws IOException
     {
-        RemoteDir dir = getSFTPEngine().openDir(path);
+        RemoteDir dir = getSFTPEngine().openDir(cwdify(path));
         try
         {
             return dir.scan(filter);
